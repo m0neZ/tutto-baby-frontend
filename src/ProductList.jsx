@@ -7,19 +7,19 @@ const ProductList = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const data = await fetchProducts();
-        setProducts(data);
-      } catch (err) {
-        setError('Failed to load products.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadProducts = async () => {
+    try {
+      const data = await fetchProducts();
+      setProducts(data);
+    } catch (err) {
+      setError('Failed to load products.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    loadProducts();
-  }, []);
+  loadProducts();
+}, [refreshFlag]); // <-- add refreshFlag here
 
   if (loading) return <p>Loading products...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
