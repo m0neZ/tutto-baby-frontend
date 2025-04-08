@@ -1,4 +1,4 @@
-const BASE_URL = 'http://127.0.0.1:5000/api';
+const BASE_URL = 'https://your-backend-name.onrender.com/api';
 
 export const fetchProducts = async () => {
   const res = await fetch(`${BASE_URL}/products/`);
