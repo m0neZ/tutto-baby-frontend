@@ -1,4 +1,4 @@
-const BASE_URL = 'https://tutto-baby-backend.onrender.com';
+const BASE_URL = 'https://tutto-baby-backend.onrender.com/api';
 
 export const fetchProducts = async () => {
   const res = await fetch(`${BASE_URL}/products/`);
