@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchProducts } from './api';
 
-const ProductList = () => {
+const ProductList = ({ refreshFlag }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
