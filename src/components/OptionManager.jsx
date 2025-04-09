@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
-// 🧩 Environment-based backend URL
-const BASE_URL = typeof import.meta !== 'undefined' && import.meta.env
-  ? import.meta.env.VITE_API_URL || ''
-  : '';
+// ✅ Environment-safe API URL
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
-const res = await fetch(`${BASE_URL}/${type}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ value: newValue })
-});
 const labels = {
   size: 'Tamanhos',
   color_print: 'Cores / Estampas',
@@ -21,13 +14,15 @@ const OptionManager = ({ type }) => {
   const [newValue, setNewValue] = useState('');
   const [error, setError] = useState('');
 
+  // 🔄 Load options on mount and type change
   const loadOptions = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/fields/${type}?active=false`);
+      const res = await fetch(`${BASE_URL}/fields/${type}?active=false`);
       const data = await res.json();
       setOptions(data);
     } catch (err) {
       console.error('Erro ao carregar opções:', err);
+      setError('Erro ao se comunicar com o servidor');
     }
   };
 
@@ -37,11 +32,12 @@ const OptionManager = ({ type }) => {
     setError('');
   }, [type]);
 
+  // ➕ Add new option
   const addOption = async () => {
     if (!newValue.trim()) return;
 
     try {
-      const res = await fetch(`${BASE_URL}/api/fields/${type}`, {
+      const res = await fetch(`${BASE_URL}/fields/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: newValue })
@@ -49,20 +45,27 @@ const OptionManager = ({ type }) => {
 
       if (res.ok) {
         setNewValue('');
-        loadOptions();
+        await loadOptions();
       } else {
         const data = await res.json();
         setError(data.error || 'Erro ao adicionar');
       }
     } catch (err) {
+      console.error('Erro no POST:', err);
       setError('Erro ao se comunicar com o servidor');
     }
   };
 
-  const toggleActive = async (id, current) => {
-    const url = `${BASE_URL}/api/fields/${id}/${current ? 'deactivate' : 'activate'}`;
-    await fetch(url, { method: 'PATCH' });
-    loadOptions();
+  // ✅ Deactivate or Reactivate
+  const toggleActive = async (id, isActive) => {
+    try {
+      const endpoint = `${BASE_URL}/fields/${id}/${isActive ? 'deactivate' : 'activate'}`;
+      await fetch(endpoint, { method: 'PATCH' });
+      await loadOptions();
+    } catch (err) {
+      console.error('Erro ao atualizar:', err);
+      setError('Erro ao atualizar opção');
+    }
   };
 
   const active = options.filter(o => o.is_active);
@@ -72,6 +75,7 @@ const OptionManager = ({ type }) => {
     <div>
       <h2 style={{ marginBottom: '1rem' }}>{labels[type]}</h2>
 
+      {/* Add new */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
         <input
           value={newValue}
@@ -83,6 +87,7 @@ const OptionManager = ({ type }) => {
       </div>
       {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
 
+      {/* Active Options */}
       <div>
         {active.map(opt => (
           <div key={opt.id} style={{
@@ -100,6 +105,7 @@ const OptionManager = ({ type }) => {
           </div>
         ))}
 
+        {/* Inactive Options */}
         {inactive.length > 0 && (
           <>
             <h4 style={{ marginTop: '2rem', marginBottom: '0.5rem' }}>Inativos</h4>
