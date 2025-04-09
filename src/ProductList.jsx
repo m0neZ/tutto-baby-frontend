@@ -26,8 +26,7 @@ const ProductList = ({ refreshFlag }) => {
 
   return (
     <div>
-      <h2>📦 Product List</h2>
-      <table border="1" cellPadding="8" style={{ width: '100%', marginTop: '1rem' }}>
+        <table border="1" cellPadding="8" style={{ width: '100%', marginTop: '1rem' }}>
         <thead>
     <tr>
       <th>Nome</th>
