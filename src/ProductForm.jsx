@@ -11,8 +11,7 @@ const ProductForm = ({ onProductAdded }) => {
     cost: '',
     retailPrice: '',
     quantity: '',
-    purchaseDate: '',
-    saleDate: ''
+    purchaseDate: ''
   });
 
   const [products, setProducts] = useState([]);
@@ -57,8 +56,7 @@ const ProductForm = ({ onProductAdded }) => {
         cost_price: parseFloat(formData.cost),
         retail_price: parseFloat(formData.retailPrice),
         current_quantity: parseInt(formData.quantity),
-        purchase_date: formData.purchaseDate || null,
-        sale_date: formData.saleDate || null
+        purchase_date: formData.purchaseDate || null
       };
 
       const response = await createProduct(payload);
@@ -74,8 +72,7 @@ const ProductForm = ({ onProductAdded }) => {
           cost: '',
           retailPrice: '',
           quantity: '',
-          purchaseDate: '',
-          saleDate: ''
+          purchaseDate: ''
         });
         if (onProductAdded) onProductAdded(); // trigger refresh in parent
       } else {
@@ -136,16 +133,6 @@ const ProductForm = ({ onProductAdded }) => {
             type="date"
             name="purchaseDate"
             value={formData.purchaseDate}
-            onChange={handleChange}
-          />
-        </label>
-
-        <label>
-          Data da Venda:
-          <input
-            type="date"
-            name="saleDate"
-            value={formData.saleDate}
             onChange={handleChange}
           />
         </label>
