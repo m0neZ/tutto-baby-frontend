@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from './assets/logo.png'; // Add your logo to /src/assets
-import avatar from './assets/avatar.png'; // Placeholder profile picture
+import logo from './assets/logo.png';      // make sure logo exists
+import avatar from './assets/avatar.png';  // make sure avatar exists
 
 const Header = ({ onOpenForm }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,7 +21,10 @@ const Header = ({ onOpenForm }) => {
       borderBottom: '1px solid #eee',
       zIndex: 1000
     }}>
-      <img src={logo} alt="Tutto Baby" style={{ height: 40 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <img src={logo} alt="Tutto Baby" style={{ height: 40 }} />
+        <button onClick={onOpenForm}>+ Produto</button>
+      </div>
 
       <div style={{ position: 'relative' }}>
         <img
