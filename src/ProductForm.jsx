@@ -11,7 +11,9 @@ const ProductForm = ({ onProductAdded }) => {
     cost: '',
     retailPrice: '',
     quantity: '',
-    reorderThreshold: '5'
+    reorderThreshold: '5',
+    purchaseDate: '',
+    saleDate: ''
   });
 
   const [products, setProducts] = useState([]);
@@ -57,6 +59,8 @@ const ProductForm = ({ onProductAdded }) => {
         retail_price: parseFloat(formData.retailPrice),
         current_quantity: parseInt(formData.quantity),
         reorder_threshold: parseInt(formData.reorderThreshold),
+        purchase_date: formData.purchaseDate || null,
+        sale_date: formData.saleDate || null
       };
 
       const response = await createProduct(payload);
@@ -72,7 +76,9 @@ const ProductForm = ({ onProductAdded }) => {
           cost: '',
           retailPrice: '',
           quantity: '',
-          reorderThreshold: '5'
+          reorderThreshold: '5',
+          purchaseDate: '',
+          saleDate: ''
         });
         if (onProductAdded) onProductAdded(); // trigger refresh in parent
       } else {
@@ -128,6 +134,26 @@ const ProductForm = ({ onProductAdded }) => {
         <input type="number" name="retailPrice" placeholder="Retail Price" value={formData.retailPrice} onChange={handleChange} required />
         <input type="number" name="quantity" placeholder="Quantity" value={formData.quantity} onChange={handleChange} required />
         <input type="number" name="reorderThreshold" placeholder="Reorder Threshold" value={formData.reorderThreshold} onChange={handleChange} />
+        <label>
+  Data da Compra:
+  <input
+    type="date"
+    name="purchaseDate"
+    value={formData.purchaseDate}
+    onChange={handleChange}
+  />
+</label>
+
+<label>
+  Data da Venda:
+  <input
+    type="date"
+    name="saleDate"
+    value={formData.saleDate}
+    onChange={handleChange}
+  />
+</label>
+
 
         <button type="submit">Add Product</button>
       </form>
