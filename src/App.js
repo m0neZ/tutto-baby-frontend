@@ -12,7 +12,11 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      
+      {/* Main content wrapper with proper padding below header */}
+      <main style={{ paddingTop: '120px', padding: '2rem', fontFamily: 'sans-serif' }}>
+        
+        {/* Title and button row */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -21,7 +25,7 @@ function App() {
           flexWrap: 'nowrap',
           gap: '1rem'
         }}>
-          <h1 style={{ margin: 0, fontSize: '2rem' }}>Estoque</h1>
+          <h1 style={{ margin: 0, fontSize: '2rem', color: '#222' }}>Estoque</h1>
           <button
             onClick={() => setShowForm(true)}
             style={{
@@ -38,46 +42,48 @@ function App() {
           </button>
         </div>
 
+        {/* Routing content */}
         <Routes>
           <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
+      </main>
 
-        {showForm && (
+      {/* Popup form modal */}
+      {showForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 999
+        }}>
           <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 999
+            backgroundColor: '#fff',
+            padding: '2rem',
+            borderRadius: '12px',
+            maxWidth: 500,
+            width: '100%',
+            position: 'relative'
           }}>
-            <div style={{
-              backgroundColor: '#fff',
-              padding: '2rem',
-              borderRadius: '12px',
-              maxWidth: 500,
-              width: '100%',
-              position: 'relative'
-            }}>
-              <button
-                style={{ position: 'absolute', top: 10, right: 10 }}
-                onClick={() => setShowForm(false)}
-              >
-                Fechar
-              </button>
-              <h2 style={{ marginBottom: '1rem' }}>Novo Produto</h2>
-              <ProductForm
-                onProductAdded={() => {
-                  setRefreshFlag(!refreshFlag);
-                  setShowForm(false);
-                }}
-              />
-            </div>
+            <button
+              style={{ position: 'absolute', top: 10, right: 10 }}
+              onClick={() => setShowForm(false)}
+            >
+              Fechar
+            </button>
+            <h2 style={{ marginBottom: '1rem' }}>Novo Produto</h2>
+            <ProductForm
+              onProductAdded={() => {
+                setRefreshFlag(!refreshFlag);
+                setShowForm(false);
+              }}
+            />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </Router>
   );
 }
