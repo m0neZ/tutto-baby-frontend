@@ -12,8 +12,7 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
-        {/* 👇 This is the row you couldn’t see */}
+      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
