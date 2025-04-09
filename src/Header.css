@@ -3,7 +3,7 @@
   top: 0;
   left: 0;
   right: 0;
-  background-color: #B5D7B4; /* Tutto Baby green */
+  background-color: #dfeed6; /* Tutto Baby green */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -14,7 +14,7 @@
 }
 
 .logo {
-  height: 60px;
+  height: 100px;
   margin: 0;
   padding: 0;
 }
