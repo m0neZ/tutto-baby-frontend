@@ -12,7 +12,7 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <div style={{ paddingTop: '180px', padding: '2rem', fontFamily: 'sans-serif' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
