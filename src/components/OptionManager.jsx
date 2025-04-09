@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
 // ✅ Environment-safe API URL
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL = typeof import.meta !== 'undefined' &&
+  import.meta.env &&
+  import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL
+  : 'https://tutto-baby-backend.onrender.com';
+
 
 const labels = {
   size: 'Tamanhos',
