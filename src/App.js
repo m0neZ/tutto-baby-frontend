@@ -12,7 +12,7 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <div style={{ paddingTop: '200px', padding: '2rem', fontFamily: 'sans-serif' }}>
         {showForm && (
           <div style={{
             position: 'fixed',
