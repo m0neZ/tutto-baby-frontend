@@ -12,12 +12,12 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '180px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '1.5rem'
+  paddingTop: '180px',
+  padding: '2rem',
+  fontFamily: 'sans-serif',
+  border: '2px solid red'
         }}>
           <h1>Estoque</h1>
           <button onClick={() => setShowForm(true)}>+ Produto</button>
