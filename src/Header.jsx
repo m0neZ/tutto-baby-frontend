@@ -21,10 +21,7 @@ const Header = ({ onOpenForm }) => {
       borderBottom: '1px solid #eee',
       zIndex: 1000
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <img src={logo} alt="Tutto Baby" style={{ height: 40 }} />
-        <button onClick={onOpenForm}>+ Produto</button>
-      </div>
+      <img src={logo} alt="Tutto Baby" style={{ height: 60 }} />
 
       <div style={{ position: 'relative' }}>
         <img
