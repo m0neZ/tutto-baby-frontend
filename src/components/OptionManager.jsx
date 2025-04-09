@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
+// 🧩 Environment-based backend URL
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const labels = {
   size: 'Tamanhos',
   color_print: 'Cores / Estampas',
@@ -12,9 +15,13 @@ const OptionManager = ({ type }) => {
   const [error, setError] = useState('');
 
   const loadOptions = async () => {
-    const res = await fetch(`/api/fields/${type}?active=false`);
-    const data = await res.json();
-    setOptions(data);
+    try {
+      const res = await fetch(`${BASE_URL}/api/fields/${type}?active=false`);
+      const data = await res.json();
+      setOptions(data);
+    } catch (err) {
+      console.error('Erro ao carregar opções:', err);
+    }
   };
 
   useEffect(() => {
@@ -26,23 +33,27 @@ const OptionManager = ({ type }) => {
   const addOption = async () => {
     if (!newValue.trim()) return;
 
-    const res = await fetch(`/api/fields/${type}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: newValue })
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/api/fields/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: newValue })
+      });
 
-    if (res.ok) {
-      setNewValue('');
-      loadOptions();
-    } else {
-      const data = await res.json();
-      setError(data.error || 'Erro ao adicionar');
+      if (res.ok) {
+        setNewValue('');
+        loadOptions();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Erro ao adicionar');
+      }
+    } catch (err) {
+      setError('Erro ao se comunicar com o servidor');
     }
   };
 
   const toggleActive = async (id, current) => {
-    const url = `/api/fields/${id}/${current ? 'deactivate' : 'activate'}`;
+    const url = `${BASE_URL}/api/fields/${id}/${current ? 'deactivate' : 'activate'}`;
     await fetch(url, { method: 'PATCH' });
     loadOptions();
   };
