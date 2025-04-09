@@ -12,30 +12,32 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: '1.5rem',
-  flexWrap: 'nowrap',
-  gap: '1rem'
-}}>
-  <h1 style={{ margin: 0, fontSize: '2rem' }}>Estoque</h1>
-  <button
-    onClick={() => setShowForm(true)}
-    style={{
-      padding: '0.5rem 1rem',
-      fontSize: '1rem',
-      cursor: 'pointer',
-      backgroundColor: '#333',
-      color: '#fff',
-      border: 'none',
-      borderRadius: '6px'
-    }}
-  >
-    + Produto
-  </button>
-</div>
+      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '1.5rem',
+          flexWrap: 'nowrap',
+          gap: '1rem'
+        }}>
+          <h1 style={{ margin: 0, fontSize: '2rem' }}>Estoque</h1>
+          <button
+            onClick={() => setShowForm(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              backgroundColor: '#333',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px'
+            }}
+          >
+            + Produto
+          </button>
+        </div>
+
         <Routes>
           <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
           <Route path="/admin" element={<AdminPage />} />
