@@ -12,20 +12,16 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      
-      {/* Main content wrapper with proper padding below header */}
-      <main style={{ paddingTop: '120px', padding: '2rem', fontFamily: 'sans-serif' }}>
-        
-        {/* Title and button row */}
+
+      <div style={{ paddingTop: '140px', padding: '2rem', fontFamily: 'sans-serif' }}>
+        {/* ✅ This was missing entirely before */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '1.5rem',
-          flexWrap: 'nowrap',
-          gap: '1rem'
+          alignItems: 'center',
+          marginBottom: '1.5rem'
         }}>
-          <h1 style={{ margin: 0, fontSize: '2rem', color: '#222' }}>Estoque</h1>
+          <h1 style={{ fontSize: '2rem', margin: 0 }}>Estoque</h1>
           <button
             onClick={() => setShowForm(true)}
             style={{
@@ -42,14 +38,12 @@ function App() {
           </button>
         </div>
 
-        {/* Routing content */}
         <Routes>
           <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
           <Route path="/admin" element={<AdminPage />} />
         </Routes>
-      </main>
+      </div>
 
-      {/* Popup form modal */}
       {showForm && (
         <div style={{
           position: 'fixed',
