@@ -10,6 +10,15 @@ function App() {
   const [showForm, setShowForm] = useState(false);
 
   return (
+    <div style={{
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: '1.5rem'
+}}>
+  <h1>Estoque</h1>
+  <button onClick={() => setShowForm(true)}>+ Produto</button>
+</div>
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
       <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
