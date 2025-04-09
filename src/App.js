@@ -12,8 +12,8 @@ function App() {
   return (
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <>
-        <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
+        <>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -28,38 +28,43 @@ function App() {
             <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
-        </div>
 
-        {showForm && (
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 999
-          }}>
+          {showForm && (
             <div style={{
-              backgroundColor: '#fff',
-              padding: '2rem',
-              borderRadius: '12px',
-              maxWidth: 500,
-              width: '100%',
-              position: 'relative'
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 999
             }}>
-              <button style={{ position: 'absolute', top: 10, right: 10 }} onClick={() => setShowForm(false)}>Fechar</button>
-              <h2 style={{ marginBottom: '1rem' }}>Novo Produto</h2>
-              <ProductForm
-                onProductAdded={() => {
-                  setRefreshFlag(!refreshFlag);
-                  setShowForm(false);
-                }}
-              />
+              <div style={{
+                backgroundColor: '#fff',
+                padding: '2rem',
+                borderRadius: '12px',
+                maxWidth: 500,
+                width: '100%',
+                position: 'relative'
+              }}>
+                <button
+                  style={{ position: 'absolute', top: 10, right: 10 }}
+                  onClick={() => setShowForm(false)}
+                >
+                  Fechar
+                </button>
+                <h2 style={{ marginBottom: '1rem' }}>Novo Produto</h2>
+                <ProductForm
+                  onProductAdded={() => {
+                    setRefreshFlag(!refreshFlag);
+                    setShowForm(false);
+                  }}
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </>
+          )}
+        </>
+      </div>
     </Router>
   );
 }
