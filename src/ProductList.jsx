@@ -29,33 +29,36 @@ const ProductList = ({ refreshFlag }) => {
       <h2>📦 Product List</h2>
       <table border="1" cellPadding="8" style={{ width: '100%', marginTop: '1rem' }}>
         <thead>
-          <tr>
-            <th>Name</th>
-            <th>SKU</th>
-            <th>Gender</th>
-            <th>Size</th>
-            <th>Color/Print</th>
-            <th>Quantity</th>
-            <th>Cost</th>
-            <th>Retail</th>
-            <th>Supplier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) => (
-            <tr key={p.id}>
-              <td>{p.name}</td>
-              <td>{p.sku}</td>
-              <td>{p.gender}</td>
-              <td>{p.size}</td>
-              <td>{p.color_print}</td>
-              <td>{p.current_quantity}</td>
-              <td>${p.cost_price.toFixed(2)}</td>
-              <td>${p.retail_price.toFixed(2)}</td>
-              <td>{p.supplier_name}</td>
-            </tr>
-          ))}
-        </tbody>
+    <tr>
+      <th>Nome</th>
+      <th>Sexo</th>
+      <th>Cor/Estampa</th>
+      <th>Tamanho</th>
+      <th>Quantidade</th>
+      <th>Custo</th>
+      <th>Preço de Venda</th>
+      <th>Fornecedor</th>
+      <th>Data da Compra</th>
+      <th>Data da Venda</th>
+    </tr>
+  </thead>
+  
+<tbody>
+  {products.map((p) => (
+    <tr key={p.id}>
+      <td>{p.name}</td>
+      <td>{p.gender === 'male' ? 'Masculino' : 'Feminino'}</td>
+      <td>{p.color_print}</td>
+      <td>{p.size}</td>
+      <td>{p.current_quantity}</td>
+      <td>{p.cost_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>{p.retail_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>{p.supplier_name}</td>
+      <td>{p.purchase_date ? new Date(p.purchase_date).toLocaleDateString('pt-BR') : '-'}</td>
+      <td>{p.sale_date ? new Date(p.sale_date).toLocaleDateString('pt-BR') : '-'}</td>
+    </tr>
+  ))}
+</tbody>
       </table>
     </div>
   );
