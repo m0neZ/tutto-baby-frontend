@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import OptionManager from './components/OptionManager';
 import './styles/theme.css';
+import './styles/AdminPage.css';
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('size');
