@@ -10,18 +10,26 @@ function App() {
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <div style={{
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: '1.5rem'
-}}>
-  <h1>Estoque</h1>
-  <button onClick={() => setShowForm(true)}>+ Produto</button>
-</div>
     <Router>
       <Header onOpenForm={() => setShowForm(true)} />
-      <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
+      <>
+        <div style={{ paddingTop: '100px', padding: '2rem', fontFamily: 'sans-serif' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1.5rem'
+          }}>
+            <h1>Estoque</h1>
+            <button onClick={() => setShowForm(true)}>+ Produto</button>
+          </div>
+
+          <Routes>
+            <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
+            <Route path="/admin" element={<AdminPage />} />
+          </Routes>
+        </div>
+
         {showForm && (
           <div style={{
             position: 'fixed',
@@ -51,12 +59,7 @@ function App() {
             </div>
           </div>
         )}
-
-        <Routes>
-          <Route path="/" element={<ProductList refreshFlag={refreshFlag} />} />
-          <Route path="/admin" element={<AdminPage />} />
-        </Routes>
-      </div>
+      </>
     </Router>
   );
 }
