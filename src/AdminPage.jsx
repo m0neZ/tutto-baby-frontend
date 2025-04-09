@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import OptionManager from './components/OptionManager';
 import './styles/theme.css';
 import './styles/AdminPage.css';
@@ -7,24 +7,24 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('size');
 
   return (
-    <main>
-      <h1 style={{ marginBottom: '1.5rem' }}>Gerenciar Campos</h1>
+    <main className="admin-page">
+      <h1 className="admin-title">Gerenciar Campos</h1>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="admin-buttons">
         <button
-          className={`button-primary ${activeTab === 'size' ? 'active' : ''}`}
+          className={`admin-tab ${activeTab === 'size' ? 'active' : ''}`}
           onClick={() => setActiveTab('size')}
         >
           Tamanhos
         </button>
         <button
-          className={`button-primary ${activeTab === 'color_print' ? 'active' : ''}`}
+          className={`admin-tab ${activeTab === 'color_print' ? 'active' : ''}`}
           onClick={() => setActiveTab('color_print')}
         >
           Cores / Estampas
         </button>
         <button
-          className={`button-primary ${activeTab === 'supplier' ? 'active' : ''}`}
+          className={`admin-tab ${activeTab === 'supplier' ? 'active' : ''}`}
           onClick={() => setActiveTab('supplier')}
         >
           Fornecedores
