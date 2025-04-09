@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-// ✅ Environment-safe API URL
-const BASE_URL = typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL
-  : 'https://tutto-baby-backend.onrender.com';
-
+// ✅ Use environment-safe and /api-correct backend base
+const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
 const labels = {
   size: 'Tamanhos',
@@ -19,10 +14,9 @@ const OptionManager = ({ type }) => {
   const [newValue, setNewValue] = useState('');
   const [error, setError] = useState('');
 
-  // 🔄 Load options on mount and type change
   const loadOptions = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/fields/${type}?active=false`);
+      const res = await fetch(`${API_BASE}/fields/${type}?active=false`);
       const data = await res.json();
       setOptions(data);
     } catch (err) {
@@ -37,12 +31,11 @@ const OptionManager = ({ type }) => {
     setError('');
   }, [type]);
 
-  // ➕ Add new option
   const addOption = async () => {
     if (!newValue.trim()) return;
 
     try {
-      const res = await fetch(`${BASE_URL}/fields/${type}`, {
+      const res = await fetch(`${API_BASE}/fields/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: newValue })
@@ -61,11 +54,16 @@ const OptionManager = ({ type }) => {
     }
   };
 
-  // ✅ Deactivate or Reactivate
   const toggleActive = async (id, isActive) => {
     try {
-      const endpoint = `${BASE_URL}/fields/${id}/${isActive ? 'deactivate' : 'activate'}`;
-      await fetch(endpoint, { method: 'PATCH' });
+      const res = await fetch(`${API_BASE}/fields/${id}/${isActive ? 'deactivate' : 'activate'}`, {
+        method: 'PATCH'
+      });
+
+      if (!res.ok) {
+        throw new Error('Erro ao atualizar opção');
+      }
+
       await loadOptions();
     } catch (err) {
       console.error('Erro ao atualizar:', err);
@@ -80,7 +78,6 @@ const OptionManager = ({ type }) => {
     <div>
       <h2 style={{ marginBottom: '1rem' }}>{labels[type]}</h2>
 
-      {/* Add new */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
         <input
           value={newValue}
@@ -90,9 +87,9 @@ const OptionManager = ({ type }) => {
         />
         <button className="button-primary" onClick={addOption}>Adicionar</button>
       </div>
+
       {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
 
-      {/* Active Options */}
       <div>
         {active.map(opt => (
           <div key={opt.id} style={{
@@ -110,7 +107,6 @@ const OptionManager = ({ type }) => {
           </div>
         ))}
 
-        {/* Inactive Options */}
         {inactive.length > 0 && (
           <>
             <h4 style={{ marginTop: '2rem', marginBottom: '0.5rem' }}>Inativos</h4>
