@@ -4,6 +4,7 @@ import ProductList from './ProductList';
 import ProductForm from './ProductForm';
 import AdminPage from './AdminPage';
 import Header from './Header';
+import './styles/theme.css';
 
 function App() {
   const [refreshFlag, setRefreshFlag] = useState(false);
