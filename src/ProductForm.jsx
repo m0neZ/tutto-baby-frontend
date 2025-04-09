@@ -11,7 +11,6 @@ const ProductForm = ({ onProductAdded }) => {
     cost: '',
     retailPrice: '',
     quantity: '',
-    reorderThreshold: '5',
     purchaseDate: '',
     saleDate: ''
   });
@@ -58,7 +57,6 @@ const ProductForm = ({ onProductAdded }) => {
         cost_price: parseFloat(formData.cost),
         retail_price: parseFloat(formData.retailPrice),
         current_quantity: parseInt(formData.quantity),
-        reorder_threshold: parseInt(formData.reorderThreshold),
         purchase_date: formData.purchaseDate || null,
         sale_date: formData.saleDate || null
       };
@@ -66,7 +64,7 @@ const ProductForm = ({ onProductAdded }) => {
       const response = await createProduct(payload);
 
       if (response.success) {
-        setFormSuccess('✅ Product added!');
+        setFormSuccess('✅ Produto adicionado!');
         setFormData({
           name: '',
           gender: '',
@@ -76,17 +74,16 @@ const ProductForm = ({ onProductAdded }) => {
           cost: '',
           retailPrice: '',
           quantity: '',
-          reorderThreshold: '5',
           purchaseDate: '',
           saleDate: ''
         });
         if (onProductAdded) onProductAdded(); // trigger refresh in parent
       } else {
-        setFormError(response.error || 'Something went wrong.');
+        setFormError(response.error || 'Algo deu errado.');
       }
     } catch (err) {
       console.error(err);
-      setFormError('Something went wrong while submitting.');
+      setFormError('Erro ao enviar o formulário.');
     }
   };
 
@@ -98,11 +95,10 @@ const ProductForm = ({ onProductAdded }) => {
 
   return (
     <div style={{ marginBottom: '3rem' }}>
-      <h2>Add New Product</h2>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem', maxWidth: 400 }}>
         <input
           name="name"
-          placeholder="Product Name"
+          placeholder="Nome do Produto"
           value={formData.name}
           onChange={handleChange}
           list="name-suggestions"
@@ -115,47 +111,46 @@ const ProductForm = ({ onProductAdded }) => {
         </datalist>
 
         <select name="gender" value={formData.gender} onChange={handleChange} required>
-          <option value="">Select Gender</option>
-          <option value="male">Boy</option>
-          <option value="female">Girl</option>
+          <option value="">Selecione o Sexo</option>
+          <option value="male">Masculino</option>
+          <option value="female">Feminino</option>
         </select>
 
-        <input name="size" placeholder="Size (e.g., 0-3m)" value={formData.size} onChange={handleChange} required />
-        <input name="colorPrint" placeholder="Color / Print" value={formData.colorPrint} onChange={handleChange} required />
+        <input name="size" placeholder="Tamanho" value={formData.size} onChange={handleChange} required />
+        <input name="colorPrint" placeholder="Cor / Estampa" value={formData.colorPrint} onChange={handleChange} required />
 
         <select name="supplierId" value={formData.supplierId} onChange={handleChange} required>
-          <option value="">Select Supplier</option>
+          <option value="">Selecione o Fornecedor</option>
           {suppliers.map(s => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
 
-        <input type="number" name="cost" placeholder="Cost Price" value={formData.cost} onChange={handleChange} required />
-        <input type="number" name="retailPrice" placeholder="Retail Price" value={formData.retailPrice} onChange={handleChange} required />
-        <input type="number" name="quantity" placeholder="Quantity" value={formData.quantity} onChange={handleChange} required />
-        <input type="number" name="reorderThreshold" placeholder="Reorder Threshold" value={formData.reorderThreshold} onChange={handleChange} />
+        <input type="number" name="cost" placeholder="Custo (R$)" value={formData.cost} onChange={handleChange} required />
+        <input type="number" name="retailPrice" placeholder="Preço de Venda (R$)" value={formData.retailPrice} onChange={handleChange} required />
+        <input type="number" name="quantity" placeholder="Quantidade" value={formData.quantity} onChange={handleChange} required />
+
         <label>
-  Data da Compra:
-  <input
-    type="date"
-    name="purchaseDate"
-    value={formData.purchaseDate}
-    onChange={handleChange}
-  />
-</label>
+          Data da Compra:
+          <input
+            type="date"
+            name="purchaseDate"
+            value={formData.purchaseDate}
+            onChange={handleChange}
+          />
+        </label>
 
-<label>
-  Data da Venda:
-  <input
-    type="date"
-    name="saleDate"
-    value={formData.saleDate}
-    onChange={handleChange}
-  />
-</label>
+        <label>
+          Data da Venda:
+          <input
+            type="date"
+            name="saleDate"
+            value={formData.saleDate}
+            onChange={handleChange}
+          />
+        </label>
 
-
-        <button type="submit">Add Product</button>
+        <button type="submit">Adicionar</button>
       </form>
 
       {formSuccess && <p style={{ color: 'green' }}>{formSuccess}</p>}
