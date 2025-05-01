@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tutto Baby Green Palette */
+  --color-green-1: #dfeed6; /* Lightest Green */
+  --color-green-2: #c4deb7;
+  --color-green-3: #aac59a;
+  --color-green-4: #8da27d; /* Darkest Green */
+
+  /* Assigning semantic roles (adjust as needed during component implementation) */
+  --color-primary: var(--color-green-4); /* Darkest green as primary */
+  --color-secondary: var(--color-green-3);
+  --color-accent: var(--color-green-2);
+  --color-background: var(--color-green-1); /* Lightest green as background */
+  --color-background-alt: #FFFFFF; /* White for contrasting backgrounds */
+
+  --color-text-primary: #333333; /* Dark Gray for text */
+  --color-text-secondary: #555555; /* Slightly lighter gray */
+
+  /* Font Configuration - Placeholder */
+  /* TODO: Add Andrea II Script Slant Nib font family. */
+  /* Commercial use might require a license. */
+  /* Consider using a free web font alternative if license is unavailable. */
+  /* --font-script: "Andrea II Script Slant Nib", cursive; */
+  --font-sans: sans-serif; /* Default sans-serif for body text */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: theme(var(--font-sans));
+  background-color: theme(var(--color-background));
+  color: theme(var(--color-text-primary));
+}
+
+/* Add other global styles or base component styles here */
+
