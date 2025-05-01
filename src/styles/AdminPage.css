@@ -1,0 +1,116 @@
+/* === Admin Manager Styles === */
+
+.admin-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+.admin-page h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+.admin-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.admin-buttons button {
+  padding: 0.6rem 1.2rem;
+  background-color: #f59b9b;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.admin-buttons button:hover {
+  background-color: #f57c7c;
+}
+
+.option-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.option-input {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.option-input input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.option-input button {
+  padding: 0.75rem 1.5rem;
+  background-color: #72b395;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.option-input button:hover {
+  background-color: #5ea987;
+}
+
+.option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option-item {
+  background: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.option-item.inactive {
+  background-color: #f3f3f3;
+  font-style: italic;
+  color: #888;
+}
+
+.option-item button {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.option-item button:hover {
+  color: #333;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
