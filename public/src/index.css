@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Remove the non-standard @theme block and @import */
+
+body {
+  margin: 0;
+  padding: 0;
+  /* Font family will be controlled by tailwind.config.js */
+  /* Background and text color will be applied via Tailwind classes */
+}
+
+/* Add other global styles or base component styles here if needed */
+
