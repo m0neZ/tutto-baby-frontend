@@ -90,7 +90,12 @@ const ProductForm = ({ onProductAdded }) => {
             console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
           } else {
             setSuppliers([]);
-            setSupplierError("Nenhum fornecedor ativo encontrado.");
+            // Check if it was an empty array or actual error before setting message
+            if (!supplierList) { // Check if supplierList is null/undefined (likely fetch error)
+                setSupplierError("Erro ao carregar fornecedores.");
+            } else { // It was an empty array
+                setSupplierError("Nenhum fornecedor ativo encontrado.");
+            }
             console.warn("[FORM DEBUG] No suppliers found or invalid format.");
           }
         }
@@ -263,8 +268,10 @@ const ProductForm = ({ onProductAdded }) => {
   const isSupplierDisabled = loading || suppliers.length === 0;
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, padding: '0 8px' }}> {/* Add slight horizontal padding */}
-      <Grid container spacing={2.5}> {/* Increased spacing slightly */}
+    // Use Box with padding for overall form spacing
+    <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 1 }}> 
+      {/* Grid container with consistent spacing */}
+      <Grid container spacing={2}> 
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Autocomplete
@@ -287,7 +294,7 @@ const ProductForm = ({ onProductAdded }) => {
                 fullWidth
                 variant="outlined"
                 size="small"
-                helperText={!formData.name ? "Nome é obrigatório" : " "} // Reserve space for helper text
+                helperText={!formData.name ? "Nome é obrigatório" : " "} // Reserve space
                 error={!formData.name}
               />
             )}
@@ -377,7 +384,8 @@ const ProductForm = ({ onProductAdded }) => {
               displayEmpty // Important to show placeholder when value is ""
             >
               <MenuItem value="" disabled>
-                <em>{loading ? "Carregando..." : "Selecione..."}</em>
+                {/* More informative placeholder based on state */}
+                <em>{loading ? "Carregando..." : (supplierError ? "Erro ao carregar" : (suppliers.length === 0 ? "Nenhum encontrado" : "Selecione..."))}</em>
               </MenuItem>
               {Array.isArray(suppliers) && suppliers.map((s) => (
                 <MenuItem key={s.id} value={s.id}>
@@ -402,7 +410,7 @@ const ProductForm = ({ onProductAdded }) => {
             required
             fullWidth
             variant="outlined"
-            // Standard height (remove size="small")
+            size="small" // Apply size="small" for consistency
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -422,7 +430,7 @@ const ProductForm = ({ onProductAdded }) => {
             required
             fullWidth
             variant="outlined"
-            // Standard height (remove size="small")
+            size="small" // Apply size="small" for consistency
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -443,7 +451,7 @@ const ProductForm = ({ onProductAdded }) => {
             required
             fullWidth
             variant="outlined"
-            size="small" // Keep quantity small
+            size="small" 
             inputProps={{ min: "0", step: "1" }}
             helperText={!formData.quantity ? "Obrigatório" : " "}
             error={!formData.quantity || parseInt(formData.quantity) < 0}
@@ -471,18 +479,18 @@ const ProductForm = ({ onProductAdded }) => {
 
       {/* General Form Error/Success Messages */}
       {formError && (
-        <Alert severity="error" sx={{ mt: 2.5, mb: 1 }}>
+        <Alert severity="error" sx={{ mt: 2, mb: 1 }}>
           {formError}
         </Alert>
       )}
       {formSuccess && (
-        <Alert severity="success" sx={{ mt: 2.5, mb: 1 }}>
+        <Alert severity="success" sx={{ mt: 2, mb: 1 }}>
           {formSuccess}
         </Alert>
       )}
 
       {/* Submit Button */}
-      <Box sx={{ mt: 3, mb: 1, display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ mt: 2.5, mb: 1, display: "flex", justifyContent: "flex-end" }}>
         <Button type="submit" variant="contained" disabled={loading}>
           {loading ? "Adicionando..." : "Adicionar Produto"}
         </Button>
