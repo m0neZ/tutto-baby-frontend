@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react"; // Added useMemo
+import React, { useEffect, useState, useMemo } from "react";
 import {
   createProduct,
   fetchSuppliers,
@@ -16,7 +16,8 @@ import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import Autocomplete from "@mui/material/Autocomplete";
-import FormHelperText from "@mui/material/FormHelperText"; // Moved import to top
+import FormHelperText from "@mui/material/FormHelperText";
+import CurrencyInput from 'react-currency-input-field'; // Import CurrencyInput
 
 const ProductForm = ({ onProductAdded }) => {
   const [formData, setFormData] = useState({
@@ -25,8 +26,8 @@ const ProductForm = ({ onProductAdded }) => {
     size: "",
     colorPrint: "",
     supplierId: "",
-    cost: "",
-    retailPrice: "",
+    cost: "", // Store raw numeric value or empty string
+    retailPrice: "", // Store raw numeric value or empty string
     quantity: "",
     purchaseDate: "",
   });
@@ -45,7 +46,7 @@ const ProductForm = ({ onProductAdded }) => {
       setFormError("");
       try {
         const [supplierList, productList, sizeOpts, colorOpts] = await Promise.all([
-          fetchSuppliers(),
+          fetchSuppliers(), 
           fetchProducts(),
           fetchFieldOptions("tamanho"),
           fetchFieldOptions("cor_estampa"),
@@ -67,12 +68,17 @@ const ProductForm = ({ onProductAdded }) => {
     loadInitialData();
   }, []);
 
+  // Generic handler for standard inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Removed unused handleNameChange
+  // Specific handler for CurrencyInput fields
+  const handleCurrencyChange = (value, name) => {
+    // value is the raw numeric string (e.g., "1234.56") or undefined
+    setFormData((prev) => ({ ...prev, [name]: value || "" }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,38 +87,51 @@ const ProductForm = ({ onProductAdded }) => {
     setLoading(true);
 
     try {
+      // Check for empty required numeric fields first
+      if (formData.cost.trim() === '' || formData.retailPrice.trim() === '' || formData.quantity.trim() === '') {
+        throw new Error("Campos de Custo, Preço Venda e Quantidade são obrigatórios e não podem estar vazios.");
+      }
+      
+      // Attempt parsing - cost and retailPrice are already numeric strings from CurrencyInput
+      const parsedSupplierId = parseInt(formData.supplierId);
+      const parsedCost = parseFloat(formData.cost); // Already a numeric string or empty
+      const parsedRetailPrice = parseFloat(formData.retailPrice); // Already a numeric string or empty
+      const parsedQuantity = parseInt(formData.quantity);
+
+      // Check if parsing resulted in NaN (handles invalid non-empty input like "abc" for quantity/supplierId)
+      if (
+        isNaN(parsedSupplierId) ||
+        isNaN(parsedCost) || // Check cost
+        isNaN(parsedRetailPrice) || // Check retailPrice
+        isNaN(parsedQuantity)
+      ) {
+        throw new Error(
+          "Valores inválidos inseridos nos campos numéricos. Verifique Fornecedor, Custo, Preço Venda e Quantidade."
+        );
+      }
+
       const payload = {
         nome: formData.name,
         sexo: formData.gender,
         tamanho: formData.size,
         cor_estampa: formData.colorPrint,
-        fornecedor_id: parseInt(formData.supplierId),
-        custo: parseFloat(formData.cost),
-        preco_venda: parseFloat(formData.retailPrice),
-        quantidade_atual: parseInt(formData.quantity),
-        data_compra: formData.purchaseDate || null,
+        fornecedor_id: parsedSupplierId,
+        custo: parsedCost,
+        preco_venda: parsedRetailPrice,
+        quantidade_atual: parsedQuantity,
+        data_compra: formData.purchaseDate || null, // Handle empty date
       };
 
-      if (
-        isNaN(payload.fornecedor_id) ||
-        isNaN(payload.custo) ||
-        isNaN(payload.preco_venda) ||
-        isNaN(payload.quantidade_atual)
-      ) {
-        throw new Error(
-          "Erro na conversão de valores numéricos. Verifique os campos de Custo, Preço e Quantidade."
-        );
-      }
-      // Basic check for required fields before submit
+      // Check for other required fields (non-numeric) and negative values
       if (!payload.nome || !payload.sexo || !payload.tamanho || !payload.cor_estampa || !payload.fornecedor_id || payload.custo < 0 || payload.preco_venda < 0 || payload.quantidade_atual < 0) {
-        throw new Error("Por favor, preencha todos os campos obrigatórios e verifique valores negativos.");
+        throw new Error("Por favor, preencha todos os campos obrigatórios e verifique se os valores numéricos não são negativos.");
       }
 
       const response = await createProduct(payload);
 
       if (response.success) {
         setFormSuccess("Produto adicionado com sucesso!");
-        setFormData({
+        setFormData({ // Reset form
           name: "",
           gender: "",
           size: "",
@@ -123,7 +142,7 @@ const ProductForm = ({ onProductAdded }) => {
           quantity: "",
           purchaseDate: "",
         });
-        if (onProductAdded) onProductAdded();
+        if (onProductAdded) onProductAdded(); // Callback to refresh list
       } else {
         setFormError(response.error || "Falha ao adicionar produto.");
       }
@@ -143,44 +162,41 @@ const ProductForm = ({ onProductAdded }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      {/* Show loading indicator centrally if needed, or just disable fields */}
-      {/* {loading && <CircularProgress sx={{ display: 'block', margin: 'auto', mb: 2 }} />} */}
       <Grid container spacing={2}>
+        {/* ... other fields ... */}
         <Grid item xs={12}>
           <Autocomplete
             freeSolo
             options={productNames}
             getOptionLabel={(option) => 
-              // Handles case where option is string (typed) or object (selected)
               typeof option === 'string' ? option : option.label || ""
             }
-            value={formData.name} // Control the value displayed in the input
+            value={formData.name}
             onChange={(event, newValue) => {
-              // This handles selection from the dropdown
               const nameValue = typeof newValue === 'string' ? newValue : newValue?.label || "";
               setFormData((prev) => ({ ...prev, name: nameValue }));
             }}
             onInputChange={(event, newInputValue) => {
-              // This handles typing directly into the input
-              // For freeSolo, we often want this to update the state directly
               setFormData((prev) => ({ ...prev, name: newInputValue }));
             }}
-            disabled={loading} // Disable while loading products
+            disabled={loading}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="Nome do Produto"
-                name="name" // Name is important for form semantics, though Autocomplete handles state
+                name="name"
                 required
                 fullWidth
-                error={!formData.name} // Basic validation indication
+                error={!formData.name}
                 helperText={!formData.name ? "Nome é obrigatório" : "Digite ou selecione um nome existente"}
+                variant="outlined" // Ensure consistent styling
+                size="small" // Optional: make fields less tall
               />
             )}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.gender}>
+          <FormControl fullWidth required error={!formData.gender} size="small">
             <InputLabel id="gender-label">Sexo</InputLabel>
             <Select
               labelId="gender-label"
@@ -195,11 +211,11 @@ const ProductForm = ({ onProductAdded }) => {
               <MenuItem value="Feminino">Feminino</MenuItem>
               <MenuItem value="Unissex">Unissex</MenuItem>
             </Select>
-            {!formData.gender && <FormHelperText>Sexo é obrigatório</FormHelperText>} {/* Added helper text */}
+            {!formData.gender && <FormHelperText>Sexo é obrigatório</FormHelperText>}
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.size}>
+          <FormControl fullWidth required error={!formData.size} size="small">
             <InputLabel id="size-label">Tamanho</InputLabel>
             <Select
               labelId="size-label"
@@ -216,11 +232,11 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {!formData.size && <FormHelperText>Tamanho é obrigatório</FormHelperText>} {/* Added helper text */}
+            {!formData.size && <FormHelperText>Tamanho é obrigatório</FormHelperText>}
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.colorPrint}>
+          <FormControl fullWidth required error={!formData.colorPrint} size="small">
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
@@ -237,11 +253,11 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {!formData.colorPrint && <FormHelperText>Cor/Estampa é obrigatório</FormHelperText>} {/* Added helper text */}
+            {!formData.colorPrint && <FormHelperText>Cor/Estampa é obrigatório</FormHelperText>}
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.supplierId}>
+          <FormControl fullWidth required error={!formData.supplierId} size="small">
             <InputLabel id="supplier-label">Fornecedor</InputLabel>
             <Select
               labelId="supplier-label"
@@ -258,37 +274,69 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {!formData.supplierId && <FormHelperText>Fornecedor é obrigatório</FormHelperText>} {/* Added helper text */}
+            {!formData.supplierId && <FormHelperText>Fornecedor é obrigatório</FormHelperText>}
+          </FormControl>
+        </Grid>
+
+        {/* Currency Inputs */}
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth required error={formData.cost === "" || parseFloat(formData.cost) < 0} size="small">
+            <InputLabel htmlFor="cost-input">Custo (R$)</InputLabel>
+            <CurrencyInput
+              id="cost-input"
+              name="cost"
+              placeholder="R$ 0,00"
+              value={formData.cost} // Use the raw value from state
+              decimalsLimit={2}
+              decimalSeparator=","
+              groupSeparator="."
+              prefix="R$ "
+              onValueChange={(value, name) => handleCurrencyChange(value, name)} // Use onValueChange
+              disabled={loading}
+              allowNegativeValue={false}
+              style={{ // Basic styling to mimic TextField
+                padding: '8.5px 14px',
+                fontSize: '1rem',
+                borderRadius: '4px',
+                border: `1px solid ${formData.cost === "" || parseFloat(formData.cost) < 0 ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)'}`,
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
+            {(formData.cost === "" || parseFloat(formData.cost) < 0) && 
+             <FormHelperText error>{formData.cost === "" ? "Custo é obrigatório" : "Custo não pode ser negativo"}</FormHelperText>}
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <TextField
-            label="Custo (R$)"
-            name="cost"
-            type="number"
-            value={formData.cost}
-            onChange={handleChange}
-            required
-            fullWidth
-            inputProps={{ step: "0.01", min: "0" }}
-            error={formData.cost !== "" && parseFloat(formData.cost) < 0}
-            helperText={formData.cost !== "" && parseFloat(formData.cost) < 0 ? "Custo não pode ser negativo" : ""}
-          />
+          <FormControl fullWidth required error={formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0} size="small">
+            <InputLabel htmlFor="retailPrice-input">Preço Venda (R$)</InputLabel>
+            <CurrencyInput
+              id="retailPrice-input"
+              name="retailPrice"
+              placeholder="R$ 0,00"
+              value={formData.retailPrice}
+              decimalsLimit={2}
+              decimalSeparator=","
+              groupSeparator="."
+              prefix="R$ "
+              onValueChange={(value, name) => handleCurrencyChange(value, name)}
+              disabled={loading}
+              allowNegativeValue={false}
+              style={{ // Basic styling to mimic TextField
+                padding: '8.5px 14px',
+                fontSize: '1rem',
+                borderRadius: '4px',
+                border: `1px solid ${formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0 ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)'}`,
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
+            {(formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0) && 
+             <FormHelperText error>{formData.retailPrice === "" ? "Preço Venda é obrigatório" : "Preço não pode ser negativo"}</FormHelperText>}
+          </FormControl>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <TextField
-            label="Preço Venda (R$)"
-            name="retailPrice"
-            type="number"
-            value={formData.retailPrice}
-            onChange={handleChange}
-            required
-            fullWidth
-            inputProps={{ step: "0.01", min: "0" }}
-            error={formData.retailPrice !== "" && parseFloat(formData.retailPrice) < 0}
-            helperText={formData.retailPrice !== "" && parseFloat(formData.retailPrice) < 0 ? "Preço não pode ser negativo" : ""}
-          />
-        </Grid>
+        
+        {/* Quantity Input */}
         <Grid item xs={12} sm={4}>
           <TextField
             label="Quantidade Inicial"
@@ -298,9 +346,11 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            inputProps={{ min: "0" }}
-            error={formData.quantity !== "" && parseInt(formData.quantity) < 0}
-            helperText={formData.quantity !== "" && parseInt(formData.quantity) < 0 ? "Quantidade não pode ser negativa" : ""}
+            inputProps={{ min: "0", step: "1" }} // Ensure integer steps
+            error={formData.quantity === "" || parseInt(formData.quantity) < 0}
+            helperText={formData.quantity === "" ? "Quantidade é obrigatória" : (parseInt(formData.quantity) < 0 ? "Quantidade não pode ser negativa" : "")}
+            variant="outlined"
+            size="small"
           />
         </Grid>
         <Grid item xs={12}>
@@ -314,6 +364,8 @@ const ProductForm = ({ onProductAdded }) => {
             InputLabelProps={{
               shrink: true,
             }}
+            variant="outlined"
+            size="small"
           />
         </Grid>
       </Grid>
@@ -338,7 +390,4 @@ const ProductForm = ({ onProductAdded }) => {
   );
 };
 
-// Removed import from bottom
-
 export default ProductForm;
-
