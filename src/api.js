@@ -61,25 +61,59 @@ export const fetchLowStock = async () => {
 // Use the correct Portuguese endpoint: /fornecedores/
 // Make response handling more robust
 export const fetchSuppliers = async () => {
-  console.log(`Fetching suppliers from: ${BASE_URL}/fornecedores/`); // Add logging
-  const res = await fetch(`${BASE_URL}/fornecedores/`);
-  if (!res.ok) {
-    console.error(`Failed to fetch suppliers: ${res.status} ${res.statusText}`); // Log error status
-    throw new Error(`Failed to fetch suppliers: ${res.status}`);
-  }
-  const data = await res.json();
-  console.log("Received supplier data:", data); // Log received data
+  const url = `${BASE_URL}/fornecedores/`;
+  console.log(`[API DEBUG] Fetching suppliers from: ${url}`); // Add logging
+  try {
+    const res = await fetch(url);
+    console.log(`[API DEBUG] Supplier fetch response status: ${res.status} ${res.statusText}`); // Log status
+    if (!res.ok) {
+      let errorBody = "No error body available";
+      try {
+        errorBody = await res.text(); // Get raw text in case JSON parsing fails
+        console.error(`[API DEBUG] Supplier fetch error body: ${errorBody}`);
+      } catch (textError) {
+        console.error("[API DEBUG] Failed to read error body text.");
+      }
+      throw new Error(`Failed to fetch suppliers: ${res.status} - ${errorBody}`);
+    }
+    
+    // Get raw text first to ensure it's not empty or malformed
+    const rawText = await res.text();
+    console.log(`[API DEBUG] Supplier fetch raw response text: ${rawText}`);
+    
+    if (!rawText) {
+        console.warn("[API DEBUG] Received empty response from /fornecedores/");
+        return []; // Return empty if response is empty
+    }
 
-  // Handle different possible structures
-  if (Array.isArray(data)) { // Case 1: Backend returns just the array [...]
-    return data;
-  } else if (data && Array.isArray(data.fornecedores)) { // Case 2: Backend returns { fornecedores: [...] }
-    return data.fornecedores;
-  } else if (data && Array.isArray(data.data)) { // Case 3: Backend returns { success: true, data: [...] } or similar
-     return data.data;
-  } else {
-    console.warn("Unexpected response format from /fornecedores/ endpoint:", data);
-    return []; // Return empty array on unexpected format
+    let data;
+    try {
+        data = JSON.parse(rawText); // Parse the raw text
+    } catch (parseError) {
+        console.error("[API DEBUG] Failed to parse supplier JSON:", parseError);
+        console.error("[API DEBUG] Raw text was:", rawText);
+        throw new Error(`Failed to parse supplier response: ${parseError.message}`);
+    }
+    
+    console.log("[API DEBUG] Parsed supplier data:", data); // Log parsed data
+
+    // Handle different possible structures
+    if (Array.isArray(data)) { // Case 1: Backend returns just the array [...]
+      console.log("[API DEBUG] Supplier data is direct array.");
+      return data;
+    } else if (data && Array.isArray(data.fornecedores)) { // Case 2: Backend returns { fornecedores: [...] }
+      console.log("[API DEBUG] Supplier data is in data.fornecedores.");
+      return data.fornecedores;
+    } else if (data && Array.isArray(data.data)) { // Case 3: Backend returns { success: true, data: [...] } or similar
+      console.log("[API DEBUG] Supplier data is in data.data.");
+      return data.data;
+    } else {
+      console.warn("[API DEBUG] Unexpected response format from /fornecedores/ endpoint:", data);
+      return []; // Return empty array on unexpected format
+    }
+  } catch (error) {
+      console.error("[API DEBUG] Error during fetchSuppliers execution:", error);
+      throw error; // Re-throw the error to be caught by the calling component
   }
 };
 
