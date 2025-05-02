@@ -58,10 +58,20 @@ export const fetchLowStock = async () => {
   return data.products;
 };
 
+// Use the correct Portuguese endpoint: /fornecedores/
 export const fetchSuppliers = async () => {
-  const res = await fetch(`${BASE_URL}/suppliers/`);
+  const res = await fetch(`${BASE_URL}/fornecedores/`); // Changed from /suppliers/
+  if (!res.ok) {
+    throw new Error(`Failed to fetch suppliers: ${res.status}`);
+  }
   const data = await res.json();
-  return data.suppliers;
+  // Assuming the backend returns { fornecedores: [...] }
+  if (data && Array.isArray(data.fornecedores)) {
+      return data.fornecedores;
+  } else {
+      console.warn("Unexpected response format from /fornecedores/ endpoint:", data);
+      return []; // Return empty array on unexpected format
+  }
 };
 
 export const createTransaction = async (transaction) => {
@@ -72,4 +82,3 @@ export const createTransaction = async (transaction) => {
   });
   return await res.json();
 };
-
