@@ -500,3 +500,4 @@ const ProductForm = ({ onProductAdded }) => {
 };
 
 export default ProductForm;
+
