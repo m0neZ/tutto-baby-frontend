@@ -130,7 +130,6 @@ const EstoquePage = () => {
       accessorKey: 'nome',
       header: 'Nome',
       cell: info => info.getValue(),
-      // Aggregated cell for 'nome' shows count of items in the group
       aggregatedCell: ({ row }) => (
         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
           {row.subRows.length} Itens
@@ -186,8 +185,9 @@ const EstoquePage = () => {
       accessorKey: 'data_compra',
       header: 'Data Compra',
       cell: info => info.getValue() ? new Date(info.getValue()).toLocaleDateString("pt-BR") : '-', 
-      enableSorting: false,
-      enableColumnFilter: false,
+      enableSorting: true, // *** FIX: Enable sorting for Data Compra ***
+      enableColumnFilter: false, // Keep filter disabled for simplicity
+      enableGrouping: true, // *** FIX: Enable grouping for Data Compra ***
     },
   ], [aggregationFn]); // Re-run memo if aggregationFn changes
 
@@ -233,6 +233,9 @@ const EstoquePage = () => {
       setAggregationFn(newAggFn);
     }
   };
+
+  // *** FIX: Define allowed grouping columns ***
+  const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -280,11 +283,13 @@ const EstoquePage = () => {
             onChange={(e) => setGrouping(e.target.value ? [e.target.value] : [])}
           >
             <MenuItem value=""><em>Nenhum</em></MenuItem>
-            {table.getAllLeafColumns().filter(col => col.getCanGroup()).map(col => (
-              <MenuItem key={col.id} value={col.id}>
-                {/* Use header string directly if available */}
-                {typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id}
-              </MenuItem>
+            {/* *** FIX: Filter columns for grouping dropdown *** */}
+            {table.getAllLeafColumns()
+              .filter(col => col.getCanGroup() && allowedGroupingColumns.includes(col.id))
+              .map(col => (
+                <MenuItem key={col.id} value={col.id}>
+                  {typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id}
+                </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -334,7 +339,6 @@ const EstoquePage = () => {
                             gap: 0.5,
                             cursor: header.column.getCanSort() ? 'pointer' : 'default',
                           }}
-                          // Use onClick only if the column can be sorted
                           onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                         >
                           {flexRender(
@@ -344,7 +348,6 @@ const EstoquePage = () => {
                           {header.column.getCanSort() && (
                             <TableSortLabel
                               active={!!header.column.getIsSorted()}
-                              // Provide direction explicitly, fallback to 'asc'
                               direction={header.column.getIsSorted() || 'asc'}
                               sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
                             />
@@ -371,7 +374,6 @@ const EstoquePage = () => {
                       ...(row.getIsGrouped() && { bgcolor: 'grey.100' }), 
                     }}
                   >
-                    {/* *** CORRECTED CELL RENDERING LOGIC *** */}
                     {row.getVisibleCells().map(cell => {
                       const context = cell.getContext(); // Get context once
                       return (
@@ -390,27 +392,21 @@ const EstoquePage = () => {
                               bgcolor: 'grey.100' 
                             }),
                           }}
-                          // Add onClick for grouped cells to toggle expansion
                           onClick={cell.getIsGrouped() ? row.getToggleExpandedHandler() : undefined}
                         >
                           {cell.getIsGrouped() ? (
-                            // Grouped cell content with expand/collapse icon
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               <IconButton size="small" onClick={(e) => { e.stopPropagation(); row.toggleExpanded(); }} sx={{ p: 0 }}>
                                 {row.getIsExpanded() ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
                               </IconButton>
-                              {/* Render the original cell value for the group */}
                               {flexRender(cell.column.columnDef.cell, context)} ({row.subRows.length})
                             </Box>
                           ) : cell.getIsAggregated() ? (
-                            // Aggregated cell content
-                            // Use aggregatedCell if defined, otherwise fallback
                             flexRender(
                               cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
                               context
                             )
                           ) : cell.getIsPlaceholder() ? null : (
-                            // Normal cell content
                             flexRender(
                               cell.column.columnDef.cell,
                               context
