@@ -76,16 +76,15 @@ const ProductForm = ({ onProductAdded }) => {
       if (!isMounted) return;
       setLoading(true);
       setFormError("");
-      setSupplierError(""); // Reset supplier error on each load attempt
+      setSupplierError(""); 
 
-      let supplierFetchSuccess = false; // Track if fetch itself succeeded
+      let supplierFetchSuccess = false; 
 
       try {
-        // Fetch Suppliers first and handle its specific errors
         try {
           console.log("[FORM DEBUG] Fetching suppliers...");
           const supplierList = await fetchSuppliers();
-          supplierFetchSuccess = true; // Mark fetch as successful
+          supplierFetchSuccess = true; 
           console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
           if (isMounted) {
             if (Array.isArray(supplierList) && supplierList.length > 0) {
@@ -93,7 +92,6 @@ const ProductForm = ({ onProductAdded }) => {
               console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
             } else {
               setSuppliers([]);
-              // Set error message specifically for empty list after successful fetch
               setSupplierError("Nenhum fornecedor ativo encontrado no banco de dados."); 
               console.warn("[FORM DEBUG] Successfully fetched suppliers, but the list is empty.");
             }
@@ -101,15 +99,12 @@ const ProductForm = ({ onProductAdded }) => {
         } catch (supplierErr) {
           console.error("[FORM DEBUG] Error fetching suppliers:", supplierErr);
           if (isMounted) {
-            setSuppliers([]); // Ensure suppliers is empty on error
-            // Set specific error message for fetch failure
+            setSuppliers([]); 
             setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`); 
           }
-          // Do not proceed if suppliers failed to load
           throw new Error("Supplier fetch failed, stopping initial data load."); 
         }
 
-        // Fetch other data only if suppliers loaded successfully (or fetch succeeded with empty list)
         console.log("[FORM DEBUG] Fetching products, sizes, colors...");
         const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
@@ -124,12 +119,8 @@ const ProductForm = ({ onProductAdded }) => {
           console.log("[FORM DEBUG] Products, sizes, colors state updated.");
         }
       } catch (err) {
-        // This catch block now primarily handles errors from fetching products, sizes, colors,
-        // or the re-thrown error if supplier fetch failed.
         console.error("[FORM DEBUG] Error during secondary data load:", err);
         if (isMounted) {
-          // If supplier fetch failed, the specific error is already set.
-          // Otherwise, set a general form error.
           if (!supplierError) { 
             setFormError(
               `Erro ao carregar dados adicionais: ${err.message}. Verifique a conexão.`
@@ -263,11 +254,12 @@ const ProductForm = ({ onProductAdded }) => {
     [products]
   );
 
-  // Determine if supplier field should be disabled
   const isSupplierDisabled = loading || !!supplierError || suppliers.length === 0;
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 1 }}> 
+    // *** FIX: Remove horizontal padding from main Box ***
+    <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}> 
+      {/* Grid container with consistent spacing */}
       <Grid container spacing={2}> 
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
