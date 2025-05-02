@@ -14,10 +14,14 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
 import Autocomplete from "@mui/material/Autocomplete";
 import FormHelperText from "@mui/material/FormHelperText";
-import CurrencyInput from 'react-currency-input-field'; // Import CurrencyInput
+import CurrencyInput from "react-currency-input-field";
+import InputAdornment from "@mui/material/InputAdornment";
+import { styled } from "@mui/material/styles";
+
+// Custom Input component that integrates CurrencyInput with MUI styling
+// Removed - Using InputProps.inputComponent directly is simpler
 
 const ProductForm = ({ onProductAdded }) => {
   const [formData, setFormData] = useState({
@@ -26,8 +30,8 @@ const ProductForm = ({ onProductAdded }) => {
     size: "",
     colorPrint: "",
     supplierId: "",
-    cost: "", // Store raw numeric value or empty string
-    retailPrice: "", // Store raw numeric value or empty string
+    cost: "",
+    retailPrice: "",
     quantity: "",
     purchaseDate: "",
   });
@@ -46,20 +50,19 @@ const ProductForm = ({ onProductAdded }) => {
       setFormError("");
       try {
         const [supplierList, productList, sizeOpts, colorOpts] = await Promise.all([
-          fetchSuppliers(), 
+          fetchSuppliers(),
           fetchProducts(),
           fetchFieldOptions("tamanho"),
           fetchFieldOptions("cor_estampa"),
         ]);
+        console.log("Fetched Suppliers in Form:", supplierList);
         setSuppliers(supplierList || []);
         setProducts(productList || []);
         setSizeOptions(sizeOpts || []);
         setColorOptions(colorOpts || []);
       } catch (err) {
         console.error("Error loading initial form data:", err);
-        setFormError(
-          "Erro ao carregar dados necessários para o formulário (fornecedores, opções, etc.)."
-        );
+        setFormError(`Erro ao carregar dados: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -68,15 +71,12 @@ const ProductForm = ({ onProductAdded }) => {
     loadInitialData();
   }, []);
 
-  // Generic handler for standard inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Specific handler for CurrencyInput fields
   const handleCurrencyChange = (value, name) => {
-    // value is the raw numeric string (e.g., "1234.56") or undefined
     setFormData((prev) => ({ ...prev, [name]: value || "" }));
   };
 
@@ -87,31 +87,59 @@ const ProductForm = ({ onProductAdded }) => {
     setLoading(true);
 
     try {
-      // Check for empty required numeric fields first
-      if (formData.cost.trim() === '' || formData.retailPrice.trim() === '' || formData.quantity.trim() === '') {
-        throw new Error("Campos de Custo, Preço Venda e Quantidade são obrigatórios e não podem estar vazios.");
+      const requiredFields = {
+        name: "Nome",
+        gender: "Sexo",
+        size: "Tamanho",
+        colorPrint: "Cor/Estampa",
+        supplierId: "Fornecedor",
+        cost: "Custo",
+        retailPrice: "Preço Venda",
+        quantity: "Quantidade",
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([key]) => !formData[key] || String(formData[key]).trim() === "")
+        .map(([, label]) => label);
+
+      if (missingFields.length > 0) {
+        throw new Error(
+          `Campos obrigatórios faltando: ${missingFields.join(", ")}.`
+        );
       }
-      
-      // Attempt parsing - cost and retailPrice are already numeric strings from CurrencyInput
+
       const parsedSupplierId = parseInt(formData.supplierId);
-      const parsedCost = parseFloat(formData.cost); // Already a numeric string or empty
-      const parsedRetailPrice = parseFloat(formData.retailPrice); // Already a numeric string or empty
+      const parsedCost = parseFloat(formData.cost);
+      const parsedRetailPrice = parseFloat(formData.retailPrice);
       const parsedQuantity = parseInt(formData.quantity);
 
-      // Check if parsing resulted in NaN (handles invalid non-empty input like "abc" for quantity/supplierId)
-      if (
-        isNaN(parsedSupplierId) ||
-        isNaN(parsedCost) || // Check cost
-        isNaN(parsedRetailPrice) || // Check retailPrice
-        isNaN(parsedQuantity)
-      ) {
+      const invalidNumericFields = [];
+      if (isNaN(parsedSupplierId)) invalidNumericFields.push("Fornecedor");
+      if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
+      if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
+      if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
+
+      if (invalidNumericFields.length > 0) {
         throw new Error(
-          "Valores inválidos inseridos nos campos numéricos. Verifique Fornecedor, Custo, Preço Venda e Quantidade."
+          `Valores inválidos inseridos nos campos numéricos. Verifique ${invalidNumericFields.join(
+            ", "
+          )}.`
+        );
+      }
+
+      const negativeFields = [];
+      if (parsedCost < 0) negativeFields.push("Custo");
+      if (parsedRetailPrice < 0) negativeFields.push("Preço Venda");
+      if (parsedQuantity < 0) negativeFields.push("Quantidade");
+
+      if (negativeFields.length > 0) {
+        throw new Error(
+          `Valores não podem ser negativos: ${negativeFields.join(", ")}.`
         );
       }
 
       const payload = {
-        nome: formData.name,
+        nome: formData.name.trim(),
         sexo: formData.gender,
         tamanho: formData.size,
         cor_estampa: formData.colorPrint,
@@ -119,19 +147,14 @@ const ProductForm = ({ onProductAdded }) => {
         custo: parsedCost,
         preco_venda: parsedRetailPrice,
         quantidade_atual: parsedQuantity,
-        data_compra: formData.purchaseDate || null, // Handle empty date
+        data_compra: formData.purchaseDate || null,
       };
-
-      // Check for other required fields (non-numeric) and negative values
-      if (!payload.nome || !payload.sexo || !payload.tamanho || !payload.cor_estampa || !payload.fornecedor_id || payload.custo < 0 || payload.preco_venda < 0 || payload.quantidade_atual < 0) {
-        throw new Error("Por favor, preencha todos os campos obrigatórios e verifique se os valores numéricos não são negativos.");
-      }
 
       const response = await createProduct(payload);
 
       if (response.success) {
         setFormSuccess("Produto adicionado com sucesso!");
-        setFormData({ // Reset form
+        setFormData({
           name: "",
           gender: "",
           size: "",
@@ -142,7 +165,7 @@ const ProductForm = ({ onProductAdded }) => {
           quantity: "",
           purchaseDate: "",
         });
-        if (onProductAdded) onProductAdded(); // Callback to refresh list
+        if (onProductAdded) onProductAdded();
       } else {
         setFormError(response.error || "Falha ao adicionar produto.");
       }
@@ -154,32 +177,34 @@ const ProductForm = ({ onProductAdded }) => {
     }
   };
 
-  // Memoize product names for Autocomplete options
-  const productNames = useMemo(() => 
-    products.map((p) => ({ label: p.nome, id: p.id })), 
+  const productNames = useMemo(
+    () => products.map((p) => ({ label: p.nome, id: p.id })),
     [products]
   );
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      <Grid container spacing={2}>
-        {/* ... other fields ... */}
+      {/* Consistent spacing and layout */} 
+      <Grid container spacing={2.5}> 
+        {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Autocomplete
             freeSolo
             options={productNames}
-            getOptionLabel={(option) => 
-              typeof option === 'string' ? option : option.label || ""
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : option.label || ""
             }
             value={formData.name}
             onChange={(event, newValue) => {
-              const nameValue = typeof newValue === 'string' ? newValue : newValue?.label || "";
+              const nameValue =
+                typeof newValue === "string" ? newValue : newValue?.label || "";
               setFormData((prev) => ({ ...prev, name: nameValue }));
             }}
             onInputChange={(event, newInputValue) => {
               setFormData((prev) => ({ ...prev, name: newInputValue }));
             }}
             disabled={loading}
+            size="small" // Consistent size
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -188,13 +213,19 @@ const ProductForm = ({ onProductAdded }) => {
                 required
                 fullWidth
                 error={!formData.name}
-                helperText={!formData.name ? "Nome é obrigatório" : "Digite ou selecione um nome existente"}
-                variant="outlined" // Ensure consistent styling
-                size="small" // Optional: make fields less tall
+                helperText={
+                  !formData.name
+                    ? "Nome é obrigatório"
+                    : "Digite ou selecione um nome existente"
+                }
+                variant="outlined"
+                size="small"
               />
             )}
           />
         </Grid>
+
+        {/* Row 2: Sexo, Tamanho */}
         <Grid item xs={12} sm={6}>
           <FormControl fullWidth required error={!formData.gender} size="small">
             <InputLabel id="gender-label">Sexo</InputLabel>
@@ -206,7 +237,9 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading}
             >
-              <MenuItem value=""><em>Selecione...</em></MenuItem>
+              <MenuItem value="">
+                <em>Selecione...</em>
+              </MenuItem>
               <MenuItem value="Masculino">Masculino</MenuItem>
               <MenuItem value="Feminino">Feminino</MenuItem>
               <MenuItem value="Unissex">Unissex</MenuItem>
@@ -225,7 +258,9 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading || sizeOptions.length === 0}
             >
-              <MenuItem value=""><em>Selecione...</em></MenuItem>
+              <MenuItem value="">
+                <em>Selecione...</em>
+              </MenuItem>
               {sizeOptions.map((opt) => (
                 <MenuItem key={opt.id} value={opt.value}>
                   {opt.value}
@@ -235,8 +270,15 @@ const ProductForm = ({ onProductAdded }) => {
             {!formData.size && <FormHelperText>Tamanho é obrigatório</FormHelperText>}
           </FormControl>
         </Grid>
+
+        {/* Row 3: Cor/Estampa, Fornecedor */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.colorPrint} size="small">
+          <FormControl
+            fullWidth
+            required
+            error={!formData.colorPrint}
+            size="small"
+          >
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
@@ -246,18 +288,27 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading || colorOptions.length === 0}
             >
-              <MenuItem value=""><em>Selecione...</em></MenuItem>
+              <MenuItem value="">
+                <em>Selecione...</em>
+              </MenuItem>
               {colorOptions.map((opt) => (
                 <MenuItem key={opt.id} value={opt.value}>
                   {opt.value}
                 </MenuItem>
               ))}
             </Select>
-            {!formData.colorPrint && <FormHelperText>Cor/Estampa é obrigatório</FormHelperText>}
+            {!formData.colorPrint && (
+              <FormHelperText>Cor/Estampa é obrigatório</FormHelperText>
+            )}
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.supplierId} size="small">
+          <FormControl
+            fullWidth
+            required
+            error={!formData.supplierId}
+            size="small"
+          >
             <InputLabel id="supplier-label">Fornecedor</InputLabel>
             <Select
               labelId="supplier-label"
@@ -267,92 +318,117 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading || suppliers.length === 0}
             >
-              <MenuItem value=""><em>Selecione...</em></MenuItem>
-              {suppliers.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  {s.nome}
-                </MenuItem>
-              ))}
+              <MenuItem value="">
+                <em>Selecione...</em>
+              </MenuItem>
+              {Array.isArray(suppliers) &&
+                suppliers.map((s) => (
+                  <MenuItem key={s.id} value={s.id}>
+                    {s.nome}
+                  </MenuItem>
+                ))}
             </Select>
-            {!formData.supplierId && <FormHelperText>Fornecedor é obrigatório</FormHelperText>}
+            {!formData.supplierId && (
+              <FormHelperText>Fornecedor é obrigatório</FormHelperText>
+            )}
+            {suppliers.length === 0 && !loading && (
+              <FormHelperText>Nenhum fornecedor encontrado.</FormHelperText>
+            )}
           </FormControl>
         </Grid>
 
-        {/* Currency Inputs */}
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth required error={formData.cost === "" || parseFloat(formData.cost) < 0} size="small">
-            <InputLabel htmlFor="cost-input">Custo (R$)</InputLabel>
-            <CurrencyInput
-              id="cost-input"
-              name="cost"
-              placeholder="R$ 0,00"
-              value={formData.cost} // Use the raw value from state
-              decimalsLimit={2}
-              decimalSeparator=","
-              groupSeparator="."
-              prefix="R$ "
-              onValueChange={(value, name) => handleCurrencyChange(value, name)} // Use onValueChange
-              disabled={loading}
-              allowNegativeValue={false}
-              style={{ // Basic styling to mimic TextField
-                padding: '8.5px 14px',
-                fontSize: '1rem',
-                borderRadius: '4px',
-                border: `1px solid ${formData.cost === "" || parseFloat(formData.cost) < 0 ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)'}`,
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            />
-            {(formData.cost === "" || parseFloat(formData.cost) < 0) && 
-             <FormHelperText error>{formData.cost === "" ? "Custo é obrigatório" : "Custo não pode ser negativo"}</FormHelperText>}
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth required error={formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0} size="small">
-            <InputLabel htmlFor="retailPrice-input">Preço Venda (R$)</InputLabel>
-            <CurrencyInput
-              id="retailPrice-input"
-              name="retailPrice"
-              placeholder="R$ 0,00"
-              value={formData.retailPrice}
-              decimalsLimit={2}
-              decimalSeparator=","
-              groupSeparator="."
-              prefix="R$ "
-              onValueChange={(value, name) => handleCurrencyChange(value, name)}
-              disabled={loading}
-              allowNegativeValue={false}
-              style={{ // Basic styling to mimic TextField
-                padding: '8.5px 14px',
-                fontSize: '1rem',
-                borderRadius: '4px',
-                border: `1px solid ${formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0 ? '#d32f2f' : 'rgba(0, 0, 0, 0.23)'}`,
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            />
-            {(formData.retailPrice === "" || parseFloat(formData.retailPrice) < 0) && 
-             <FormHelperText error>{formData.retailPrice === "" ? "Preço Venda é obrigatório" : "Preço não pode ser negativo"}</FormHelperText>}
-          </FormControl>
-        </Grid>
-        
-        {/* Quantity Input */}
+        {/* Row 4: Custo, Preço Venda, Quantidade */}
         <Grid item xs={12} sm={4}>
           <TextField
-            label="Quantidade Inicial"
+            label="Custo"
+            name="cost"
+            value={formData.cost}
+            onChange={(e) => handleCurrencyChange(e.target.value, "cost")}
+            required
+            fullWidth
+            error={formData.cost === "" || parseFloat(formData.cost) < 0}
+            helperText={
+              formData.cost === ""
+                ? "Obrigatório"
+                : parseFloat(formData.cost) < 0
+                ? "Inválido"
+                : ""
+            }
+            variant="outlined"
+            size="small"
+            InputProps={{
+              inputComponent: CurrencyInputAdapter,
+              inputProps: {
+                decimalSeparator: ",",
+                groupSeparator: ".",
+                decimalsLimit: 2,
+                allowNegativeValue: false,
+              },
+              startAdornment: (
+                <InputAdornment position="start">R$</InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            label="Preço Venda"
+            name="retailPrice"
+            value={formData.retailPrice}
+            onChange={(e) => handleCurrencyChange(e.target.value, "retailPrice")}
+            required
+            fullWidth
+            error={
+              formData.retailPrice === "" ||
+              parseFloat(formData.retailPrice) < 0
+            }
+            helperText={
+              formData.retailPrice === ""
+                ? "Obrigatório"
+                : parseFloat(formData.retailPrice) < 0
+                ? "Inválido"
+                : ""
+            }
+            variant="outlined"
+            size="small"
+            InputProps={{
+              inputComponent: CurrencyInputAdapter,
+              inputProps: {
+                decimalSeparator: ",",
+                groupSeparator: ".",
+                decimalsLimit: 2,
+                allowNegativeValue: false,
+              },
+              startAdornment: (
+                <InputAdornment position="start">R$</InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            label="Quantidade"
             name="quantity"
             type="number"
             value={formData.quantity}
             onChange={handleChange}
             required
             fullWidth
-            inputProps={{ min: "0", step: "1" }} // Ensure integer steps
+            inputProps={{ min: "0", step: "1" }}
             error={formData.quantity === "" || parseInt(formData.quantity) < 0}
-            helperText={formData.quantity === "" ? "Quantidade é obrigatória" : (parseInt(formData.quantity) < 0 ? "Quantidade não pode ser negativa" : "")}
+            helperText={
+              formData.quantity === ""
+                ? "Obrigatório"
+                : parseInt(formData.quantity) < 0
+                ? "Inválido"
+                : ""
+            }
             variant="outlined"
             size="small"
           />
         </Grid>
+
+        {/* Row 5: Data da Compra (Full Width) */}
         <Grid item xs={12}>
           <TextField
             label="Data da Compra"
@@ -370,13 +446,14 @@ const ProductForm = ({ onProductAdded }) => {
         </Grid>
       </Grid>
 
+      {/* Alerts and Submit Button */} 
       {formError && (
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={{ mt: 2.5, mb: 1 }}>
           {formError}
         </Alert>
       )}
       {formSuccess && (
-        <Alert severity="success" sx={{ mt: 2 }}>
+        <Alert severity="success" sx={{ mt: 2.5, mb: 1 }}>
           {formSuccess}
         </Alert>
       )}
@@ -389,5 +466,40 @@ const ProductForm = ({ onProductAdded }) => {
     </Box>
   );
 };
+
+// Adapter component to bridge CurrencyInput with MUI TextField
+const CurrencyInputAdapter = React.forwardRef(function CurrencyInputAdapter(
+  props,
+  ref
+) {
+  const { onChange, ...other } = props;
+
+  return (
+    <CurrencyInput
+      {...other}
+      ref={ref}
+      onValueChange={(value, name, values) => {
+        onChange({
+          target: {
+            name: props.name,
+            value: value,
+          },
+        });
+      }}
+      placeholder=""
+      prefix=""
+      // Apply basic styles to match TextField size="small"
+      style={{ 
+          padding: 0, // Padding is handled by TextField
+          border: "none", 
+          fontSize: "inherit", 
+          fontFamily: "inherit",
+          backgroundColor: "transparent",
+          outline: "none",
+          width: "100%", // Ensure it fills the TextField
+      }}
+    />
+  );
+});
 
 export default ProductForm;
