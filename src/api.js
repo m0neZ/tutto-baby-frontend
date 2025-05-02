@@ -10,7 +10,8 @@ export const fetchProducts = async () => {
     throw new Error(`Failed to fetch products: ${res.status}`);
   }
   const data = await res.json();
-  return data.produtos; // Assuming backend returns { produtos: [...] }
+  // Assuming backend returns { produtos: [...] } or { success: true, produtos: [...] }
+  return data.produtos || (data.success && data.produtos) || []; 
 };
 
 // Use the correct backend endpoint path: /produtos/
@@ -39,7 +40,7 @@ export const fetchFieldOptions = async (fieldType) => {
   if (!data.success) {
     throw new Error(data.error || `API error fetching options for ${fieldType}`);
   }
-  return data.opcoes; // Assuming backend returns { sucesso: true, opcoes: [...] }
+  return data.opcoes || []; // Assuming backend returns { sucesso: true, opcoes: [...] }
 };
 
 
@@ -61,7 +62,9 @@ export const fetchLowStock = async () => {
 // Use the correct Portuguese endpoint: /fornecedores/
 // Make response handling more robust
 export const fetchSuppliers = async () => {
-  const url = `${BASE_URL}/fornecedores/`;
+  // The backend uses /fornecedores/ but the blueprint might be registered under /suppliers/
+  // Let's try /fornecedores/ first as seen in supplier_routes.py
+  const url = `${BASE_URL}/fornecedores/`; 
   console.log(`[API DEBUG] Fetching suppliers from: ${url}`); // Add logging
   try {
     const res = await fetch(url);
@@ -97,18 +100,19 @@ export const fetchSuppliers = async () => {
     
     console.log("[API DEBUG] Parsed supplier data:", data); // Log parsed data
 
-    // Handle different possible structures
-    if (Array.isArray(data)) { // Case 1: Backend returns just the array [...]
+    // *** FIX: Handle the actual backend response structure ***
+    if (data && data.success && Array.isArray(data.fornecedores)) { 
+      console.log("[API DEBUG] Supplier data found in data.fornecedores.");
+      return data.fornecedores;
+    } else if (Array.isArray(data)) { // Keep handling direct array just in case
       console.log("[API DEBUG] Supplier data is direct array.");
       return data;
-    } else if (data && Array.isArray(data.fornecedores)) { // Case 2: Backend returns { fornecedores: [...] }
-      console.log("[API DEBUG] Supplier data is in data.fornecedores.");
-      return data.fornecedores;
-    } else if (data && Array.isArray(data.data)) { // Case 3: Backend returns { success: true, data: [...] } or similar
-      console.log("[API DEBUG] Supplier data is in data.data.");
-      return data.data;
     } else {
       console.warn("[API DEBUG] Unexpected response format from /fornecedores/ endpoint:", data);
+      // Check if there was an error message in the response
+      if (data && !data.success && data.error) {
+          throw new Error(`Backend error fetching suppliers: ${data.error}`);
+      }
       return []; // Return empty array on unexpected format
     }
   } catch (error) {
