@@ -35,11 +35,9 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  getGroupedRowModel, // Import grouping hook
-  getExpandedRowModel, // Import expanding hook
+  getGroupedRowModel,
+  getExpandedRowModel,
   flexRender,
-  // Aggregation functions (can also define custom ones)
-  aggregationFns,
 } from '@tanstack/react-table';
 
 // Import the AddProductModal component
@@ -88,12 +86,6 @@ function Filter({ column, table }) {
   );
 }
 
-// Define custom aggregation functions if needed, or use built-ins like sum, mean (average)
-const customAggregations = {
-  sum: aggregationFns.sum,
-  mean: aggregationFns.mean,
-};
-
 const EstoquePage = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +130,7 @@ const EstoquePage = () => {
       accessorKey: 'nome',
       header: 'Nome',
       cell: info => info.getValue(),
-      // Aggregated cell shows count of items in the group
+      // Aggregated cell for 'nome' shows count of items in the group
       aggregatedCell: ({ row }) => (
         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
           {row.subRows.length} Itens
@@ -149,52 +141,51 @@ const EstoquePage = () => {
       accessorKey: 'sexo',
       header: 'Sexo',
       cell: info => info.getValue(),
-      enableGrouping: true, // Allow grouping by this column
+      enableGrouping: true,
     },
     {
       accessorKey: 'cor_estampa',
       header: 'Cor/Estampa',
       cell: info => info.getValue(),
-      enableGrouping: true, // Allow grouping by this column
+      enableGrouping: true,
     },
     {
       accessorKey: 'tamanho',
       header: 'Tamanho',
       cell: info => info.getValue(),
-      enableGrouping: true, // Allow grouping by this column
+      enableGrouping: true,
     },
     {
       accessorKey: 'quantidade_atual',
       header: 'Qtd.',
       cell: info => info.getValue(),
       aggregationFn: 'sum', // Always sum quantity
-      aggregatedCell: info => info.getValue(), // Show the aggregated sum
+      aggregatedCell: info => info.getValue(),
     },
     {
       accessorKey: 'custo',
       header: 'Custo',
-      cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, // Format currency
-      aggregationFn: aggregationFn, // Use selected aggregation (sum/mean)
-      aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, // Show aggregated value
+      cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
+      aggregationFn: aggregationFn, // Use selected aggregation ('sum' or 'mean')
+      aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
     },
     {
       accessorKey: 'preco_venda',
       header: 'Preço Venda',
-      cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, // Format currency
-      aggregationFn: aggregationFn, // Use selected aggregation (sum/mean)
-      aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, // Show aggregated value
+      cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
+      aggregationFn: aggregationFn, // Use selected aggregation ('sum' or 'mean')
+      aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
     },
     {
       accessorKey: 'nome_fornecedor',
       header: 'Fornecedor',
-      cell: info => info.getValue() ?? '-', // Handle null supplier names
-      enableGrouping: true, // Allow grouping by this column
+      cell: info => info.getValue() ?? '-', 
+      enableGrouping: true,
     },
     {
       accessorKey: 'data_compra',
       header: 'Data Compra',
-      cell: info => info.getValue() ? new Date(info.getValue()).toLocaleDateString("pt-BR") : '-', // Format date
-      // Disable sorting/filtering/grouping for date for simplicity now
+      cell: info => info.getValue() ? new Date(info.getValue()).toLocaleDateString("pt-BR") : '-', 
       enableSorting: false,
       enableColumnFilter: false,
     },
@@ -211,7 +202,6 @@ const EstoquePage = () => {
       grouping,
       expanded,
     },
-    aggregationFns: customAggregations, // Provide aggregation functions
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
@@ -220,9 +210,9 @@ const EstoquePage = () => {
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getGroupedRowModel: getGroupedRowModel(), // Enable grouping
-    getExpandedRowModel: getExpandedRowModel(), // Enable expansion
-    debugTable: true, // Enable debug logging
+    getGroupedRowModel: getGroupedRowModel(), 
+    getExpandedRowModel: getExpandedRowModel(), 
+    debugTable: true, 
   });
 
   const handleOpenAddModal = () => {
@@ -285,14 +275,15 @@ const EstoquePage = () => {
           <InputLabel id="group-by-label">Agrupar Por</InputLabel>
           <Select
             labelId="group-by-label"
-            value={grouping[0] || ''} // Assuming single column grouping for simplicity
+            value={grouping[0] || ''} // Assuming single column grouping
             label="Agrupar Por"
             onChange={(e) => setGrouping(e.target.value ? [e.target.value] : [])}
           >
             <MenuItem value=""><em>Nenhum</em></MenuItem>
             {table.getAllLeafColumns().filter(col => col.getCanGroup()).map(col => (
               <MenuItem key={col.id} value={col.id}>
-                {flexRender(col.columnDef.header, col.getContext())}
+                {/* Use header string directly if available */}
+                {typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id}
               </MenuItem>
             ))}
           </Select>
@@ -333,7 +324,7 @@ const EstoquePage = () => {
                       key={header.id}
                       colSpan={header.colSpan}
                       sortDirection={header.column.getIsSorted()}
-                      sx={{ fontWeight: 'bold' }} // Make headers bold
+                      sx={{ fontWeight: 'bold' }} 
                     >
                       {header.isPlaceholder ? null : (
                         <Box
@@ -343,7 +334,8 @@ const EstoquePage = () => {
                             gap: 0.5,
                             cursor: header.column.getCanSort() ? 'pointer' : 'default',
                           }}
-                          onClick={header.column.getToggleSortingHandler()}
+                          // Use onClick only if the column can be sorted
+                          onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                         >
                           {flexRender(
                             header.column.columnDef.header,
@@ -352,13 +344,13 @@ const EstoquePage = () => {
                           {header.column.getCanSort() && (
                             <TableSortLabel
                               active={!!header.column.getIsSorted()}
+                              // Provide direction explicitly, fallback to 'asc'
                               direction={header.column.getIsSorted() || 'asc'}
-                              sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} // Make sort icon slightly less prominent
+                              sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
                             />
                           )}
                         </Box>
                       )}
-                      {/* Render Column Filter */}
                       {header.column.getCanFilter() ? (
                         <Box sx={{ mt: 1 }}>
                           <Filter column={header.column} table={table} />
@@ -376,55 +368,57 @@ const EstoquePage = () => {
                     key={row.id}
                     sx={{ 
                       '&:hover': { bgcolor: 'action.hover' },
-                      // Apply slight background color to grouped rows
                       ...(row.getIsGrouped() && { bgcolor: 'grey.100' }), 
                     }}
                   >
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell 
-                        key={cell.id}
-                        sx={{ 
-                          // Style grouped cells
-                          ...(cell.getIsGrouped() && { 
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                          }),
-                          // Style aggregated cells
-                          ...(cell.getIsAggregated() && { 
-                            fontWeight: 'bold',
-                            color: 'text.secondary'
-                          }),
-                          // Style placeholder cells in grouped rows
-                          ...(cell.getIsPlaceholder() && !cell.getIsAggregated() && { 
-                            bgcolor: 'grey.100' // Match grouped row background
-                          }),
-                        }}
-                        // Add onClick for grouped cells to toggle expansion
-                        onClick={cell.getIsGrouped() ? row.getToggleExpandedHandler() : undefined}
-                      >
-                        {cell.getIsGrouped() ? (
-                          // Grouped cell content with expand/collapse icon
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <IconButton size="small" onClick={row.getToggleExpandedHandler()} sx={{ p: 0 }}>
-                              {row.getIsExpanded() ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
-                            </IconButton>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())} ({row.subRows.length})
-                          </Box>
-                        ) : cell.getIsAggregated() ? (
-                          // Aggregated cell content
-                          flexRender(
-                            cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
-                            cell.getContext()
-                          )
-                        ) : cell.getIsPlaceholder() ? null : (
-                          // Normal cell content
-                          flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )
-                        )}
-                      </TableCell>
-                    ))}
+                    {/* *** CORRECTED CELL RENDERING LOGIC *** */}
+                    {row.getVisibleCells().map(cell => {
+                      const context = cell.getContext(); // Get context once
+                      return (
+                        <TableCell 
+                          key={cell.id}
+                          sx={{ 
+                            ...(cell.getIsGrouped() && { 
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                            }),
+                            ...(cell.getIsAggregated() && { 
+                              fontWeight: 'bold',
+                              color: 'text.secondary'
+                            }),
+                            ...(cell.getIsPlaceholder() && !cell.getIsAggregated() && { 
+                              bgcolor: 'grey.100' 
+                            }),
+                          }}
+                          // Add onClick for grouped cells to toggle expansion
+                          onClick={cell.getIsGrouped() ? row.getToggleExpandedHandler() : undefined}
+                        >
+                          {cell.getIsGrouped() ? (
+                            // Grouped cell content with expand/collapse icon
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <IconButton size="small" onClick={(e) => { e.stopPropagation(); row.toggleExpanded(); }} sx={{ p: 0 }}>
+                                {row.getIsExpanded() ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
+                              </IconButton>
+                              {/* Render the original cell value for the group */}
+                              {flexRender(cell.column.columnDef.cell, context)} ({row.subRows.length})
+                            </Box>
+                          ) : cell.getIsAggregated() ? (
+                            // Aggregated cell content
+                            // Use aggregatedCell if defined, otherwise fallback
+                            flexRender(
+                              cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
+                              context
+                            )
+                          ) : cell.getIsPlaceholder() ? null : (
+                            // Normal cell content
+                            flexRender(
+                              cell.column.columnDef.cell,
+                              context
+                            )
+                          )}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))
               ) : (
@@ -451,3 +445,4 @@ const EstoquePage = () => {
 };
 
 export default EstoquePage;
+
