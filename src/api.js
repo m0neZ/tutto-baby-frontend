@@ -59,18 +59,27 @@ export const fetchLowStock = async () => {
 };
 
 // Use the correct Portuguese endpoint: /fornecedores/
+// Make response handling more robust
 export const fetchSuppliers = async () => {
-  const res = await fetch(`${BASE_URL}/fornecedores/`); // Changed from /suppliers/
+  console.log(`Fetching suppliers from: ${BASE_URL}/fornecedores/`); // Add logging
+  const res = await fetch(`${BASE_URL}/fornecedores/`);
   if (!res.ok) {
+    console.error(`Failed to fetch suppliers: ${res.status} ${res.statusText}`); // Log error status
     throw new Error(`Failed to fetch suppliers: ${res.status}`);
   }
   const data = await res.json();
-  // Assuming the backend returns { fornecedores: [...] }
-  if (data && Array.isArray(data.fornecedores)) {
-      return data.fornecedores;
+  console.log("Received supplier data:", data); // Log received data
+
+  // Handle different possible structures
+  if (Array.isArray(data)) { // Case 1: Backend returns just the array [...]
+    return data;
+  } else if (data && Array.isArray(data.fornecedores)) { // Case 2: Backend returns { fornecedores: [...] }
+    return data.fornecedores;
+  } else if (data && Array.isArray(data.data)) { // Case 3: Backend returns { success: true, data: [...] } or similar
+     return data.data;
   } else {
-      console.warn("Unexpected response format from /fornecedores/ endpoint:", data);
-      return []; // Return empty array on unexpected format
+    console.warn("Unexpected response format from /fornecedores/ endpoint:", data);
+    return []; // Return empty array on unexpected format
   }
 };
 
