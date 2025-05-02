@@ -19,19 +19,17 @@ import FormHelperText from "@mui/material/FormHelperText";
 import CurrencyInput from "react-currency-input-field";
 import InputAdornment from "@mui/material/InputAdornment";
 
-// Adapter component to bridge CurrencyInput with MUI TextField
+// Adapter component (unchanged)
 const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
   props,
   ref
 ) {
   const { onChange, ...other } = props;
-
   return (
     <CurrencyInput
       {...other}
       ref={ref}
       onValueChange={(value, name, values) => {
-        // Pass the raw value string to the onChange handler
         onChange({
           target: {
             name: props.name,
@@ -69,37 +67,49 @@ const ProductForm = ({ onProductAdded }) => {
   const [loading, setLoading] = useState(true);
   const [formSuccess, setFormSuccess] = useState("");
   const [formError, setFormError] = useState("");
-  const [supplierError, setSupplierError] = useState(""); // Specific error for supplier loading
+  const [supplierError, setSupplierError] = useState("");
 
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates on unmounted component
+    let isMounted = true;
     const loadInitialData = async () => {
       console.log("[FORM DEBUG] Starting loadInitialData...");
       if (!isMounted) return;
       setLoading(true);
       setFormError("");
-      setSupplierError("");
+      setSupplierError(""); // Reset supplier error on each load attempt
+
+      let supplierFetchSuccess = false; // Track if fetch itself succeeded
 
       try {
-        console.log("[FORM DEBUG] Fetching suppliers...");
-        const supplierList = await fetchSuppliers();
-        console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
-        if (isMounted) {
-          if (Array.isArray(supplierList) && supplierList.length > 0) {
-            setSuppliers(supplierList);
-            console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
-          } else {
-            setSuppliers([]);
-            // Check if it was an empty array or actual error before setting message
-            if (!supplierList) { // Check if supplierList is null/undefined (likely fetch error)
-                setSupplierError("Erro ao carregar fornecedores.");
-            } else { // It was an empty array
-                setSupplierError("Nenhum fornecedor ativo encontrado.");
+        // Fetch Suppliers first and handle its specific errors
+        try {
+          console.log("[FORM DEBUG] Fetching suppliers...");
+          const supplierList = await fetchSuppliers();
+          supplierFetchSuccess = true; // Mark fetch as successful
+          console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
+          if (isMounted) {
+            if (Array.isArray(supplierList) && supplierList.length > 0) {
+              setSuppliers(supplierList);
+              console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
+            } else {
+              setSuppliers([]);
+              // Set error message specifically for empty list after successful fetch
+              setSupplierError("Nenhum fornecedor ativo encontrado no banco de dados."); 
+              console.warn("[FORM DEBUG] Successfully fetched suppliers, but the list is empty.");
             }
-            console.warn("[FORM DEBUG] No suppliers found or invalid format.");
           }
+        } catch (supplierErr) {
+          console.error("[FORM DEBUG] Error fetching suppliers:", supplierErr);
+          if (isMounted) {
+            setSuppliers([]); // Ensure suppliers is empty on error
+            // Set specific error message for fetch failure
+            setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`); 
+          }
+          // Do not proceed if suppliers failed to load
+          throw new Error("Supplier fetch failed, stopping initial data load."); 
         }
 
+        // Fetch other data only if suppliers loaded successfully (or fetch succeeded with empty list)
         console.log("[FORM DEBUG] Fetching products, sizes, colors...");
         const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
@@ -114,15 +124,16 @@ const ProductForm = ({ onProductAdded }) => {
           console.log("[FORM DEBUG] Products, sizes, colors state updated.");
         }
       } catch (err) {
-        console.error("[FORM DEBUG] Error loading initial form data:", err);
+        // This catch block now primarily handles errors from fetching products, sizes, colors,
+        // or the re-thrown error if supplier fetch failed.
+        console.error("[FORM DEBUG] Error during secondary data load:", err);
         if (isMounted) {
-          setFormError(
-            `Erro ao carregar dados: ${err.message}. Verifique a conexão com o backend.`
-          );
-          // If the error specifically mentions suppliers, update supplierError
-          if (err.message.toLowerCase().includes("suppliers") || err.message.toLowerCase().includes("fornecedores")) {
-            setSupplierError(`Erro ao carregar fornecedores: ${err.message}`);
-            setSuppliers([]); // Ensure suppliers is empty on error
+          // If supplier fetch failed, the specific error is already set.
+          // Otherwise, set a general form error.
+          if (!supplierError) { 
+            setFormError(
+              `Erro ao carregar dados adicionais: ${err.message}. Verifique a conexão.`
+            );
           }
         }
       } finally {
@@ -135,19 +146,17 @@ const ProductForm = ({ onProductAdded }) => {
 
     loadInitialData();
 
-    // Cleanup function
     return () => {
       isMounted = false;
       console.log("[FORM DEBUG] ProductForm unmounted or dependency changed.");
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []); // Empty dependency array
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Specific handler for Autocomplete changes
   const handleAutocompleteChange = (event, newValue) => {
     const nameValue =
       typeof newValue === "string" ? newValue : newValue?.label || "";
@@ -164,7 +173,7 @@ const ProductForm = ({ onProductAdded }) => {
     setFormSuccess("");
     setLoading(true);
 
-    // --- Validation --- 
+    // --- Validation (unchanged) --- 
     const requiredFields = {
       name: "Nome",
       gender: "Sexo",
@@ -175,36 +184,28 @@ const ProductForm = ({ onProductAdded }) => {
       retailPrice: "Preço Venda",
       quantity: "Quantidade",
     };
-
     const missingFields = Object.entries(requiredFields)
       .filter(([key]) => !formData[key] || String(formData[key]).trim() === "")
       .map(([, label]) => label);
-
     if (missingFields.length > 0) {
       setFormError(`Campos obrigatórios faltando: ${missingFields.join(", ")}.`);
       setLoading(false);
       return;
     }
-
-    // Convert currency strings (like "123,45") to numbers
     const parseCurrency = (value) => {
       if (typeof value !== 'string') return NaN;
-      // Remove R$, thousand separators (.), replace decimal comma with dot
       const cleanedValue = value.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.');
       return parseFloat(cleanedValue);
     };
-
     const parsedSupplierId = parseInt(formData.supplierId);
     const parsedCost = parseCurrency(formData.cost);
     const parsedRetailPrice = parseCurrency(formData.retailPrice);
     const parsedQuantity = parseInt(formData.quantity);
-
     const invalidNumericFields = [];
     if (isNaN(parsedSupplierId)) invalidNumericFields.push("Fornecedor");
     if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
     if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
     if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
-
     if (invalidNumericFields.length > 0) {
       setFormError(
         `Valores inválidos inseridos nos campos numéricos. Verifique ${invalidNumericFields.join(", ")}.`
@@ -212,12 +213,10 @@ const ProductForm = ({ onProductAdded }) => {
       setLoading(false);
       return;
     }
-
     const negativeFields = [];
     if (parsedCost < 0) negativeFields.push("Custo");
     if (parsedRetailPrice < 0) negativeFields.push("Preço Venda");
     if (parsedQuantity < 0) negativeFields.push("Quantidade");
-
     if (negativeFields.length > 0) {
       setFormError(
         `Valores não podem ser negativos: ${negativeFields.join(", ")}.`
@@ -265,12 +264,10 @@ const ProductForm = ({ onProductAdded }) => {
   );
 
   // Determine if supplier field should be disabled
-  const isSupplierDisabled = loading || suppliers.length === 0;
+  const isSupplierDisabled = loading || !!supplierError || suppliers.length === 0;
 
   return (
-    // Use Box with padding for overall form spacing
     <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 1 }}> 
-      {/* Grid container with consistent spacing */}
       <Grid container spacing={2}> 
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
@@ -294,7 +291,7 @@ const ProductForm = ({ onProductAdded }) => {
                 fullWidth
                 variant="outlined"
                 size="small"
-                helperText={!formData.name ? "Nome é obrigatório" : " "} // Reserve space
+                helperText={!formData.name ? "Nome é obrigatório" : " "} 
                 error={!formData.name}
               />
             )}
@@ -313,9 +310,7 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading}
             >
-              <MenuItem value="">
-                <em>Selecione...</em>
-              </MenuItem>
+              <MenuItem value=""><em>Selecione...</em></MenuItem>
               <MenuItem value="Masculino">Masculino</MenuItem>
               <MenuItem value="Feminino">Feminino</MenuItem>
               <MenuItem value="Unissex">Unissex</MenuItem>
@@ -334,9 +329,7 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading || sizeOptions.length === 0}
             >
-              <MenuItem value="">
-                <em>Selecione...</em>
-              </MenuItem>
+              <MenuItem value=""><em>Selecione...</em></MenuItem>
               {sizeOptions.map((opt) => (
                 <MenuItem key={opt.id} value={opt.value}>
                   {opt.value}
@@ -359,9 +352,7 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={loading || colorOptions.length === 0}
             >
-              <MenuItem value="">
-                <em>Selecione...</em>
-              </MenuItem>
+              <MenuItem value=""><em>Selecione...</em></MenuItem>
               {colorOptions.map((opt) => (
                 <MenuItem key={opt.id} value={opt.value}>
                   {opt.value}
@@ -381,11 +372,10 @@ const ProductForm = ({ onProductAdded }) => {
               label="Fornecedor"
               onChange={handleChange}
               disabled={isSupplierDisabled}
-              displayEmpty // Important to show placeholder when value is ""
+              displayEmpty 
             >
               <MenuItem value="" disabled>
-                {/* More informative placeholder based on state */}
-                <em>{loading ? "Carregando..." : (supplierError ? "Erro ao carregar" : (suppliers.length === 0 ? "Nenhum encontrado" : "Selecione..."))}</em>
+                <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
               </MenuItem>
               {Array.isArray(suppliers) && suppliers.map((s) => (
                 <MenuItem key={s.id} value={s.id}>
@@ -393,7 +383,6 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {/* Show specific supplier error or general required message */}
             <FormHelperText error={!!supplierError || (!loading && !formData.supplierId)}>
               {supplierError ? supplierError : (!loading && !formData.supplierId ? "Fornecedor é obrigatório" : " ")}
             </FormHelperText>
@@ -406,11 +395,11 @@ const ProductForm = ({ onProductAdded }) => {
             label="Custo"
             name="cost"
             value={formData.cost}
-            onChange={handleChange} // Use standard handleChange
+            onChange={handleChange} 
             required
             fullWidth
             variant="outlined"
-            size="small" // Apply size="small" for consistency
+            size="small" 
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -426,11 +415,11 @@ const ProductForm = ({ onProductAdded }) => {
             label="Preço Venda"
             name="retailPrice"
             value={formData.retailPrice}
-            onChange={handleChange} // Use standard handleChange
+            onChange={handleChange} 
             required
             fullWidth
             variant="outlined"
-            size="small" // Apply size="small" for consistency
+            size="small" 
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
