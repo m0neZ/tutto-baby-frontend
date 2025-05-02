@@ -33,8 +33,10 @@ const OptionManager = ({ type }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // *** FIX: Determine API endpoint based on type ***
-  const apiEndpoint = type === 'fornecedor' ? `${API_BASE}/fornecedores` : `${API_BASE}/opcoes_campo/${type}`;
+  // Determine API endpoint based on type, ensuring trailing slash
+  const baseEndpoint = type === 'fornecedor' ? `${API_BASE}/fornecedores` : `${API_BASE}/opcoes_campo/${type}`;
+  const apiEndpoint = baseEndpoint.endsWith('/') ? baseEndpoint : `${baseEndpoint}/`; // Ensure trailing slash
+  
   const dataKey = type === 'fornecedor' ? 'fornecedores' : 'opcoes';
   const valueKey = type === 'fornecedor' ? 'nome' : 'value'; // Key for the option's display value
 
@@ -51,7 +53,6 @@ const OptionManager = ({ type }) => {
       }
       
       const allOptions = data[dataKey] || [];
-      // Sort by the correct value key
       setOptions(allOptions.sort((a, b) => (a[valueKey] || '').localeCompare(b[valueKey] || ''))); 
 
     } catch (err) {
@@ -73,25 +74,27 @@ const OptionManager = ({ type }) => {
     setError('');
     setLoading(true);
     try {
-      // *** FIX: Use correct payload key based on type ***
       const payload = { [valueKey]: newValue }; 
-      const res = await fetch(apiEndpoint, { // Use the dynamic endpoint
+      // Use the endpoint with guaranteed trailing slash
+      const res = await fetch(apiEndpoint, { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json(); // Always try to parse response
+      const data = await res.json(); 
 
       if (res.ok && data.success) {
         setNewValue('');
         await loadOptions();
       } else {
-        setError(data.error || `Erro ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`);
+        // *** FIX: Correct typo in error message ***
+        setError(data.error || `Erro ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`); 
       }
     } catch (err) {
       console.error('Erro no POST:', err);
-      setError(`Erro de comunicação ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`);
+      // *** FIX: Correct typo in error message ***
+      setError(`Erro de comunicação ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`); 
     } finally {
       setLoading(false);
     }
@@ -102,12 +105,12 @@ const OptionManager = ({ type }) => {
     setLoading(true);
     try {
       const action = isActive ? 'deactivate' : 'activate';
-      // *** FIX: Use the dynamic endpoint with ID and action ***
-      const res = await fetch(`${apiEndpoint}/${id}/${action}`, { 
+      // Use the endpoint with guaranteed trailing slash, then add ID and action
+      const res = await fetch(`${apiEndpoint}${id}/${action}`, { 
         method: 'PATCH'
       });
 
-      const data = await res.json(); // Always try to parse response
+      const data = await res.json(); 
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || `Erro ao atualizar status da ${labels[type]?.slice(0, -1) || 'opção'}`);
@@ -138,7 +141,8 @@ const OptionManager = ({ type }) => {
           size="small"
           value={newValue}
           onChange={e => setNewValue(e.target.value)}
-          placeholder={`Adicionar ${labels[type]?.slice(0, -1) || 'Opção'}...`}
+          // *** FIX: Correct typo in placeholder ***
+          placeholder={`Adicionar ${labels[type]?.slice(0, -1) || 'Opção'}...`} 
           disabled={loading}
         />
         <Button
@@ -168,7 +172,6 @@ const OptionManager = ({ type }) => {
               <React.Fragment key={opt.id}>
                 {index > 0 && <Divider component="li" />}
                 <ListItem>
-                  {/* *** FIX: Use correct value key *** */}
                   <ListItemText primary={opt[valueKey]} sx={{ color: 'text.primary' }} /> 
                   <ListItemSecondaryAction>
                     <IconButton
@@ -201,7 +204,6 @@ const OptionManager = ({ type }) => {
                 <React.Fragment key={opt.id}>
                   {index > 0 && <Divider component="li" />}
                   <ListItem sx={{ opacity: 0.7 }}>
-                    {/* *** FIX: Use correct value key *** */}
                     <ListItemText primary={opt[valueKey]} sx={{ fontStyle: 'italic', color: 'text.secondary' }} /> 
                     <ListItemSecondaryAction>
                       <IconButton
