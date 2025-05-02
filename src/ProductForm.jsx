@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, forwardRef } from "react";
 import {
   createProduct,
   fetchSuppliers,
@@ -19,8 +19,37 @@ import FormHelperText from "@mui/material/FormHelperText";
 import CurrencyInput from "react-currency-input-field";
 import InputAdornment from "@mui/material/InputAdornment";
 
+// Adapter component to bridge CurrencyInput with MUI TextField
+const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
+  props,
+  ref
+) {
+  const { onChange, ...other } = props;
+
+  return (
+    <CurrencyInput
+      {...other}
+      ref={ref}
+      onValueChange={(value, name, values) => {
+        // Pass the raw value string to the onChange handler
+        onChange({
+          target: {
+            name: props.name,
+            value: value === undefined || value === null ? "" : String(value),
+          },
+        });
+      }}
+      allowNegativeValue={false}
+      decimalSeparator=","
+      groupSeparator="."
+      decimalsLimit={2}
+      prefix=""
+    />
+  );
+});
+
 const ProductForm = ({ onProductAdded }) => {
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     name: "",
     gender: "",
     size: "",
@@ -30,7 +59,8 @@ const ProductForm = ({ onProductAdded }) => {
     retailPrice: "",
     quantity: "",
     purchaseDate: "",
-  });
+  };
+  const [formData, setFormData] = useState(initialFormData);
 
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -39,18 +69,31 @@ const ProductForm = ({ onProductAdded }) => {
   const [loading, setLoading] = useState(true);
   const [formSuccess, setFormSuccess] = useState("");
   const [formError, setFormError] = useState("");
+  const [supplierError, setSupplierError] = useState(""); // Specific error for supplier loading
 
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates on unmounted component
     const loadInitialData = async () => {
       console.log("[FORM DEBUG] Starting loadInitialData...");
+      if (!isMounted) return;
       setLoading(true);
       setFormError("");
+      setSupplierError("");
+
       try {
         console.log("[FORM DEBUG] Fetching suppliers...");
         const supplierList = await fetchSuppliers();
-        console.log("[FORM DEBUG] Fetched Suppliers in Form:", supplierList);
-        setSuppliers(supplierList || []);
-        console.log("[FORM DEBUG] Suppliers state updated.");
+        console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
+        if (isMounted) {
+          if (Array.isArray(supplierList) && supplierList.length > 0) {
+            setSuppliers(supplierList);
+            console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
+          } else {
+            setSuppliers([]);
+            setSupplierError("Nenhum fornecedor ativo encontrado.");
+            console.warn("[FORM DEBUG] No suppliers found or invalid format.");
+          }
+        }
 
         console.log("[FORM DEBUG] Fetching products, sizes, colors...");
         const [productList, sizeOpts, colorOpts] = await Promise.all([
@@ -59,32 +102,55 @@ const ProductForm = ({ onProductAdded }) => {
           fetchFieldOptions("cor_estampa"),
         ]);
         console.log("[FORM DEBUG] Fetched products, sizes, colors.");
-        setProducts(productList || []);
-        setSizeOptions(sizeOpts || []);
-        setColorOptions(colorOpts || []);
-        console.log("[FORM DEBUG] Products, sizes, colors state updated.");
-
+        if (isMounted) {
+          setProducts(productList || []);
+          setSizeOptions(sizeOpts || []);
+          setColorOptions(colorOpts || []);
+          console.log("[FORM DEBUG] Products, sizes, colors state updated.");
+        }
       } catch (err) {
         console.error("[FORM DEBUG] Error loading initial form data:", err);
-        setFormError(
-          `Erro ao carregar dados iniciais do formulário: ${err.message}`
-        );
+        if (isMounted) {
+          setFormError(
+            `Erro ao carregar dados: ${err.message}. Verifique a conexão com o backend.`
+          );
+          // If the error specifically mentions suppliers, update supplierError
+          if (err.message.toLowerCase().includes("suppliers") || err.message.toLowerCase().includes("fornecedores")) {
+            setSupplierError(`Erro ao carregar fornecedores: ${err.message}`);
+            setSuppliers([]); // Ensure suppliers is empty on error
+          }
+        }
       } finally {
-        setLoading(false);
-        console.log("[FORM DEBUG] loadInitialData finished.");
+        if (isMounted) {
+          setLoading(false);
+          console.log("[FORM DEBUG] loadInitialData finished.");
+        }
       }
     };
 
     loadInitialData();
-  }, []);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      console.log("[FORM DEBUG] ProductForm unmounted or dependency changed.");
+    };
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCurrencyChange = (value, name) => {
-    setFormData((prev) => ({ ...prev, [name]: value || "" }));
+  // Specific handler for Autocomplete changes
+  const handleAutocompleteChange = (event, newValue) => {
+    const nameValue =
+      typeof newValue === "string" ? newValue : newValue?.label || "";
+    setFormData((prev) => ({ ...prev, name: nameValue }));
+  };
+
+  const handleAutocompleteInputChange = (event, newInputValue) => {
+    setFormData((prev) => ({ ...prev, name: newInputValue }));
   };
 
   const handleSubmit = async (e) => {
@@ -93,58 +159,70 @@ const ProductForm = ({ onProductAdded }) => {
     setFormSuccess("");
     setLoading(true);
 
+    // --- Validation --- 
+    const requiredFields = {
+      name: "Nome",
+      gender: "Sexo",
+      size: "Tamanho",
+      colorPrint: "Cor/Estampa",
+      supplierId: "Fornecedor",
+      cost: "Custo",
+      retailPrice: "Preço Venda",
+      quantity: "Quantidade",
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key]) => !formData[key] || String(formData[key]).trim() === "")
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
+      setFormError(`Campos obrigatórios faltando: ${missingFields.join(", ")}.`);
+      setLoading(false);
+      return;
+    }
+
+    // Convert currency strings (like "123,45") to numbers
+    const parseCurrency = (value) => {
+      if (typeof value !== 'string') return NaN;
+      // Remove R$, thousand separators (.), replace decimal comma with dot
+      const cleanedValue = value.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.');
+      return parseFloat(cleanedValue);
+    };
+
+    const parsedSupplierId = parseInt(formData.supplierId);
+    const parsedCost = parseCurrency(formData.cost);
+    const parsedRetailPrice = parseCurrency(formData.retailPrice);
+    const parsedQuantity = parseInt(formData.quantity);
+
+    const invalidNumericFields = [];
+    if (isNaN(parsedSupplierId)) invalidNumericFields.push("Fornecedor");
+    if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
+    if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
+    if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
+
+    if (invalidNumericFields.length > 0) {
+      setFormError(
+        `Valores inválidos inseridos nos campos numéricos. Verifique ${invalidNumericFields.join(", ")}.`
+      );
+      setLoading(false);
+      return;
+    }
+
+    const negativeFields = [];
+    if (parsedCost < 0) negativeFields.push("Custo");
+    if (parsedRetailPrice < 0) negativeFields.push("Preço Venda");
+    if (parsedQuantity < 0) negativeFields.push("Quantidade");
+
+    if (negativeFields.length > 0) {
+      setFormError(
+        `Valores não podem ser negativos: ${negativeFields.join(", ")}.`
+      );
+      setLoading(false);
+      return;
+    }
+    // --- End Validation ---
+
     try {
-      const requiredFields = {
-        name: "Nome",
-        gender: "Sexo",
-        size: "Tamanho",
-        colorPrint: "Cor/Estampa",
-        supplierId: "Fornecedor",
-        cost: "Custo",
-        retailPrice: "Preço Venda",
-        quantity: "Quantidade",
-      };
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([key]) => !formData[key] || String(formData[key]).trim() === "")
-        .map(([, label]) => label);
-
-      if (missingFields.length > 0) {
-        throw new Error(
-          `Campos obrigatórios faltando: ${missingFields.join(", ")}.`
-        );
-      }
-
-      const parsedSupplierId = parseInt(formData.supplierId);
-      const parsedCost = parseFloat(formData.cost);
-      const parsedRetailPrice = parseFloat(formData.retailPrice);
-      const parsedQuantity = parseInt(formData.quantity);
-
-      const invalidNumericFields = [];
-      if (isNaN(parsedSupplierId) || formData.supplierId === "") invalidNumericFields.push("Fornecedor");
-      if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
-      if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
-      if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
-
-      if (invalidNumericFields.length > 0) {
-        throw new Error(
-          `Valores inválidos inseridos nos campos numéricos. Verifique ${invalidNumericFields.join(
-            ", "
-          )}.`
-        );
-      }
-
-      const negativeFields = [];
-      if (parsedCost < 0) negativeFields.push("Custo");
-      if (parsedRetailPrice < 0) negativeFields.push("Preço Venda");
-      if (parsedQuantity < 0) negativeFields.push("Quantidade");
-
-      if (negativeFields.length > 0) {
-        throw new Error(
-          `Valores não podem ser negativos: ${negativeFields.join(", ")}.`
-        );
-      }
-
       const payload = {
         nome: formData.name.trim(),
         sexo: formData.gender,
@@ -157,28 +235,20 @@ const ProductForm = ({ onProductAdded }) => {
         data_compra: formData.purchaseDate || null,
       };
 
+      console.log("[FORM DEBUG] Submitting payload:", payload);
       const response = await createProduct(payload);
+      console.log("[FORM DEBUG] Create product response:", response);
 
       if (response.success) {
         setFormSuccess("Produto adicionado com sucesso!");
-        setFormData({
-          name: "",
-          gender: "",
-          size: "",
-          colorPrint: "",
-          supplierId: "",
-          cost: "",
-          retailPrice: "",
-          quantity: "",
-          purchaseDate: "",
-        });
-        if (onProductAdded) onProductAdded();
+        setFormData(initialFormData); // Reset form
+        if (onProductAdded) onProductAdded(); // Trigger refresh in parent
       } else {
-        setFormError(response.error || "Falha ao adicionar produto.");
+        setFormError(response.error || "Falha ao adicionar produto. Verifique os dados.");
       }
     } catch (err) {
-      console.error("Submit error:", err);
-      setFormError(err.message || "Erro ao enviar o formulário.");
+      console.error("[FORM DEBUG] Submit error:", err);
+      setFormError(err.message || "Erro ao enviar o formulário. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -189,10 +259,12 @@ const ProductForm = ({ onProductAdded }) => {
     [products]
   );
 
+  // Determine if supplier field should be disabled
+  const isSupplierDisabled = loading || suppliers.length === 0;
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      {/* Use consistent spacing */}
-      <Grid container spacing={2}>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, padding: '0 8px' }}> {/* Add slight horizontal padding */}
+      <Grid container spacing={2.5}> {/* Increased spacing slightly */}
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Autocomplete
@@ -202,16 +274,10 @@ const ProductForm = ({ onProductAdded }) => {
               typeof option === "string" ? option : option.label || ""
             }
             value={formData.name}
-            onChange={(event, newValue) => {
-              const nameValue =
-                typeof newValue === "string" ? newValue : newValue?.label || "";
-              setFormData((prev) => ({ ...prev, name: nameValue }));
-            }}
-            onInputChange={(event, newInputValue) => {
-              setFormData((prev) => ({ ...prev, name: newInputValue }));
-            }}
+            onChange={handleAutocompleteChange}
+            onInputChange={handleAutocompleteInputChange}
             disabled={loading}
-            size="small" // Keep other fields small for consistency
+            size="small"
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -219,22 +285,18 @@ const ProductForm = ({ onProductAdded }) => {
                 name="name"
                 required
                 fullWidth
-                error={!formData.name}
-                helperText={
-                  !formData.name
-                    ? "Nome é obrigatório"
-                    : "Digite ou selecione um nome existente"
-                }
                 variant="outlined"
                 size="small"
+                helperText={!formData.name ? "Nome é obrigatório" : " "} // Reserve space for helper text
+                error={!formData.name}
               />
             )}
           />
         </Grid>
 
-        {/* Row 2: Sexo, Tamanho (Equal Width) */}
+        {/* Row 2: Sexo, Tamanho */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.gender} size="small">
+          <FormControl fullWidth required size="small" error={!formData.gender}>
             <InputLabel id="gender-label">Sexo</InputLabel>
             <Select
               labelId="gender-label"
@@ -251,11 +313,11 @@ const ProductForm = ({ onProductAdded }) => {
               <MenuItem value="Feminino">Feminino</MenuItem>
               <MenuItem value="Unissex">Unissex</MenuItem>
             </Select>
-            {!formData.gender && <FormHelperText>Sexo é obrigatório</FormHelperText>}
+            <FormHelperText>{!formData.gender ? "Sexo é obrigatório" : " "}</FormHelperText>
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required error={!formData.size} size="small">
+          <FormControl fullWidth required size="small" error={!formData.size}>
             <InputLabel id="size-label">Tamanho</InputLabel>
             <Select
               labelId="size-label"
@@ -274,18 +336,13 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {!formData.size && <FormHelperText>Tamanho é obrigatório</FormHelperText>}
+            <FormHelperText>{!formData.size ? "Tamanho é obrigatório" : " "}</FormHelperText>
           </FormControl>
         </Grid>
 
-        {/* Row 3: Cor/Estampa, Fornecedor (Equal Width) */}
+        {/* Row 3: Cor/Estampa, Fornecedor */}
         <Grid item xs={12} sm={6}>
-          <FormControl
-            fullWidth
-            required
-            error={!formData.colorPrint}
-            size="small"
-          >
+          <FormControl fullWidth required size="small" error={!formData.colorPrint}>
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
@@ -304,18 +361,11 @@ const ProductForm = ({ onProductAdded }) => {
                 </MenuItem>
               ))}
             </Select>
-            {!formData.colorPrint && (
-              <FormHelperText>Cor/Estampa é obrigatório</FormHelperText>
-            )}
+            <FormHelperText>{!formData.colorPrint ? "Cor/Estampa é obrigatório" : " "}</FormHelperText>
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl
-            fullWidth
-            required
-            error={(!loading && suppliers.length === 0) || !formData.supplierId}
-            size="small"
-          >
+          <FormControl fullWidth required size="small" error={(!loading && !formData.supplierId) || !!supplierError}>
             <InputLabel id="supplier-label">Fornecedor</InputLabel>
             <Select
               labelId="supplier-label"
@@ -323,58 +373,44 @@ const ProductForm = ({ onProductAdded }) => {
               value={formData.supplierId}
               label="Fornecedor"
               onChange={handleChange}
-              disabled={loading || suppliers.length === 0}
+              disabled={isSupplierDisabled}
+              displayEmpty // Important to show placeholder when value is ""
             >
-              <MenuItem value="">
-                <em>Selecione...</em>
+              <MenuItem value="" disabled>
+                <em>{loading ? "Carregando..." : "Selecione..."}</em>
               </MenuItem>
-              {Array.isArray(suppliers) &&
-                suppliers.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>
-                    {s.nome}
-                  </MenuItem>
-                ))}
+              {Array.isArray(suppliers) && suppliers.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.nome}
+                </MenuItem>
+              ))}
             </Select>
-            {!formData.supplierId && !loading && suppliers.length > 0 && (
-              <FormHelperText>Fornecedor é obrigatório</FormHelperText>
-            )}
-            {!loading && suppliers.length === 0 && (
-              <FormHelperText error>Nenhum fornecedor encontrado.</FormHelperText>
-            )}
+            {/* Show specific supplier error or general required message */}
+            <FormHelperText error={!!supplierError || (!loading && !formData.supplierId)}>
+              {supplierError ? supplierError : (!loading && !formData.supplierId ? "Fornecedor é obrigatório" : " ")}
+            </FormHelperText>
           </FormControl>
         </Grid>
 
-        {/* Row 4: Custo, Preço Venda, Quantidade (Equal Width) */}
+        {/* Row 4: Custo, Preço Venda, Quantidade */}
         <Grid item xs={12} sm={4}>
           <TextField
             label="Custo"
             name="cost"
             value={formData.cost}
-            onChange={(e) => handleCurrencyChange(e.target.value, "cost")}
+            onChange={handleChange} // Use standard handleChange
             required
             fullWidth
-            error={formData.cost === "" || parseFloat(formData.cost) < 0}
-            helperText={
-              formData.cost === ""
-                ? "Obrigatório"
-                : parseFloat(formData.cost) < 0
-                ? "Inválido"
-                : ""
-            }
             variant="outlined"
-            // Remove size="small" to make it taller
+            // Standard height (remove size="small")
             InputProps={{
               inputComponent: CurrencyInputAdapter,
-              inputProps: {
-                decimalSeparator: ",",
-                groupSeparator: ".",
-                decimalsLimit: 2,
-                allowNegativeValue: false,
-              },
               startAdornment: (
                 <InputAdornment position="start">R$</InputAdornment>
               ),
             }}
+            helperText={!formData.cost ? "Obrigatório" : " "}
+            error={!formData.cost}
           />
         </Grid>
         <Grid item xs={12} sm={4}>
@@ -382,34 +418,19 @@ const ProductForm = ({ onProductAdded }) => {
             label="Preço Venda"
             name="retailPrice"
             value={formData.retailPrice}
-            onChange={(e) => handleCurrencyChange(e.target.value, "retailPrice")}
+            onChange={handleChange} // Use standard handleChange
             required
             fullWidth
-            error={
-              formData.retailPrice === "" ||
-              parseFloat(formData.retailPrice) < 0
-            }
-            helperText={
-              formData.retailPrice === ""
-                ? "Obrigatório"
-                : parseFloat(formData.retailPrice) < 0
-                ? "Inválido"
-                : ""
-            }
             variant="outlined"
-            // Remove size="small" to make it taller
+            // Standard height (remove size="small")
             InputProps={{
               inputComponent: CurrencyInputAdapter,
-              inputProps: {
-                decimalSeparator: ",",
-                groupSeparator: ".",
-                decimalsLimit: 2,
-                allowNegativeValue: false,
-              },
               startAdornment: (
                 <InputAdornment position="start">R$</InputAdornment>
               ),
             }}
+            helperText={!formData.retailPrice ? "Obrigatório" : " "}
+            error={!formData.retailPrice}
           />
         </Grid>
         <Grid item xs={12} sm={4}>
@@ -421,17 +442,11 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            inputProps={{ min: "0", step: "1" }}
-            error={formData.quantity === "" || parseInt(formData.quantity) < 0}
-            helperText={
-              formData.quantity === ""
-                ? "Obrigatório"
-                : parseInt(formData.quantity) < 0
-                ? "Inválido"
-                : ""
-            }
             variant="outlined"
-            size="small" // Keep other fields small
+            size="small" // Keep quantity small
+            inputProps={{ min: "0", step: "1" }}
+            helperText={!formData.quantity ? "Obrigatório" : " "}
+            error={!formData.quantity || parseInt(formData.quantity) < 0}
           />
         </Grid>
 
@@ -444,27 +459,30 @@ const ProductForm = ({ onProductAdded }) => {
             value={formData.purchaseDate}
             onChange={handleChange}
             fullWidth
+            variant="outlined"
+            size="small"
             InputLabelProps={{
               shrink: true,
             }}
-            variant="outlined"
-            size="small" // Keep other fields small
+            helperText=" " // Reserve space
           />
         </Grid>
       </Grid>
 
+      {/* General Form Error/Success Messages */}
       {formError && (
-        <Alert severity="error" sx={{ mt: 2, mb: 1 }}>
+        <Alert severity="error" sx={{ mt: 2.5, mb: 1 }}>
           {formError}
         </Alert>
       )}
       {formSuccess && (
-        <Alert severity="success" sx={{ mt: 2, mb: 1 }}>
+        <Alert severity="success" sx={{ mt: 2.5, mb: 1 }}>
           {formSuccess}
         </Alert>
       )}
 
-      <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+      {/* Submit Button */}
+      <Box sx={{ mt: 3, mb: 1, display: "flex", justifyContent: "flex-end" }}>
         <Button type="submit" variant="contained" disabled={loading}>
           {loading ? "Adicionando..." : "Adicionar Produto"}
         </Button>
@@ -472,40 +490,5 @@ const ProductForm = ({ onProductAdded }) => {
     </Box>
   );
 };
-
-// Adapter component to bridge CurrencyInput with MUI TextField
-const CurrencyInputAdapter = React.forwardRef(function CurrencyInputAdapter(
-  props,
-  ref
-) {
-  const { onChange, ...other } = props;
-
-  return (
-    <CurrencyInput
-      {...other}
-      ref={ref}
-      onValueChange={(value, name, values) => {
-        onChange({
-          target: {
-            name: props.name,
-            value: value,
-          },
-        });
-      }}
-      placeholder=""
-      prefix=""
-      style={{
-          padding: 0,
-          border: "none",
-          fontSize: "inherit",
-          fontFamily: "inherit",
-          backgroundColor: "transparent",
-          outline: "none",
-          width: "100%",
-          // Remove explicit height/lineHeight to inherit from parent TextField
-      }}
-    />
-  );
-});
 
 export default ProductForm;
