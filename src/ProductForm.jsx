@@ -18,10 +18,6 @@ import Autocomplete from "@mui/material/Autocomplete";
 import FormHelperText from "@mui/material/FormHelperText";
 import CurrencyInput from "react-currency-input-field";
 import InputAdornment from "@mui/material/InputAdornment";
-import { styled } from "@mui/material/styles";
-
-// Custom Input component that integrates CurrencyInput with MUI styling
-// Removed - Using InputProps.inputComponent directly is simpler
 
 const ProductForm = ({ onProductAdded }) => {
   const [formData, setFormData] = useState({
@@ -46,25 +42,36 @@ const ProductForm = ({ onProductAdded }) => {
 
   useEffect(() => {
     const loadInitialData = async () => {
+      console.log("[FORM DEBUG] Starting loadInitialData...");
       setLoading(true);
       setFormError("");
       try {
-        const [supplierList, productList, sizeOpts, colorOpts] = await Promise.all([
-          fetchSuppliers(),
+        console.log("[FORM DEBUG] Fetching suppliers...");
+        const supplierList = await fetchSuppliers();
+        console.log("[FORM DEBUG] Fetched Suppliers in Form:", supplierList);
+        setSuppliers(supplierList || []);
+        console.log("[FORM DEBUG] Suppliers state updated.");
+
+        console.log("[FORM DEBUG] Fetching products, sizes, colors...");
+        const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
           fetchFieldOptions("tamanho"),
           fetchFieldOptions("cor_estampa"),
         ]);
-        console.log("Fetched Suppliers in Form:", supplierList);
-        setSuppliers(supplierList || []);
+        console.log("[FORM DEBUG] Fetched products, sizes, colors.");
         setProducts(productList || []);
         setSizeOptions(sizeOpts || []);
         setColorOptions(colorOpts || []);
+        console.log("[FORM DEBUG] Products, sizes, colors state updated.");
+
       } catch (err) {
-        console.error("Error loading initial form data:", err);
-        setFormError(`Erro ao carregar dados: ${err.message}`);
+        console.error("[FORM DEBUG] Error loading initial form data:", err);
+        setFormError(
+          `Erro ao carregar dados iniciais do formulário: ${err.message}`
+        );
       } finally {
         setLoading(false);
+        console.log("[FORM DEBUG] loadInitialData finished.");
       }
     };
 
@@ -114,7 +121,7 @@ const ProductForm = ({ onProductAdded }) => {
       const parsedQuantity = parseInt(formData.quantity);
 
       const invalidNumericFields = [];
-      if (isNaN(parsedSupplierId)) invalidNumericFields.push("Fornecedor");
+      if (isNaN(parsedSupplierId) || formData.supplierId === "") invalidNumericFields.push("Fornecedor");
       if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
       if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
       if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
@@ -184,8 +191,8 @@ const ProductForm = ({ onProductAdded }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-      {/* Consistent spacing and layout */} 
-      <Grid container spacing={2.5}> 
+      {/* Use consistent spacing */}
+      <Grid container spacing={2}>
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Autocomplete
@@ -204,7 +211,7 @@ const ProductForm = ({ onProductAdded }) => {
               setFormData((prev) => ({ ...prev, name: newInputValue }));
             }}
             disabled={loading}
-            size="small" // Consistent size
+            size="small" // Keep other fields small for consistency
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -225,7 +232,7 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 2: Sexo, Tamanho */}
+        {/* Row 2: Sexo, Tamanho (Equal Width) */}
         <Grid item xs={12} sm={6}>
           <FormControl fullWidth required error={!formData.gender} size="small">
             <InputLabel id="gender-label">Sexo</InputLabel>
@@ -271,7 +278,7 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
 
-        {/* Row 3: Cor/Estampa, Fornecedor */}
+        {/* Row 3: Cor/Estampa, Fornecedor (Equal Width) */}
         <Grid item xs={12} sm={6}>
           <FormControl
             fullWidth
@@ -306,7 +313,7 @@ const ProductForm = ({ onProductAdded }) => {
           <FormControl
             fullWidth
             required
-            error={!formData.supplierId}
+            error={(!loading && suppliers.length === 0) || !formData.supplierId}
             size="small"
           >
             <InputLabel id="supplier-label">Fornecedor</InputLabel>
@@ -328,16 +335,16 @@ const ProductForm = ({ onProductAdded }) => {
                   </MenuItem>
                 ))}
             </Select>
-            {!formData.supplierId && (
+            {!formData.supplierId && !loading && suppliers.length > 0 && (
               <FormHelperText>Fornecedor é obrigatório</FormHelperText>
             )}
-            {suppliers.length === 0 && !loading && (
-              <FormHelperText>Nenhum fornecedor encontrado.</FormHelperText>
+            {!loading && suppliers.length === 0 && (
+              <FormHelperText error>Nenhum fornecedor encontrado.</FormHelperText>
             )}
           </FormControl>
         </Grid>
 
-        {/* Row 4: Custo, Preço Venda, Quantidade */}
+        {/* Row 4: Custo, Preço Venda, Quantidade (Equal Width) */}
         <Grid item xs={12} sm={4}>
           <TextField
             label="Custo"
@@ -355,7 +362,7 @@ const ProductForm = ({ onProductAdded }) => {
                 : ""
             }
             variant="outlined"
-            size="small"
+            // Remove size="small" to make it taller
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               inputProps: {
@@ -390,7 +397,7 @@ const ProductForm = ({ onProductAdded }) => {
                 : ""
             }
             variant="outlined"
-            size="small"
+            // Remove size="small" to make it taller
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               inputProps: {
@@ -424,7 +431,7 @@ const ProductForm = ({ onProductAdded }) => {
                 : ""
             }
             variant="outlined"
-            size="small"
+            size="small" // Keep other fields small
           />
         </Grid>
 
@@ -441,24 +448,23 @@ const ProductForm = ({ onProductAdded }) => {
               shrink: true,
             }}
             variant="outlined"
-            size="small"
+            size="small" // Keep other fields small
           />
         </Grid>
       </Grid>
 
-      {/* Alerts and Submit Button */} 
       {formError && (
-        <Alert severity="error" sx={{ mt: 2.5, mb: 1 }}>
+        <Alert severity="error" sx={{ mt: 2, mb: 1 }}>
           {formError}
         </Alert>
       )}
       {formSuccess && (
-        <Alert severity="success" sx={{ mt: 2.5, mb: 1 }}>
+        <Alert severity="success" sx={{ mt: 2, mb: 1 }}>
           {formSuccess}
         </Alert>
       )}
 
-      <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
+      <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
         <Button type="submit" variant="contained" disabled={loading}>
           {loading ? "Adicionando..." : "Adicionar Produto"}
         </Button>
@@ -488,15 +494,15 @@ const CurrencyInputAdapter = React.forwardRef(function CurrencyInputAdapter(
       }}
       placeholder=""
       prefix=""
-      // Apply basic styles to match TextField size="small"
-      style={{ 
-          padding: 0, // Padding is handled by TextField
-          border: "none", 
-          fontSize: "inherit", 
+      style={{
+          padding: 0,
+          border: "none",
+          fontSize: "inherit",
           fontFamily: "inherit",
           backgroundColor: "transparent",
           outline: "none",
-          width: "100%", // Ensure it fills the TextField
+          width: "100%",
+          // Remove explicit height/lineHeight to inherit from parent TextField
       }}
     />
   );
