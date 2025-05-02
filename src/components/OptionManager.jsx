@@ -33,54 +33,65 @@ const OptionManager = ({ type }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // *** FIX: Determine API endpoint based on type ***
+  const apiEndpoint = type === 'fornecedor' ? `${API_BASE}/fornecedores` : `${API_BASE}/opcoes_campo/${type}`;
+  const dataKey = type === 'fornecedor' ? 'fornecedores' : 'opcoes';
+  const valueKey = type === 'fornecedor' ? 'nome' : 'value'; // Key for the option's display value
+
   const loadOptions = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/opcoes_campo/${type}?incluir_inativos=true`);
+      // Always include inactive for the manager view
+      const res = await fetch(`${apiEndpoint}?incluir_inativos=true`); 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to fetch options');
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Failed to fetch ${type} options`);
       }
-      const allOptions = data.opcoes || [];
-      setOptions(allOptions.sort((a, b) => a.value.localeCompare(b.value)));
+      
+      const allOptions = data[dataKey] || [];
+      // Sort by the correct value key
+      setOptions(allOptions.sort((a, b) => (a[valueKey] || '').localeCompare(b[valueKey] || ''))); 
 
     } catch (err) {
-      console.error('Erro ao carregar opções:', err);
-      setError('Erro ao carregar opções do servidor.');
+      console.error(`Erro ao carregar ${type}:`, err);
+      setError(`Erro ao carregar ${labels[type]?.toLowerCase() || 'opções'} do servidor.`);
     } finally {
       setLoading(false);
     }
-  }, [type]); // Dependency: type
+  }, [type, apiEndpoint, dataKey, valueKey]); // Add new dependencies
 
   useEffect(() => {
     loadOptions();
     setNewValue('');
     setError('');
-  }, [type, loadOptions]); // Include loadOptions here
+  }, [type, loadOptions]);
 
   const addOption = async () => {
     if (!newValue.trim()) return;
     setError('');
-    setLoading(true); // Indicate loading during add
+    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/opcoes_campo/${type}`, {
+      // *** FIX: Use correct payload key based on type ***
+      const payload = { [valueKey]: newValue }; 
+      const res = await fetch(apiEndpoint, { // Use the dynamic endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: newValue })
+        body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
+      const data = await res.json(); // Always try to parse response
+
+      if (res.ok && data.success) {
         setNewValue('');
         await loadOptions();
       } else {
-        const data = await res.json();
-        setError(data.message || 'Erro ao adicionar opção.');
+        setError(data.error || `Erro ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`);
       }
     } catch (err) {
       console.error('Erro no POST:', err);
-      setError('Erro de comunicação ao adicionar opção.');
+      setError(`Erro de comunicação ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`);
     } finally {
       setLoading(false);
     }
@@ -88,21 +99,23 @@ const OptionManager = ({ type }) => {
 
   const toggleActive = async (id, isActive) => {
     setError('');
-    setLoading(true); // Indicate loading during toggle
+    setLoading(true);
     try {
       const action = isActive ? 'deactivate' : 'activate';
-      const res = await fetch(`${API_BASE}/opcoes_campo/${id}/${action}`, {
+      // *** FIX: Use the dynamic endpoint with ID and action ***
+      const res = await fetch(`${apiEndpoint}/${id}/${action}`, { 
         method: 'PATCH'
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Erro ao atualizar status da opção');
+      const data = await res.json(); // Always try to parse response
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Erro ao atualizar status da ${labels[type]?.slice(0, -1) || 'opção'}`);
       }
       await loadOptions();
     } catch (err) {
       console.error('Erro ao atualizar:', err);
-      setError(err.message || 'Erro ao atualizar status da opção.');
+      setError(err.message || `Erro ao atualizar status da ${labels[type]?.slice(0, -1) || 'opção'}.`);
     } finally {
       setLoading(false);
     }
@@ -155,7 +168,8 @@ const OptionManager = ({ type }) => {
               <React.Fragment key={opt.id}>
                 {index > 0 && <Divider component="li" />}
                 <ListItem>
-                  <ListItemText primary={opt.value} sx={{ color: 'text.primary' }} />
+                  {/* *** FIX: Use correct value key *** */}
+                  <ListItemText primary={opt[valueKey]} sx={{ color: 'text.primary' }} /> 
                   <ListItemSecondaryAction>
                     <IconButton
                       edge="end"
@@ -187,7 +201,8 @@ const OptionManager = ({ type }) => {
                 <React.Fragment key={opt.id}>
                   {index > 0 && <Divider component="li" />}
                   <ListItem sx={{ opacity: 0.7 }}>
-                    <ListItemText primary={opt.value} sx={{ fontStyle: 'italic', color: 'text.secondary' }} />
+                    {/* *** FIX: Use correct value key *** */}
+                    <ListItemText primary={opt[valueKey]} sx={{ fontStyle: 'italic', color: 'text.secondary' }} /> 
                     <ListItemSecondaryAction>
                       <IconButton
                         edge="end"
