@@ -21,10 +21,25 @@ import RestoreIcon from '@mui/icons-material/Restore';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-const labels = {
-  tamanho: 'Tamanhos',
-  cor_estampa: 'Cores / Estampas',
-  fornecedor: 'Fornecedores'
+const config = {
+  tamanho: {
+    label: 'Tamanhos',
+    endpoint: `${API_BASE}/opcoes_campo/tamanho/`,
+    dataKey: 'opcoes',
+    valueKey: 'value',
+  },
+  cor_estampa: {
+    label: 'Cores / Estampas',
+    endpoint: `${API_BASE}/opcoes_campo/cor_estampa/`,
+    dataKey: 'opcoes',
+    valueKey: 'value',
+  },
+  fornecedor: {
+    label: 'Fornecedores',
+    endpoint: `${API_BASE}/fornecedores/`,
+    dataKey: 'fornecedores',
+    valueKey: 'nome',
+  },
 };
 
 const OptionManager = ({ type }) => {
@@ -33,35 +48,33 @@ const OptionManager = ({ type }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Determine API endpoint based on type, ensuring trailing slash
-  const baseEndpoint = type === 'fornecedor' ? `${API_BASE}/fornecedores` : `${API_BASE}/opcoes_campo/${type}`;
-  const apiEndpoint = baseEndpoint.endsWith('/') ? baseEndpoint : `${baseEndpoint}/`; // Ensure trailing slash
-  
-  const dataKey = type === 'fornecedor' ? 'fornecedores' : 'opcoes';
-  const valueKey = type === 'fornecedor' ? 'nome' : 'value'; // Key for the option's display value
+  const currentConfig = config[type];
 
   const loadOptions = useCallback(async () => {
+    if (!currentConfig) {
+      setError('Tipo de opção inválido.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      // Always include inactive for the manager view
-      const res = await fetch(`${apiEndpoint}?incluir_inativos=true`); 
+      const res = await fetch(`${currentConfig.endpoint}?incluir_inativos=true`);
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || `Failed to fetch ${type} options`);
+        throw new Error(data.error || `Falha ao carregar ${currentConfig.label.toLowerCase()}`);
       }
-      
-      const allOptions = data[dataKey] || [];
-      setOptions(allOptions.sort((a, b) => (a[valueKey] || '').localeCompare(b[valueKey] || ''))); 
+
+      const allOptions = data[currentConfig.dataKey] || [];
+      setOptions(allOptions.sort((a, b) => (a[currentConfig.valueKey] || '').localeCompare(b[currentConfig.valueKey] || '')));
 
     } catch (err) {
       console.error(`Erro ao carregar ${type}:`, err);
-      setError(`Erro ao carregar ${labels[type]?.toLowerCase() || 'opções'} do servidor.`);
+      setError(err.message || `Erro ao carregar ${currentConfig.label.toLowerCase()} do servidor.`);
     } finally {
       setLoading(false);
     }
-  }, [type, apiEndpoint, dataKey, valueKey]); // Add new dependencies
+  }, [type, currentConfig]);
 
   useEffect(() => {
     loadOptions();
@@ -70,59 +83,60 @@ const OptionManager = ({ type }) => {
   }, [type, loadOptions]);
 
   const addOption = async () => {
-    if (!newValue.trim()) return;
+    if (!newValue.trim() || !currentConfig) return;
     setError('');
     setLoading(true);
     try {
-      const payload = { [valueKey]: newValue }; 
-      // Use the endpoint with guaranteed trailing slash
-      const res = await fetch(apiEndpoint, { 
+      const payload = { [currentConfig.valueKey]: newValue };
+      const res = await fetch(currentConfig.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json(); 
+      const data = await res.json();
 
       if (res.ok && data.success) {
         setNewValue('');
         await loadOptions();
       } else {
-        // *** FIX: Correct typo in error message ***
-        setError(data.error || `Erro ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`); 
+        setError(data.error || `Erro ao adicionar ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
       }
     } catch (err) {
       console.error('Erro no POST:', err);
-      // *** FIX: Correct typo in error message ***
-      setError(`Erro de comunicação ao adicionar ${labels[type]?.slice(0, -1) || 'opção'}.`); 
+      setError(`Erro de comunicação ao adicionar ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
     } finally {
       setLoading(false);
     }
   };
 
   const toggleActive = async (id, isActive) => {
+    if (!currentConfig) return;
     setError('');
     setLoading(true);
     try {
       const action = isActive ? 'deactivate' : 'activate';
-      // Use the endpoint with guaranteed trailing slash, then add ID and action
-      const res = await fetch(`${apiEndpoint}${id}/${action}`, { 
-        method: 'PATCH'
+      const res = await fetch(`${currentConfig.endpoint}${id}/${action}`, {
+        method: 'PATCH',
       });
 
-      const data = await res.json(); 
+      const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || `Erro ao atualizar status da ${labels[type]?.slice(0, -1) || 'opção'}`);
+        throw new Error(data.error || `Erro ao atualizar status da ${currentConfig.label.slice(0, -1).toLowerCase()}`);
       }
       await loadOptions();
     } catch (err) {
       console.error('Erro ao atualizar:', err);
-      setError(err.message || `Erro ao atualizar status da ${labels[type]?.slice(0, -1) || 'opção'}.`);
+      setError(err.message || `Erro ao atualizar status da ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
     } finally {
       setLoading(false);
     }
   };
+
+  if (!currentConfig) {
+    return <Alert severity="error">Tipo de gerenciador de opções inválido: {type}</Alert>;
+  }
 
   const activeOptions = options.filter(o => o.is_active);
   const inactiveOptions = options.filter(o => !o.is_active);
@@ -130,7 +144,7 @@ const OptionManager = ({ type }) => {
   return (
     <Box>
       <Typography variant="h5" component="h2" sx={{ color: 'primary.main', mb: 2, fontWeight: 600 }}>
-        {labels[type] || 'Opções'}
+        {currentConfig.label}
       </Typography>
 
       {/* Add New Option Form */}
@@ -141,8 +155,7 @@ const OptionManager = ({ type }) => {
           size="small"
           value={newValue}
           onChange={e => setNewValue(e.target.value)}
-          // *** FIX: Correct typo in placeholder ***
-          placeholder={`Adicionar ${labels[type]?.slice(0, -1) || 'Opção'}...`} 
+          placeholder={`Adicionar ${currentConfig.label.slice(0, -1)}...`}
           disabled={loading}
         />
         <Button
@@ -172,7 +185,7 @@ const OptionManager = ({ type }) => {
               <React.Fragment key={opt.id}>
                 {index > 0 && <Divider component="li" />}
                 <ListItem>
-                  <ListItemText primary={opt[valueKey]} sx={{ color: 'text.primary' }} /> 
+                  <ListItemText primary={opt[currentConfig.valueKey]} sx={{ color: 'text.primary' }} />
                   <ListItemSecondaryAction>
                     <IconButton
                       edge="end"
@@ -204,7 +217,7 @@ const OptionManager = ({ type }) => {
                 <React.Fragment key={opt.id}>
                   {index > 0 && <Divider component="li" />}
                   <ListItem sx={{ opacity: 0.7 }}>
-                    <ListItemText primary={opt[valueKey]} sx={{ fontStyle: 'italic', color: 'text.secondary' }} /> 
+                    <ListItemText primary={opt[currentConfig.valueKey]} sx={{ fontStyle: 'italic', color: 'text.secondary' }} />
                     <ListItemSecondaryAction>
                       <IconButton
                         edge="end"
@@ -228,7 +241,7 @@ const OptionManager = ({ type }) => {
       {/* Show message if no options exist */}
       {!loading && options.length === 0 && (
         <Typography sx={{ color: 'text.secondary', textAlign: 'center', mt: 3, py: 3 }}>
-          Nenhuma opção cadastrada para {labels[type]?.toLowerCase() || 'este tipo'}.
+          Nenhuma opção cadastrada para {currentConfig.label.toLowerCase()}.
         </Typography>
       )}
     </Box>
@@ -236,4 +249,3 @@ const OptionManager = ({ type }) => {
 };
 
 export default OptionManager;
-
