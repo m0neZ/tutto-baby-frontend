@@ -16,17 +16,47 @@ export const fetchProducts = async () => {
 
 // Use the correct backend endpoint path: /produtos/
 export const createProduct = async (product) => {
-  const res = await fetch(`${BASE_URL}/produtos/`, { // Changed from /products/
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(product),
-  });
-  // Add check for response status before parsing JSON
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({})); // Try to get error details
-    throw new Error(errorData.error || `Failed to create product: ${res.status}`);
+  const url = `${BASE_URL}/produtos/`;
+  console.log("[API DEBUG] Attempting to create product at:", url);
+  console.log("[API DEBUG] Payload:", product);
+  try {
+    const res = await fetch(url, { 
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(product),
+    });
+    console.log(`[API DEBUG] Create product response status: ${res.status} ${res.statusText}`);
+    
+    // Add check for response status before parsing JSON
+    if (!res.ok) {
+      let errorBody = "No error body available";
+      try {
+        errorBody = await res.text(); // Get raw text first
+        console.error(`[API DEBUG] Create product error body: ${errorBody}`);
+        // Try parsing as JSON if possible
+        const errorData = JSON.parse(errorBody);
+        throw new Error(errorData.error || `Failed to create product: ${res.status} - ${errorBody}`);
+      } catch (parseOrTextError) {
+         // If parsing fails or reading text fails, use the status and original text
+         console.error("[API DEBUG] Failed to parse error body or read text:", parseOrTextError);
+         throw new Error(`Failed to create product: ${res.status} ${res.statusText}. Response: ${errorBody}`);
+      }
+    }
+    // If response is OK, parse JSON
+    const data = await res.json();
+    console.log("[API DEBUG] Create product success response data:", data);
+    return data;
+  } catch (error) {
+    // Catch network errors (like Failed to Fetch) or errors thrown above
+    console.error("[API DEBUG] Error during createProduct fetch:", error);
+    if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
+        // Specific network error
+        throw new Error("Erro de rede ao tentar criar produto. Verifique a conexão com o servidor ou a configuração CORS do backend.");
+    } else {
+        // Other errors (parsing, backend error messages, etc.)
+        throw error; // Re-throw the original error
+    }
   }
-  return await res.json();
 };
 
 // Function to fetch options for a specific field type
