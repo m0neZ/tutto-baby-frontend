@@ -38,6 +38,8 @@ import {
   getGroupedRowModel,
   getExpandedRowModel,
   flexRender,
+  // Import filter functions
+  filterFns,
 } from '@tanstack/react-table';
 
 // Import the AddProductModal component
@@ -45,7 +47,7 @@ import AddProductModal from '../components/AddProductModal';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper component for column filtering (unchanged)
+// Helper component for general column filtering
 function Filter({ column, table }) {
   const firstValue = table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
 
@@ -85,6 +87,74 @@ function Filter({ column, table }) {
     />
   );
 }
+
+// *** NEW: Helper component for Date Range Filtering ***
+function DateRangeColumnFilter({ column }) {
+  const [startDate, setStartDate] = useState(column.getFilterValue()?.[0] || '');
+  const [endDate, setEndDate] = useState(column.getFilterValue()?.[1] || '');
+
+  // Update filter value when dates change
+  useEffect(() => {
+    // Only set filter if both dates are valid or both are empty
+    if ((startDate && endDate) || (!startDate && !endDate)) {
+      column.setFilterValue([startDate || undefined, endDate || undefined]);
+    }
+  }, [startDate, endDate, column]);
+
+  return (
+    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 1 }}>
+      <TextField
+        label="De"
+        type="date"
+        size="small"
+        variant="standard"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        InputLabelProps={{ shrink: true }}
+        sx={{ width: '130px' }}
+      />
+      <TextField
+        label="Até"
+        type="date"
+        size="small"
+        variant="standard"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        InputLabelProps={{ shrink: true }}
+        sx={{ width: '130px' }}
+      />
+    </Box>
+  );
+}
+
+// *** NEW: Custom filter function for date range ***
+const dateBetweenFilterFn = (row, columnId, filterValue) => {
+  const rowValue = row.getValue(columnId);
+  const [start, end] = filterValue; // filterValue is an array [start, end]
+
+  if (!rowValue) return false; // Don't include rows with no date
+
+  // Convert row value and filter values to comparable format (YYYY-MM-DD strings)
+  let rowDateStr;
+  try {
+    rowDateStr = new Date(rowValue).toISOString().split('T')[0];
+  } catch (e) {
+    return false; // Invalid date in row
+  }
+
+  const startDateStr = start ? start : null;
+  const endDateStr = end ? end : null;
+
+  // Perform comparison
+  if (startDateStr && rowDateStr < startDateStr) {
+    return false;
+  }
+  if (endDateStr && rowDateStr > endDateStr) {
+    return false;
+  }
+  return true;
+};
+
 
 const EstoquePage = () => {
   const [produtos, setProdutos] = useState([]);
@@ -185,9 +255,11 @@ const EstoquePage = () => {
       accessorKey: 'data_compra',
       header: 'Data Compra',
       cell: info => info.getValue() ? new Date(info.getValue()).toLocaleDateString("pt-BR") : '-', 
-      enableSorting: true, // *** FIX: Enable sorting for Data Compra ***
-      enableColumnFilter: false, // Keep filter disabled for simplicity
-      enableGrouping: true, // *** FIX: Enable grouping for Data Compra ***
+      enableSorting: true, 
+      enableGrouping: true, 
+      // *** NEW: Enable date range filtering ***
+      enableColumnFilter: true,
+      filterFn: dateBetweenFilterFn, // Use custom date filter function
     },
   ], [aggregationFn]); // Re-run memo if aggregationFn changes
 
@@ -195,6 +267,10 @@ const EstoquePage = () => {
   const table = useReactTable({
     data: produtos,
     columns,
+    // *** NEW: Add custom filter function to table options ***
+    filterFns: {
+      dateBetween: dateBetweenFilterFn,
+    },
     state: {
       columnFilters,
       globalFilter,
@@ -234,7 +310,6 @@ const EstoquePage = () => {
     }
   };
 
-  // *** FIX: Define allowed grouping columns ***
   const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
 
   return (
@@ -283,7 +358,6 @@ const EstoquePage = () => {
             onChange={(e) => setGrouping(e.target.value ? [e.target.value] : [])}
           >
             <MenuItem value=""><em>Nenhum</em></MenuItem>
-            {/* *** FIX: Filter columns for grouping dropdown *** */}
             {table.getAllLeafColumns()
               .filter(col => col.getCanGroup() && allowedGroupingColumns.includes(col.id))
               .map(col => (
@@ -354,7 +428,10 @@ const EstoquePage = () => {
                           )}
                         </Box>
                       )}
-                      {header.column.getCanFilter() ? (
+                      {/* *** NEW: Render DateRangeColumnFilter for data_compra *** */}
+                      {header.column.id === 'data_compra' && header.column.getCanFilter() ? (
+                        <DateRangeColumnFilter column={header.column} />
+                      ) : header.column.getCanFilter() ? (
                         <Box sx={{ mt: 1 }}>
                           <Filter column={header.column} table={table} />
                         </Box>
