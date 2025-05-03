@@ -30,12 +30,15 @@ const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
       {...other}
       ref={ref}
       onValueChange={(value, name, values) => {
-        onChange({
-          target: {
-            name: props.name,
-            value: value === undefined || value === null ? "" : String(value),
-          },
-        });
+        // Ensure onChange is called only if it exists
+        if (onChange) {
+          onChange({
+            target: {
+              name: props.name,
+              value: value === undefined || value === null ? "" : String(value),
+            },
+          });
+        }
       }}
       allowNegativeValue={false}
       decimalSeparator=","
@@ -76,15 +79,15 @@ const ProductForm = ({ onProductAdded }) => {
       if (!isMounted) return;
       setLoading(true);
       setFormError("");
-      setSupplierError(""); 
+      setSupplierError("");
 
-      let supplierFetchSuccess = false; 
+      // let supplierFetchSuccess = false; // Removed unused variable
 
       try {
         try {
           console.log("[FORM DEBUG] Fetching suppliers...");
           const supplierList = await fetchSuppliers();
-          supplierFetchSuccess = true; 
+          // supplierFetchSuccess = true; // Removed unused variable
           console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
           if (isMounted) {
             if (Array.isArray(supplierList) && supplierList.length > 0) {
@@ -92,20 +95,22 @@ const ProductForm = ({ onProductAdded }) => {
               console.log("[FORM DEBUG] Suppliers state updated with:", supplierList);
             } else {
               setSuppliers([]);
-              setSupplierError("Nenhum fornecedor ativo encontrado no banco de dados."); 
+              setSupplierError("Nenhum fornecedor ativo encontrado no banco de dados.");
               console.warn("[FORM DEBUG] Successfully fetched suppliers, but the list is empty.");
             }
           }
         } catch (supplierErr) {
           console.error("[FORM DEBUG] Error fetching suppliers:", supplierErr);
           if (isMounted) {
-            setSuppliers([]); 
-            setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`); 
+            setSuppliers([]);
+            setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`);
           }
-          throw new Error("Supplier fetch failed, stopping initial data load."); 
+          // Avoid throwing error here to allow other fetches to proceed
+          // throw new Error("Supplier fetch failed, stopping initial data load.");
         }
 
         console.log("[FORM DEBUG] Fetching products, sizes, colors...");
+        // Fetch secondary data even if suppliers failed
         const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
           fetchFieldOptions("tamanho"),
@@ -121,7 +126,8 @@ const ProductForm = ({ onProductAdded }) => {
       } catch (err) {
         console.error("[FORM DEBUG] Error during secondary data load:", err);
         if (isMounted) {
-          if (!supplierError) { 
+          // Only set general form error if supplier error hasn't already been set
+          if (!supplierError) {
             setFormError(
               `Erro ao carregar dados adicionais: ${err.message}. Verifique a conexão.`
             );
@@ -141,7 +147,8 @@ const ProductForm = ({ onProductAdded }) => {
       isMounted = false;
       console.log("[FORM DEBUG] ProductForm unmounted or dependency changed.");
     };
-  }, []); // Empty dependency array
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Keep empty dependency array for initial load
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -257,10 +264,10 @@ const ProductForm = ({ onProductAdded }) => {
   const isSupplierDisabled = loading || !!supplierError || suppliers.length === 0;
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}> 
-      <Grid container spacing={3}> {/* Increased spacing for standard variant */} 
+    <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}>
+      <Grid container spacing={3}> {/* Increased spacing for standard variant */}
         {/* Row 1: Nome (Full Width) */}
-        <Grid item xs={12}> 
+        <Grid item xs={12}>
           <Autocomplete
             freeSolo
             options={productNames}
@@ -281,7 +288,7 @@ const ProductForm = ({ onProductAdded }) => {
                 fullWidth
                 variant="standard" // *** CHANGE: Use standard variant ***
                 // size="small" // Remove size
-                helperText={!formData.name ? "Nome é obrigatório" : " "} 
+                helperText={!formData.name ? "Nome é obrigatório" : " "}
                 error={!formData.name}
               />
             )}
@@ -364,7 +371,7 @@ const ProductForm = ({ onProductAdded }) => {
               // label="Fornecedor" // Label provided by InputLabel
               onChange={handleChange}
               disabled={isSupplierDisabled}
-              displayEmpty 
+              displayEmpty
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
@@ -387,7 +394,7 @@ const ProductForm = ({ onProductAdded }) => {
             label="Custo"
             name="cost"
             value={formData.cost}
-            onChange={handleChange} 
+            onChange={handleChange}
             required
             fullWidth
             variant="standard" // *** CHANGE: Use standard variant ***
@@ -407,7 +414,7 @@ const ProductForm = ({ onProductAdded }) => {
             label="Preço Venda"
             name="retailPrice"
             value={formData.retailPrice}
-            onChange={handleChange} 
+            onChange={handleChange}
             required
             fullWidth
             variant="standard" // *** CHANGE: Use standard variant ***
