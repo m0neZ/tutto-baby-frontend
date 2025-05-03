@@ -28,6 +28,8 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Popover from '@mui/material/Popover'; // Import Popover
+import FilterListIcon from '@mui/icons-material/FilterList'; // Import Filter icon
 
 // Import TanStack Table hooks and utilities
 import {
@@ -38,7 +40,6 @@ import {
   getGroupedRowModel,
   getExpandedRowModel,
   flexRender,
-  // Import filter functions
   filterFns,
 } from '@tanstack/react-table';
 
@@ -47,12 +48,12 @@ import AddProductModal from '../components/AddProductModal';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper component for general column filtering
-function Filter({ column, table }) {
-  const firstValue = table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+// Helper component for general column filtering (to be placed inside Popover)
+function Filter({ column }) {
+  const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
 
   return typeof firstValue === 'number' ? (
-    <Box sx={{ display: 'flex', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
       <TextField
         size="small"
         type="number"
@@ -61,8 +62,8 @@ function Filter({ column, table }) {
           column.setFilterValue((old) => [e.target.value, old?.[1]])
         }
         placeholder={`Min`}
-        sx={{ width: '70px' }}
-        variant="standard"
+        sx={{ width: '80px' }}
+        variant="outlined"
       />
       <TextField
         size="small"
@@ -72,8 +73,8 @@ function Filter({ column, table }) {
           column.setFilterValue((old) => [old?.[0], e.target.value])
         }
         placeholder={`Max`}
-        sx={{ width: '70px' }}
-        variant="standard"
+        sx={{ width: '80px' }}
+        variant="outlined"
       />
     </Box>
   ) : (
@@ -81,77 +82,65 @@ function Filter({ column, table }) {
       size="small"
       value={(column.getFilterValue() ?? '')}
       onChange={e => column.setFilterValue(e.target.value)}
-      placeholder={`Buscar...`}
-      variant="standard"
-      sx={{ width: '100%' }}
+      placeholder={`Buscar ${typeof column.columnDef.header === 'string' ? column.columnDef.header : ''}...`}
+      variant="outlined"
+      sx={{ width: '100%', p: 1 }}
     />
   );
 }
 
-// *** NEW: Helper component for Date Range Filtering ***
+// Helper component for Date Range Filtering (to be placed inside Popover)
 function DateRangeColumnFilter({ column }) {
   const [startDate, setStartDate] = useState(column.getFilterValue()?.[0] || '');
   const [endDate, setEndDate] = useState(column.getFilterValue()?.[1] || '');
 
-  // Update filter value when dates change
   useEffect(() => {
-    // Only set filter if both dates are valid or both are empty
     if ((startDate && endDate) || (!startDate && !endDate)) {
       column.setFilterValue([startDate || undefined, endDate || undefined]);
     }
   }, [startDate, endDate, column]);
 
   return (
-    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: 1 }}>
       <TextField
         label="De"
         type="date"
         size="small"
-        variant="standard"
+        variant="outlined"
         value={startDate}
         onChange={(e) => setStartDate(e.target.value)}
         InputLabelProps={{ shrink: true }}
-        sx={{ width: '130px' }}
+        sx={{ width: '150px' }}
       />
       <TextField
         label="Até"
         type="date"
         size="small"
-        variant="standard"
+        variant="outlined"
         value={endDate}
         onChange={(e) => setEndDate(e.target.value)}
         InputLabelProps={{ shrink: true }}
-        sx={{ width: '130px' }}
+        sx={{ width: '150px' }}
       />
     </Box>
   );
 }
 
-// *** NEW: Custom filter function for date range ***
+// Custom filter function for date range (unchanged)
 const dateBetweenFilterFn = (row, columnId, filterValue) => {
   const rowValue = row.getValue(columnId);
-  const [start, end] = filterValue; // filterValue is an array [start, end]
-
-  if (!rowValue) return false; // Don't include rows with no date
-
-  // Convert row value and filter values to comparable format (YYYY-MM-DD strings)
+  const [start, end] = filterValue;
+  if (!rowValue) return false;
   let rowDateStr;
   try {
     rowDateStr = new Date(rowValue).toISOString().split('T')[0];
   } catch (e) {
-    return false; // Invalid date in row
+    return false;
   }
-
   const startDateStr = start ? start : null;
   const endDateStr = end ? end : null;
-
-  // Perform comparison
-  if (startDateStr && rowDateStr < startDateStr) {
-    return false;
-  }
-  if (endDateStr && rowDateStr > endDateStr) {
-    return false;
-  }
+  if (startDateStr && rowDateStr < startDateStr) return false;
+  if (endDateStr && rowDateStr > endDateStr) return false;
   return true;
 };
 
@@ -160,15 +149,19 @@ const EstoquePage = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [openAddModal, setOpenAddModal] = useState(false); // State for modal
+  const [openAddModal, setOpenAddModal] = useState(false);
+
+  // State for filter popovers
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [currentFilterColumnId, setCurrentFilterColumnId] = useState(null);
 
   // TanStack Table state
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
-  const [grouping, setGrouping] = useState(['cor_estampa']); // Default grouping
-  const [expanded, setExpanded] = useState({}); // State for expanded rows
-  const [aggregationFn, setAggregationFn] = useState('sum'); // Default aggregation
+  const [grouping, setGrouping] = useState(['cor_estampa']);
+  const [expanded, setExpanded] = useState({});
+  const [aggregationFn, setAggregationFn] = useState('sum');
 
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
@@ -181,9 +174,7 @@ const EstoquePage = () => {
       const data = await response.json();
       const fetchedProdutos = data.produtos || (data.success && data.produtos) || [];
       setProdutos(fetchedProdutos);
-      console.log("[ESTOQUE DEBUG] Fetched products:", fetchedProdutos);
     } catch (e) {
-      console.error("Error fetching products:", e);
       setError('Falha ao carregar produtos. Verifique a conexão com o backend.');
     } finally {
       setLoading(false);
@@ -194,7 +185,7 @@ const EstoquePage = () => {
     fetchProdutos();
   }, [fetchProdutos]);
 
-  // Define columns for TanStack Table with grouping and aggregation
+  // Define columns
   const columns = useMemo(() => [
     {
       accessorKey: 'nome',
@@ -205,51 +196,62 @@ const EstoquePage = () => {
           {row.subRows.length} Itens
         </Typography>
       ),
+      enableColumnFilter: true,
     },
     {
       accessorKey: 'sexo',
       header: 'Sexo',
       cell: info => info.getValue(),
       enableGrouping: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: 'cor_estampa',
       header: 'Cor/Estampa',
       cell: info => info.getValue(),
       enableGrouping: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: 'tamanho',
       header: 'Tamanho',
       cell: info => info.getValue(),
       enableGrouping: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: 'quantidade_atual',
       header: 'Qtd.',
       cell: info => info.getValue(),
-      aggregationFn: 'sum', // Always sum quantity
+      aggregationFn: 'sum',
       aggregatedCell: info => info.getValue(),
+      enableColumnFilter: true,
+      filterFn: 'inNumberRange',
     },
     {
       accessorKey: 'custo',
       header: 'Custo',
       cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
-      aggregationFn: aggregationFn, // Use selected aggregation ('sum' or 'mean')
+      aggregationFn: aggregationFn,
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
+      enableColumnFilter: true,
+      filterFn: 'inNumberRange',
     },
     {
       accessorKey: 'preco_venda',
       header: 'Preço Venda',
       cell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
-      aggregationFn: aggregationFn, // Use selected aggregation ('sum' or 'mean')
+      aggregationFn: aggregationFn,
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
+      enableColumnFilter: true,
+      filterFn: 'inNumberRange',
     },
     {
       accessorKey: 'nome_fornecedor',
       header: 'Fornecedor',
       cell: info => info.getValue() ?? '-', 
       enableGrouping: true,
+      enableColumnFilter: true,
     },
     {
       accessorKey: 'data_compra',
@@ -257,17 +259,15 @@ const EstoquePage = () => {
       cell: info => info.getValue() ? new Date(info.getValue()).toLocaleDateString("pt-BR") : '-', 
       enableSorting: true, 
       enableGrouping: true, 
-      // *** NEW: Enable date range filtering ***
       enableColumnFilter: true,
-      filterFn: dateBetweenFilterFn, // Use custom date filter function
+      filterFn: dateBetweenFilterFn,
     },
-  ], [aggregationFn]); // Re-run memo if aggregationFn changes
+  ], [aggregationFn]);
 
-  // Initialize TanStack Table instance with grouping and expansion
+  // Initialize TanStack Table instance
   const table = useReactTable({
     data: produtos,
     columns,
-    // *** NEW: Add custom filter function to table options ***
     filterFns: {
       dateBetween: dateBetweenFilterFn,
     },
@@ -288,33 +288,43 @@ const EstoquePage = () => {
     getSortedRowModel: getSortedRowModel(),
     getGroupedRowModel: getGroupedRowModel(), 
     getExpandedRowModel: getExpandedRowModel(), 
-    debugTable: true, 
+    debugTable: false, // Disable debug for cleaner console
   });
 
-  const handleOpenAddModal = () => {
-    setOpenAddModal(true);
+  // Filter Popover handlers
+  const handleFilterIconClick = (event, columnId) => {
+    setFilterAnchorEl(event.currentTarget);
+    setCurrentFilterColumnId(columnId);
   };
 
-  const handleCloseAddModal = () => {
-    setOpenAddModal(false);
+  const handleFilterPopoverClose = () => {
+    setFilterAnchorEl(null);
+    setCurrentFilterColumnId(null);
   };
 
+  const openFilterPopover = Boolean(filterAnchorEl);
+  const filterPopoverId = openFilterPopover ? 'filter-popover' : undefined;
+
+  // Find the current column object for the popover
+  const currentFilterColumn = useMemo(() => 
+    table.getAllLeafColumns().find(col => col.id === currentFilterColumnId)
+  , [currentFilterColumnId, table]);
+
+  // Other handlers (unchanged)
+  const handleOpenAddModal = () => setOpenAddModal(true);
+  const handleCloseAddModal = () => setOpenAddModal(false);
   const handleProductAdded = () => {
     handleCloseAddModal();
-    fetchProdutos(); // Refresh the product list
+    fetchProdutos();
   };
-
   const handleAggregationChange = (event, newAggFn) => {
-    if (newAggFn !== null) {
-      setAggregationFn(newAggFn);
-    }
+    if (newAggFn !== null) setAggregationFn(newAggFn);
   };
-
   const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Page Header and Action Button */}
+      {/* Header and Action Button (unchanged) */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" component="h1" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
           Estoque de Produtos
@@ -329,9 +339,8 @@ const EstoquePage = () => {
         </Button>
       </Box>
 
-      {/* Filters and Grouping Controls */}
+      {/* Filters and Grouping Controls (unchanged) */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems="center">
-        {/* Global Filter */}
         <TextField
           fullWidth
           variant="outlined"
@@ -348,12 +357,11 @@ const EstoquePage = () => {
           }}
           sx={{ flexGrow: 1 }}
         />
-        {/* Grouping Selector */}
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel id="group-by-label">Agrupar Por</InputLabel>
           <Select
             labelId="group-by-label"
-            value={grouping[0] || ''} // Assuming single column grouping
+            value={grouping[0] || ''}
             label="Agrupar Por"
             onChange={(e) => setGrouping(e.target.value ? [e.target.value] : [])}
           >
@@ -367,7 +375,6 @@ const EstoquePage = () => {
             ))}
           </Select>
         </FormControl>
-        {/* Aggregation Method Selector */}
         <ToggleButtonGroup
           color="primary"
           value={aggregationFn}
@@ -381,7 +388,7 @@ const EstoquePage = () => {
         </ToggleButtonGroup>
       </Stack>
 
-      {/* Loading and Error States */}
+      {/* Loading and Error States (unchanged) */}
       {loading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
           <CircularProgress />
@@ -391,7 +398,7 @@ const EstoquePage = () => {
         <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
       )}
 
-      {/* Products Table using TanStack Table */}
+      {/* Products Table */}
       {!loading && !error && (
         <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
           <Table sx={{ minWidth: 650 }} aria-label="estoque table">
@@ -403,7 +410,7 @@ const EstoquePage = () => {
                       key={header.id}
                       colSpan={header.colSpan}
                       sortDirection={header.column.getIsSorted()}
-                      sx={{ fontWeight: 'bold' }} 
+                      sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} // Prevent wrapping
                     >
                       {header.isPlaceholder ? null : (
                         <Box
@@ -411,36 +418,46 @@ const EstoquePage = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
-                            cursor: header.column.getCanSort() ? 'pointer' : 'default',
                           }}
-                          onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {header.column.getCanSort() && (
-                            <TableSortLabel
-                              active={!!header.column.getIsSorted()}
-                              direction={header.column.getIsSorted() || 'asc'}
-                              sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
-                            />
+                          {/* Sortable Header Label */}
+                          <Box 
+                            onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                            sx={{ cursor: header.column.getCanSort() ? 'pointer' : 'default', display: 'flex', alignItems: 'center' }}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {header.column.getCanSort() && (
+                              <TableSortLabel
+                                active={!!header.column.getIsSorted()}
+                                direction={header.column.getIsSorted() || 'asc'}
+                                sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
+                              />
+                            )}
+                          </Box>
+                          {/* Filter Icon Button */}
+                          {header.column.getCanFilter() && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleFilterIconClick(e, header.column.id)}
+                              color={header.column.getIsFiltered() ? 'primary' : 'default'} // Indicate if filter is active
+                              aria-describedby={filterPopoverId}
+                              sx={{ p: 0.25 }}
+                            >
+                              <FilterListIcon fontSize="small" />
+                            </IconButton>
                           )}
                         </Box>
                       )}
-                      {/* *** NEW: Render DateRangeColumnFilter for data_compra *** */}
-                      {header.column.id === 'data_compra' && header.column.getCanFilter() ? (
-                        <DateRangeColumnFilter column={header.column} />
-                      ) : header.column.getCanFilter() ? (
-                        <Box sx={{ mt: 1 }}>
-                          <Filter column={header.column} table={table} />
-                        </Box>
-                      ) : null}
+                      {/* REMOVED direct filter rendering from here */}
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableHead>
+            {/* Table Body (unchanged) */}
             <TableBody>
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map(row => (
@@ -452,7 +469,7 @@ const EstoquePage = () => {
                     }}
                   >
                     {row.getVisibleCells().map(cell => {
-                      const context = cell.getContext(); // Get context once
+                      const context = cell.getContext();
                       return (
                         <TableCell 
                           key={cell.id}
@@ -506,7 +523,31 @@ const EstoquePage = () => {
         </TableContainer>
       )}
 
-      {/* Render the AddProductModal */}
+      {/* Filter Popover */}
+      <Popover
+        id={filterPopoverId}
+        open={openFilterPopover}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterPopoverClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        {currentFilterColumn && (
+          currentFilterColumn.id === 'data_compra' ? (
+            <DateRangeColumnFilter column={currentFilterColumn} />
+          ) : (
+            <Filter column={currentFilterColumn} />
+          )
+        )}
+      </Popover>
+
+      {/* AddProductModal (unchanged) */}
       <AddProductModal 
         open={openAddModal} 
         onClose={handleCloseAddModal} 
