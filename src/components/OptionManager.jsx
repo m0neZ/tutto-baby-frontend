@@ -24,18 +24,21 @@ const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backen
 const config = {
   tamanho: {
     label: 'Tamanhos',
-    endpoint: `${API_BASE}/opcoes_campo/tamanho/`,
+    // *** FIX: Remove trailing slash ***
+    endpoint: `${API_BASE}/opcoes_campo/tamanho`,
     dataKey: 'opcoes',
     valueKey: 'value',
   },
   cor_estampa: {
     label: 'Cores / Estampas',
-    endpoint: `${API_BASE}/opcoes_campo/cor_estampa/`,
+    // *** FIX: Remove trailing slash ***
+    endpoint: `${API_BASE}/opcoes_campo/cor_estampa`,
     dataKey: 'opcoes',
     valueKey: 'value',
   },
   fornecedor: {
     label: 'Fornecedores',
+    // Keep trailing slash for consistency with backend supplier routes
     endpoint: `${API_BASE}/fornecedores/`,
     dataKey: 'fornecedores',
     valueKey: 'nome',
@@ -58,9 +61,14 @@ const OptionManager = ({ type }) => {
     setLoading(true);
     setError('');
     try {
+      // Use endpoint directly from config
       const res = await fetch(`${currentConfig.endpoint}?incluir_inativos=true`);
       const data = await res.json();
 
+      // Check for specific 404 error
+      if (res.status === 404) {
+          throw new Error('Recurso não encontrado. Verifique a URL da API.');
+      }
       if (!res.ok || !data.success) {
         throw new Error(data.error || `Falha ao carregar ${currentConfig.label.toLowerCase()}`);
       }
@@ -88,6 +96,7 @@ const OptionManager = ({ type }) => {
     setLoading(true);
     try {
       const payload = { [currentConfig.valueKey]: newValue };
+      // Use endpoint directly from config
       const res = await fetch(currentConfig.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +125,9 @@ const OptionManager = ({ type }) => {
     setLoading(true);
     try {
       const action = isActive ? 'deactivate' : 'activate';
-      const res = await fetch(`${currentConfig.endpoint}${id}/${action}`, {
+      // Construct toggle URL carefully
+      const toggleUrl = `${currentConfig.endpoint}${currentConfig.endpoint.endsWith('/') ? '' : '/'}${id}/${action}`;
+      const res = await fetch(toggleUrl, {
         method: 'PATCH',
       });
 
@@ -249,3 +260,4 @@ const OptionManager = ({ type }) => {
 };
 
 export default OptionManager;
+
