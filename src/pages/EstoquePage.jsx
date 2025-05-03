@@ -55,6 +55,7 @@ function DateRangeColumnFilter({ column }) {
   if (!column) return null;
 
   const filterValue = column.getFilterValue();
+  // Hooks are now at the top level of this component
   const [startDate, setStartDate] = useState(filterValue?.[0] || '');
   const [endDate, setEndDate] = useState(filterValue?.[1] || '');
 
@@ -102,6 +103,7 @@ function DateRangeColumnFilter({ column }) {
   );
 }
 
+// *** FIX: Moved Filter component outside EstoquePage component ***
 // Helper component for general column filtering (to be placed inside Popover)
 function Filter({ column }) {
   // Add safety check for column
@@ -110,6 +112,7 @@ function Filter({ column }) {
   const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
   const filterValue = column.getFilterValue();
 
+  // No hooks here, so this component is fine
   return typeof firstValue === 'number' ? (
     <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
       <TextField
@@ -566,7 +569,7 @@ const EstoquePage = () => {
         </TableContainer>
       )}
 
-      {/* Filter Popover (unchanged) */}
+      {/* Filter Popover */}
       <Popover
         id={filterPopoverId}
         open={openFilterPopover}
@@ -581,6 +584,7 @@ const EstoquePage = () => {
           horizontal: 'left',
         }}
       >
+        {/* Render filter component based on current column */}
         {currentFilterColumn && (
           currentFilterColumn.id === 'data_compra' ? (
             <DateRangeColumnFilter column={currentFilterColumn} />
