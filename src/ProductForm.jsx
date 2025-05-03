@@ -258,9 +258,9 @@ const ProductForm = ({ onProductAdded }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}> 
-      <Grid container spacing={2}> 
+      <Grid container spacing={3}> {/* Increased spacing for standard variant */} 
         {/* Row 1: Nome (Full Width) */}
-        <Grid item xs={12}>
+        <Grid item xs={12}> 
           <Autocomplete
             freeSolo
             options={productNames}
@@ -271,7 +271,7 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleAutocompleteChange}
             onInputChange={handleAutocompleteInputChange}
             disabled={loading}
-            size="small"
+            // size="small" // Remove size for standard variant
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -279,8 +279,8 @@ const ProductForm = ({ onProductAdded }) => {
                 name="name"
                 required
                 fullWidth
-                variant="outlined"
-                size="small"
+                variant="standard" // *** CHANGE: Use standard variant ***
+                // size="small" // Remove size
                 helperText={!formData.name ? "Nome é obrigatório" : " "} 
                 error={!formData.name}
               />
@@ -290,13 +290,13 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 2: Sexo, Tamanho */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required size="small" error={!formData.gender}>
+          <FormControl fullWidth required variant="standard" error={!formData.gender}> {/* *** CHANGE: Use standard variant *** */}
             <InputLabel id="gender-label">Sexo</InputLabel>
             <Select
               labelId="gender-label"
               name="gender"
               value={formData.gender}
-              label="Sexo"
+              // label="Sexo" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading}
             >
@@ -309,13 +309,13 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required size="small" error={!formData.size}>
+          <FormControl fullWidth required variant="standard" error={!formData.size}> {/* *** CHANGE: Use standard variant *** */}
             <InputLabel id="size-label">Tamanho</InputLabel>
             <Select
               labelId="size-label"
               name="size"
               value={formData.size}
-              label="Tamanho"
+              // label="Tamanho" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading || sizeOptions.length === 0}
             >
@@ -332,13 +332,13 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 3: Cor/Estampa, Fornecedor */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required size="small" error={!formData.colorPrint}>
+          <FormControl fullWidth required variant="standard" error={!formData.colorPrint}> {/* *** CHANGE: Use standard variant *** */}
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
               name="colorPrint"
               value={formData.colorPrint}
-              label="Cor / Estampa"
+              // label="Cor / Estampa" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading || colorOptions.length === 0}
             >
@@ -353,20 +353,18 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          {/* *** FIX: Ensure InputLabel shrinks correctly for Select *** */}
-          <FormControl fullWidth required size="small" error={(!loading && !formData.supplierId) || !!supplierError}>
-            <InputLabel id="supplier-label" shrink={!!formData.supplierId || loading || !!supplierError || suppliers.length > 0}>
+          <FormControl fullWidth required variant="standard" error={(!loading && !formData.supplierId) || !!supplierError}> {/* *** CHANGE: Use standard variant *** */}
+            <InputLabel id="supplier-label">
               Fornecedor
             </InputLabel>
             <Select
               labelId="supplier-label"
               name="supplierId"
               value={formData.supplierId}
-              label="Fornecedor" // Keep label for accessibility, even if visually handled by InputLabel
+              // label="Fornecedor" // Label provided by InputLabel
               onChange={handleChange}
               disabled={isSupplierDisabled}
               displayEmpty 
-              notched={!!formData.supplierId || loading || !!supplierError || suppliers.length > 0} // Ensure notch is correct
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
@@ -392,8 +390,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange} 
             required
             fullWidth
-            variant="outlined"
-            size="small" 
+            variant="standard" // *** CHANGE: Use standard variant ***
+            // size="small" // Remove size
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -412,8 +410,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange} 
             required
             fullWidth
-            variant="outlined"
-            size="small" 
+            variant="standard" // *** CHANGE: Use standard variant ***
+            // size="small" // Remove size
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -433,8 +431,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="outlined"
-            size="small" 
+            variant="standard" // *** CHANGE: Use standard variant ***
+            // size="small" // Remove size
             inputProps={{ min: "0", step: "1" }}
             helperText={!formData.quantity ? "Obrigatório" : " "}
             error={!formData.quantity || parseInt(formData.quantity) < 0}
@@ -450,34 +448,24 @@ const ProductForm = ({ onProductAdded }) => {
             value={formData.purchaseDate}
             onChange={handleChange}
             fullWidth
-            variant="outlined"
-            size="small"
+            variant="standard" // *** CHANGE: Use standard variant ***
+            // size="small" // Remove size
             InputLabelProps={{
               shrink: true,
             }}
-            helperText=" " // Reserve space
+            helperText=" " // Add space for consistent height
           />
         </Grid>
+
+        {/* Row 6: Submit Button */}
+        <Grid item xs={12} sx={{ textAlign: "right", mt: 2 }}>
+          {formError && <Alert severity="error" sx={{ mb: 2, textAlign: "left" }}>{formError}</Alert>}
+          {formSuccess && <Alert severity="success" sx={{ mb: 2, textAlign: "left" }}>{formSuccess}</Alert>}
+          <Button type="submit" variant="contained" disabled={loading}>
+            {loading ? "Adicionando..." : "Adicionar Produto"}
+          </Button>
+        </Grid>
       </Grid>
-
-      {/* General Form Error/Success Messages */}
-      {formError && (
-        <Alert severity="error" sx={{ mt: 2, mb: 1 }}>
-          {formError}
-        </Alert>
-      )}
-      {formSuccess && (
-        <Alert severity="success" sx={{ mt: 2, mb: 1 }}>
-          {formSuccess}
-        </Alert>
-      )}
-
-      {/* Submit Button */}
-      <Box sx={{ mt: 2.5, mb: 1, display: "flex", justifyContent: "flex-end" }}>
-        <Button type="submit" variant="contained" disabled={loading}>
-          {loading ? "Adicionando..." : "Adicionar Produto"}
-        </Button>
-      </Box>
     </Box>
   );
 };
