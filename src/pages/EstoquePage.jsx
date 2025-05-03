@@ -50,14 +50,18 @@ const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backen
 
 // Helper component for general column filtering (to be placed inside Popover)
 function Filter({ column }) {
+  // Add safety check for column
+  if (!column) return null;
+
   const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+  const filterValue = column.getFilterValue();
 
   return typeof firstValue === 'number' ? (
     <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
       <TextField
         size="small"
         type="number"
-        value={(column.getFilterValue()?.[0] ?? '')}
+        value={(filterValue?.[0] ?? '')}
         onChange={e =>
           column.setFilterValue((old) => [e.target.value, old?.[1]])
         }
@@ -68,7 +72,7 @@ function Filter({ column }) {
       <TextField
         size="small"
         type="number"
-        value={(column.getFilterValue()?.[1] ?? '')}
+        value={(filterValue?.[1] ?? '')}
         onChange={e =>
           column.setFilterValue((old) => [old?.[0], e.target.value])
         }
@@ -80,7 +84,7 @@ function Filter({ column }) {
   ) : (
     <TextField
       size="small"
-      value={(column.getFilterValue() ?? '')}
+      value={(filterValue ?? '')}
       onChange={e => column.setFilterValue(e.target.value)}
       placeholder={`Buscar ${typeof column.columnDef.header === 'string' ? column.columnDef.header : ''}...`}
       variant="outlined"
@@ -91,14 +95,30 @@ function Filter({ column }) {
 
 // Helper component for Date Range Filtering (to be placed inside Popover)
 function DateRangeColumnFilter({ column }) {
-  const [startDate, setStartDate] = useState(column.getFilterValue()?.[0] || '');
-  const [endDate, setEndDate] = useState(column.getFilterValue()?.[1] || '');
+  // Add safety check for column
+  if (!column) return null;
+
+  const filterValue = column.getFilterValue();
+  const [startDate, setStartDate] = useState(filterValue?.[0] || '');
+  const [endDate, setEndDate] = useState(filterValue?.[1] || '');
 
   useEffect(() => {
-    if ((startDate && endDate) || (!startDate && !endDate)) {
-      column.setFilterValue([startDate || undefined, endDate || undefined]);
-    }
-  }, [startDate, endDate, column]);
+    // Update local state if external filter value changes
+    setStartDate(filterValue?.[0] || '');
+    setEndDate(filterValue?.[1] || '');
+  }, [filterValue]);
+
+  const handleStartDateChange = (e) => {
+    const newStartDate = e.target.value;
+    setStartDate(newStartDate);
+    column.setFilterValue([newStartDate || undefined, endDate || undefined]);
+  };
+
+  const handleEndDateChange = (e) => {
+    const newEndDate = e.target.value;
+    setEndDate(newEndDate);
+    column.setFilterValue([startDate || undefined, newEndDate || undefined]);
+  };
 
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: 1 }}>
@@ -108,7 +128,7 @@ function DateRangeColumnFilter({ column }) {
         size="small"
         variant="outlined"
         value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
+        onChange={handleStartDateChange}
         InputLabelProps={{ shrink: true }}
         sx={{ width: '150px' }}
       />
@@ -118,7 +138,7 @@ function DateRangeColumnFilter({ column }) {
         size="small"
         variant="outlined"
         value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
+        onChange={handleEndDateChange}
         InputLabelProps={{ shrink: true }}
         sx={{ width: '150px' }}
       />
@@ -129,7 +149,7 @@ function DateRangeColumnFilter({ column }) {
 // Custom filter function for date range (unchanged)
 const dateBetweenFilterFn = (row, columnId, filterValue) => {
   const rowValue = row.getValue(columnId);
-  const [start, end] = filterValue;
+  const [start, end] = filterValue || []; // Default to empty array if filterValue is undefined
   if (!rowValue) return false;
   let rowDateStr;
   try {
@@ -197,6 +217,7 @@ const EstoquePage = () => {
         </Typography>
       ),
       enableColumnFilter: true,
+      // size: 200, // Example: Set a size if needed
     },
     {
       accessorKey: 'sexo',
@@ -204,6 +225,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      // size: 80,
     },
     {
       accessorKey: 'cor_estampa',
@@ -211,6 +233,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      // size: 150,
     },
     {
       accessorKey: 'tamanho',
@@ -218,6 +241,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      // size: 100,
     },
     {
       accessorKey: 'quantidade_atual',
@@ -227,6 +251,7 @@ const EstoquePage = () => {
       aggregatedCell: info => info.getValue(),
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      // size: 60,
     },
     {
       accessorKey: 'custo',
@@ -236,6 +261,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      // size: 100,
     },
     {
       accessorKey: 'preco_venda',
@@ -245,6 +271,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      // size: 110,
     },
     {
       accessorKey: 'nome_fornecedor',
@@ -252,6 +279,7 @@ const EstoquePage = () => {
       cell: info => info.getValue() ?? '-', 
       enableGrouping: true,
       enableColumnFilter: true,
+      // size: 150,
     },
     {
       accessorKey: 'data_compra',
@@ -261,6 +289,7 @@ const EstoquePage = () => {
       enableGrouping: true, 
       enableColumnFilter: true,
       filterFn: dateBetweenFilterFn,
+      // size: 120,
     },
   ], [aggregationFn]);
 
@@ -400,8 +429,9 @@ const EstoquePage = () => {
 
       {/* Products Table */}
       {!loading && !error && (
-        <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider' }}>
-          <Table sx={{ minWidth: 650 }} aria-label="estoque table">
+        // *** FIX: Remove minWidth from Table to prevent horizontal scroll ***
+        <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
+          <Table sx={{ /* minWidth: 650 */ }} aria-label="estoque table">
             <TableHead>
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id}>
@@ -410,7 +440,14 @@ const EstoquePage = () => {
                       key={header.id}
                       colSpan={header.colSpan}
                       sortDirection={header.column.getIsSorted()}
-                      sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} // Prevent wrapping
+                      // *** FIX: Adjust padding, consider allowing wrap for some columns ***
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        whiteSpace: 'nowrap', // Keep nowrap for headers
+                        py: 1, // Reduce vertical padding
+                        px: 1, // Reduce horizontal padding
+                        // width: header.getSize(), // Use if column sizes are defined
+                      }}
                     >
                       {header.isPlaceholder ? null : (
                         <Box
@@ -451,13 +488,12 @@ const EstoquePage = () => {
                           )}
                         </Box>
                       )}
-                      {/* REMOVED direct filter rendering from here */}
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableHead>
-            {/* Table Body (unchanged) */}
+            {/* Table Body */}
             <TableBody>
               {table.getRowModel().rows.length > 0 ? (
                 table.getRowModel().rows.map(row => (
@@ -473,14 +509,20 @@ const EstoquePage = () => {
                       return (
                         <TableCell 
                           key={cell.id}
+                          // *** FIX: Adjust padding, allow wrap for non-numeric/non-grouped cells ***
                           sx={{ 
+                            py: 0.75, // Reduce vertical padding
+                            px: 1,    // Reduce horizontal padding
+                            whiteSpace: ['custo', 'preco_venda', 'quantidade_atual'].includes(cell.column.id) ? 'nowrap' : 'normal', // Allow wrap for text
                             ...(cell.getIsGrouped() && { 
                               fontWeight: 'bold',
                               cursor: 'pointer',
+                              whiteSpace: 'nowrap', // Keep grouped cells nowrap
                             }),
                             ...(cell.getIsAggregated() && { 
                               fontWeight: 'bold',
-                              color: 'text.secondary'
+                              color: 'text.secondary',
+                              whiteSpace: 'nowrap', // Keep aggregated cells nowrap
                             }),
                             ...(cell.getIsPlaceholder() && !cell.getIsAggregated() && { 
                               bgcolor: 'grey.100' 
@@ -523,7 +565,7 @@ const EstoquePage = () => {
         </TableContainer>
       )}
 
-      {/* Filter Popover */}
+      {/* Filter Popover (unchanged) */}
       <Popover
         id={filterPopoverId}
         open={openFilterPopover}
