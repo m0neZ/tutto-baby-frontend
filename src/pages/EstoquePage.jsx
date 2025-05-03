@@ -24,8 +24,8 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
+// import Chip from '@mui/material/Chip'; // Removed unused import
+import Stack from '@mui/material/Stack'; // Keep Stack for Filters/Grouping Controls
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Popover from '@mui/material/Popover'; // Import Popover
@@ -40,7 +40,7 @@ import {
   getGroupedRowModel,
   getExpandedRowModel,
   flexRender,
-  filterFns,
+  // filterFns, // filterFns might not be explicitly needed if using built-ins + custom
 } from '@tanstack/react-table';
 
 // Import the AddProductModal component
@@ -48,51 +48,7 @@ import AddProductModal from '../components/AddProductModal';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper component for general column filtering (to be placed inside Popover)
-function Filter({ column }) {
-  // Add safety check for column
-  if (!column) return null;
-
-  const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
-  const filterValue = column.getFilterValue();
-
-  return typeof firstValue === 'number' ? (
-    <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
-      <TextField
-        size="small"
-        type="number"
-        value={(filterValue?.[0] ?? '')}
-        onChange={e =>
-          column.setFilterValue((old) => [e.target.value, old?.[1]])
-        }
-        placeholder={`Min`}
-        sx={{ width: '80px' }}
-        variant="outlined"
-      />
-      <TextField
-        size="small"
-        type="number"
-        value={(filterValue?.[1] ?? '')}
-        onChange={e =>
-          column.setFilterValue((old) => [old?.[0], e.target.value])
-        }
-        placeholder={`Max`}
-        sx={{ width: '80px' }}
-        variant="outlined"
-      />
-    </Box>
-  ) : (
-    <TextField
-      size="small"
-      value={(filterValue ?? '')}
-      onChange={e => column.setFilterValue(e.target.value)}
-      placeholder={`Buscar ${typeof column.columnDef.header === 'string' ? column.columnDef.header : ''}...`}
-      variant="outlined"
-      sx={{ width: '100%', p: 1 }}
-    />
-  );
-}
-
+// *** FIX: Moved DateRangeColumnFilter outside EstoquePage component ***
 // Helper component for Date Range Filtering (to be placed inside Popover)
 function DateRangeColumnFilter({ column }) {
   // Add safety check for column
@@ -143,6 +99,51 @@ function DateRangeColumnFilter({ column }) {
         sx={{ width: '150px' }}
       />
     </Box>
+  );
+}
+
+// Helper component for general column filtering (to be placed inside Popover)
+function Filter({ column }) {
+  // Add safety check for column
+  if (!column) return null;
+
+  const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+  const filterValue = column.getFilterValue();
+
+  return typeof firstValue === 'number' ? (
+    <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
+      <TextField
+        size="small"
+        type="number"
+        value={(filterValue?.[0] ?? '')}
+        onChange={e =>
+          column.setFilterValue((old) => [e.target.value, old?.[1]])
+        }
+        placeholder={`Min`}
+        sx={{ width: '80px' }}
+        variant="outlined"
+      />
+      <TextField
+        size="small"
+        type="number"
+        value={(filterValue?.[1] ?? '')}
+        onChange={e =>
+          column.setFilterValue((old) => [old?.[0], e.target.value])
+        }
+        placeholder={`Max`}
+        sx={{ width: '80px' }}
+        variant="outlined"
+      />
+    </Box>
+  ) : (
+    <TextField
+      size="small"
+      value={(filterValue ?? '')}
+      onChange={e => column.setFilterValue(e.target.value)}
+      placeholder={`Buscar ${typeof column.columnDef.header === 'string' ? column.columnDef.header : ''}...`}
+      variant="outlined"
+      sx={{ width: '100%', p: 1 }}
+    />
   );
 }
 
