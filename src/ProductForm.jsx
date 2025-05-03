@@ -257,9 +257,7 @@ const ProductForm = ({ onProductAdded }) => {
   const isSupplierDisabled = loading || !!supplierError || suppliers.length === 0;
 
   return (
-    // *** FIX: Remove horizontal padding from main Box ***
     <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}> 
-      {/* Grid container with consistent spacing */}
       <Grid container spacing={2}> 
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
@@ -355,16 +353,20 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
+          {/* *** FIX: Ensure InputLabel shrinks correctly for Select *** */}
           <FormControl fullWidth required size="small" error={(!loading && !formData.supplierId) || !!supplierError}>
-            <InputLabel id="supplier-label">Fornecedor</InputLabel>
+            <InputLabel id="supplier-label" shrink={!!formData.supplierId || loading || !!supplierError || suppliers.length > 0}>
+              Fornecedor
+            </InputLabel>
             <Select
               labelId="supplier-label"
               name="supplierId"
               value={formData.supplierId}
-              label="Fornecedor"
+              label="Fornecedor" // Keep label for accessibility, even if visually handled by InputLabel
               onChange={handleChange}
               disabled={isSupplierDisabled}
               displayEmpty 
+              notched={!!formData.supplierId || loading || !!supplierError || suppliers.length > 0} // Ensure notch is correct
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
