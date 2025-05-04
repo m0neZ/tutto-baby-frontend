@@ -3,15 +3,37 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
 } from 'material-react-table';
-import { Box, Button, Container, Typography, CircularProgress, Alert } from '@mui/material';
+import {
+  Box,
+  Button,
+  Container,
+  Typography,
+  CircularProgress,
+  Alert,
+  Tooltip,
+  IconButton,
+  ToggleButtonGroup,
+  ToggleButton,
+  Dialog, // For confirmation dialog
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR'; // Import MRT localization
+import FunctionsIcon from '@mui/icons-material/Functions'; // Sum icon
+import MovingIcon from '@mui/icons-material/Moving'; // Average icon
+import EditIcon from '@mui/icons-material/Edit'; // Edit icon
+import DeleteIcon from '@mui/icons-material/Delete'; // Delete icon
+import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 
-import AddProductModal from '../components/AddProductModal';
+import AddProductModal from '../components/AddProductModal'; // Assuming AddProductModal can handle editing
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper function to format currency (unchanged)
+// Helper functions (formatCurrency, formatDate) remain unchanged...
 const formatCurrency = (value) => {
   if (value == null) return 'R$ 0,00';
   const numValue = Number(value);
@@ -19,13 +41,11 @@ const formatCurrency = (value) => {
   return `R$ ${numValue.toFixed(2).replace('.', ',')}`;
 };
 
-// Helper function to format date (unchanged)
 const formatDate = (value) => {
   if (!value) return '-';
   try {
     const date = new Date(value);
     if (isNaN(date.getTime())) return '-';
-    // Ensure UTC date is interpreted correctly for display
     const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     return utcDate.toLocaleDateString("pt-BR");
   } catch (e) {
@@ -39,15 +59,12 @@ class ErrorBoundary extends React.Component {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
   static getDerivedStateFromError(error) {
     return { hasError: true, error: error };
   }
-
   componentDidCatch(error, errorInfo) {
     console.error("Uncaught error in EstoquePage:", error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return (
@@ -68,8 +85,15 @@ const EstoquePageContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddModal, setOpenAddModal] = useState(false);
-  const [grouping, setGrouping] = useState([]); // State for grouping
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 }); // Control pagination
+  const [grouping, setGrouping] = useState([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  const [priceAggregationMode, setPriceAggregationMode] = useState('mean');
+  // State for editing
+  const [editingProduct, setEditingProduct] = useState(null); // Store product being edited
+  const [openEditModal, setOpenEditModal] = useState(false);
+  // State for deletion confirmation
+  const [deletingProduct, setDeletingProduct] = useState(null); // Store product being deleted
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
 
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
@@ -84,9 +108,7 @@ const EstoquePageContent = () => {
         throw new Error(errorMsg);
       }
       const data = await response.json();
-      // MRT uses the data directly, no need to map 'id' if 'id' exists in the data
       const fetchedProdutos = (data.produtos || (data.success && data.produtos) || []);
-      // Ensure 'id' exists, otherwise MRT might complain
       if (fetchedProdutos.length > 0 && fetchedProdutos[0].id === undefined) {
           console.warn("Backend data does not contain 'id' field, attempting to use 'id_produto'.");
           setProdutos(fetchedProdutos.map(p => ({ ...p, id: p.id_produto })));
@@ -109,7 +131,8 @@ const EstoquePageContent = () => {
 
   const columns = useMemo(
     () => [
-      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true }, // Enable grouping for these columns
+      // ... other columns remain unchanged ...
+      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
       { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
       { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
       { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
@@ -117,7 +140,7 @@ const EstoquePageContent = () => {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
         size: 80,
-        aggregationFn: 'sum', // Enable aggregation
+        aggregationFn: 'sum',
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 Total: {cell.getValue()}
@@ -130,13 +153,14 @@ const EstoquePageContent = () => {
         accessorKey: 'custo',
         header: 'Custo',
         size: 110,
-        aggregationFn: 'mean', // Default to average, can add toggle later if needed
+        aggregationFn: priceAggregationMode,
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-                Média: {formatCurrency(cell.getValue())}
+                {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+                {formatCurrency(cell.getValue())}
             </Box>
         ),
-        Cell: ({ cell }) => formatCurrency(cell.getValue()), // Format in regular cells
+        Cell: ({ cell }) => formatCurrency(cell.getValue()),
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
       },
@@ -144,13 +168,14 @@ const EstoquePageContent = () => {
         accessorKey: 'preco_venda',
         header: 'Preço Venda',
         size: 120,
-        aggregationFn: 'mean', // Default to average
+        aggregationFn: priceAggregationMode,
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-                Média: {formatCurrency(cell.getValue())}
+                {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+                {formatCurrency(cell.getValue())}
             </Box>
         ),
-        Cell: ({ cell }) => formatCurrency(cell.getValue()), // Format in regular cells
+        Cell: ({ cell }) => formatCurrency(cell.getValue()),
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
       },
@@ -159,37 +184,99 @@ const EstoquePageContent = () => {
         accessorKey: 'data_compra',
         header: 'Data Compra',
         size: 120,
-        Cell: ({ cell }) => formatDate(cell.getValue()), // Format date
-        filterVariant: 'date-range', // Enable date range filtering
+        Cell: ({ cell }) => formatDate(cell.getValue()),
+        filterVariant: 'date-range',
       },
     ],
-    [],
+    [priceAggregationMode],
   );
 
-  const handleOpenAddModal = () => setOpenAddModal(true);
+  // --- Modal Handlers ---
+  const handleOpenAddModal = () => {
+    setEditingProduct(null); // Ensure we are adding, not editing
+    setOpenAddModal(true);
+  };
   const handleCloseAddModal = () => setOpenAddModal(false);
 
-  const handleProductAdded = async () => {
+  const handleOpenEditModal = (product) => {
+    setEditingProduct(product); // Set the product to edit
+    setOpenEditModal(true);
+  };
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setEditingProduct(null);
+  };
+
+  const handleOpenConfirmDelete = (product) => {
+    setDeletingProduct(product);
+    setOpenConfirmDelete(true);
+  };
+  const handleCloseConfirmDelete = () => {
+    setOpenConfirmDelete(false);
+    setDeletingProduct(null);
+  };
+
+  // --- Action Handlers ---
+  const handleProductAddedOrEdited = async () => {
     handleCloseAddModal();
+    handleCloseEditModal();
     try {
-      await fetchProdutos();
+      await fetchProdutos(); // Refresh data after adding/editing
     } catch (refreshError) {
-      console.error("Error refreshing products after add:", refreshError);
+      console.error("Error refreshing products:", refreshError);
+      setError("Falha ao atualizar a lista de produtos.");
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    setLoading(true); // Indicate loading during delete
+    try {
+      const response = await fetch(`${API_BASE}/produtos/${deletingProduct.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+        } catch (jsonError) { /* Ignore */ }
+        throw new Error(errorMsg);
+      }
+      // Success
+      handleCloseConfirmDelete();
+      await fetchProdutos(); // Refresh data
+    } catch (e) {
+      setError(`Falha ao excluir produto: ${e.message}`);
+      console.error("Delete error:", e);
+      setLoading(false); // Stop loading indicator on error
+    }
+    // setLoading(false) is handled in fetchProdutos' finally block if successful
+  };
+
+  // --- Aggregation Toggle Handler ---
+  const handleAggregationModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setPriceAggregationMode(newMode);
+    }
+  };
+
+  // --- Table Definition ---
   const table = useMaterialReactTable({
     columns,
-    data: produtos, // Pass fetched data
-    localization: MRT_Localization_PT_BR, // Apply localization
+    data: produtos,
+    localization: MRT_Localization_PT_BR,
     enableGrouping: true,
     enableStickyHeader: true,
     enableDensityToggle: false,
+    enableRowActions: true, // Enable row actions
+    positionActionsColumn: 'last', // Put actions column at the end
     initialState: {
         density: 'compact',
-        sorting: [{ id: 'nome', desc: false }], // Initial sort
-        grouping: [], // Initial grouping state
+        sorting: [{ id: 'nome', desc: false }],
+        grouping: [],
         pagination: { pageIndex: 0, pageSize: 50 },
+        columnPinning: { right: ['mrt-row-actions'] }, // Pin actions column to the right
     },
     state: {
         isLoading: loading,
@@ -204,10 +291,11 @@ const EstoquePageContent = () => {
           children: error,
         }
       : undefined,
-    onGroupingChange: setGrouping, // Control grouping state
-    onPaginationChange: setPagination, // Control pagination state
-    muiTableContainerProps: { sx: { maxHeight: '650px' } }, // Set max height for scroll
+    onGroupingChange: setGrouping,
+    onPaginationChange: setPagination,
+    muiTableContainerProps: { sx: { maxHeight: '650px' } },
     renderTopToolbarCustomActions: () => (
+      <Box sx={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <Button
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
@@ -216,10 +304,42 @@ const EstoquePageContent = () => {
         >
           Adicionar Produto
         </Button>
+        <Tooltip title="Alternar Agregação de Preços (Média/Soma)">
+          <ToggleButtonGroup
+            value={priceAggregationMode}
+            exclusive
+            onChange={handleAggregationModeChange}
+            aria-label="aggregation mode"
+            size="small"
+          >
+            <ToggleButton value="mean" aria-label="average">
+              <MovingIcon fontSize="small" /> Média
+            </ToggleButton>
+            <ToggleButton value="sum" aria-label="sum">
+              <FunctionsIcon fontSize="small" /> Soma
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Tooltip>
+      </Box>
     ),
-    // Styling
+    // Define Row Actions
+    renderRowActions: ({ row }) => (
+      <Box sx={{ display: 'flex', gap: '0.1rem', justifyContent: 'center' }}>
+        <Tooltip title="Editar">
+          <IconButton size="small" onClick={() => handleOpenEditModal(row.original)}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Excluir">
+          <IconButton size="small" color="error" onClick={() => handleOpenConfirmDelete(row.original)}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+    ),
+    // Styling props remain unchanged...
     muiTablePaperProps: {
-        elevation: 1, // Optional: add slight shadow
+        elevation: 1,
         sx: {
             borderRadius: '0',
             border: '1px solid',
@@ -228,18 +348,26 @@ const EstoquePageContent = () => {
     },
     muiTableHeadCellProps: {
         sx: (theme) => ({
-            backgroundColor: theme.palette.secondary.main, // Pink header
+            backgroundColor: theme.palette.secondary.main,
             color: theme.palette.secondary.contrastText,
             fontWeight: 'bold',
+            '& .Mui-TableHeadCell-Content': {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+            },
+            '&.MuiTableCell-alignRight .Mui-TableHeadCell-Content': {
+                flexDirection: 'row-reverse',
+            }
         }),
     },
     muiTableBodyProps: {
         sx: (theme) => ({
             '& tr:nth-of-type(odd) > td': {
-                backgroundColor: theme.palette.background.paper, // White background for odd rows
+                backgroundColor: theme.palette.background.paper,
             },
             '& tr:nth-of-type(even) > td': {
-                backgroundColor: theme.palette.action.hover, // Slightly off-white for even rows (optional zebra striping)
+                backgroundColor: theme.palette.action.hover,
             },
         }),
     },
@@ -251,19 +379,42 @@ const EstoquePageContent = () => {
         Estoque de Produtos
       </Typography>
 
-      {/* Render the table */} 
-      <MaterialReactTable table={table} />
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <MaterialReactTable table={table} />
+      </LocalizationProvider>
 
+      {/* Add/Edit Modal - Assuming AddProductModal can handle editing via 'initialData' prop */}
       <AddProductModal
-        open={openAddModal}
-        onClose={handleCloseAddModal}
-        onSuccess={handleProductAdded}
+        key={editingProduct ? `edit-${editingProduct.id}` : 'add'}
+        open={openAddModal || openEditModal}
+        onClose={editingProduct ? handleCloseEditModal : handleCloseAddModal}
+        onSuccess={handleProductAddedOrEdited}
+        initialData={editingProduct} // Pass product data for editing
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openConfirmDelete}
+        onClose={handleCloseConfirmDelete}
+      >
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza que deseja excluir o produto "{deletingProduct?.nome}"? Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirmDelete}>Cancelar</Button>
+          <Button onClick={handleDeleteProduct} color="error" autoFocus>
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Container>
   );
 };
 
-// Wrap the main content with the Error Boundary
 const EstoquePage = () => (
   <ErrorBoundary>
     <EstoquePageContent />
