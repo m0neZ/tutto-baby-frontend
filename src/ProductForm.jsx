@@ -32,7 +32,6 @@ const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
       {...other}
       ref={ref}
       onValueChange={(value, name, values) => {
-        // Ensure onChange is called only if it exists
         if (onChange) {
           onChange({
             target: {
@@ -57,8 +56,7 @@ const ProductForm = ({ onProductAdded }) => {
     control,
     reset,
     formState: { errors, isSubmitting },
-    setValue, // Use setValue to update form state programmatically if needed
-    watch // Use watch to observe field values if needed
+    watch
   } = useForm({
     defaultValues: {
       name: "",
@@ -145,7 +143,6 @@ const ProductForm = ({ onProductAdded }) => {
     setFormError("");
     setFormSuccess("");
 
-    // --- Validation (Handled by react-hook-form rules, but keep parsing/numeric checks) ---
     const parseCurrency = (value) => {
       if (typeof value !== "string" || value.trim() === "") return NaN;
       const cleanedValue = value.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".");
@@ -177,7 +174,6 @@ const ProductForm = ({ onProductAdded }) => {
       setFormError(`Valores não podem ser negativos: ${negativeFields.join(", ")}.`);
       return;
     }
-    // --- End Validation ---
 
     try {
       const payload = {
@@ -192,30 +188,34 @@ const ProductForm = ({ onProductAdded }) => {
         data_compra: data.purchaseDate || null,
       };
 
+      console.log("[API DEBUG] Payload:", payload);
       const response = await createProduct(payload);
 
       if (response.success) {
         setFormSuccess("Produto adicionado com sucesso!");
-        reset(); // Reset form using react-hook-form's reset
+        reset();
         if (onProductAdded) onProductAdded();
       } else {
         setFormError(response.error || "Falha ao adicionar produto.");
       }
     } catch (err) {
+      console.error("[API DEBUG] Error during createProduct fetch:", err);
       setFormError(err.message || "Erro ao enviar o formulário.");
     }
   };
 
   const productNames = useMemo(
-    () => products.map((p) => ({ label: p.nome, id: p.id_produto })), // Use id_produto
+    () => products.map((p) => ({ label: p.nome, id: p.id_produto })),
     [products]
   );
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 1 }}>
-      <Grid container spacing={2}> {/* Reduced spacing slightly */}
+    // Increased padding slightly for better spacing from modal edges
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 1 }}> 
+      {/* Grid container with spacing matching the sketch's feel */}
+      <Grid container spacing={3}> 
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Controller
@@ -230,9 +230,9 @@ const ProductForm = ({ onProductAdded }) => {
                 getOptionLabel={(option) =>
                   typeof option === "string" ? option : option.label || ""
                 }
-                inputValue={value || ""} // Control input value
+                inputValue={value || ""}
                 onInputChange={(event, newInputValue) => {
-                  onChange(newInputValue); // Update form state
+                  onChange(newInputValue);
                 }}
                 disabled={loadingOptions}
                 renderInput={(params) => (
@@ -240,7 +240,7 @@ const ProductForm = ({ onProductAdded }) => {
                     {...params}
                     label="Nome do Produto"
                     required
-                    fullWidth
+                    fullWidth // Ensures it takes full grid item width
                     variant="standard"
                     error={!!error}
                     helperText={error ? error.message : " "}
@@ -251,8 +251,8 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 2: Sexo, Tamanho */}
-        <Grid item xs={12} sm={6}>
+        {/* Row 2: Sexo, Tamanho, Cor/Estampa, Fornecedor (4 columns on medium screens) */}
+        <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="gender"
             control={control}
@@ -275,7 +275,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="size"
             control={control}
@@ -300,9 +300,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-
-        {/* Row 3: Cor/Estampa, Fornecedor */}
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="colorPrint"
             control={control}
@@ -327,15 +325,15 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} md={3}>
           <Controller
             name="supplierId"
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              // Use watched value to determine shrink, avoids direct state manipulation
+              // Use watchedSupplierId (from watch()) to determine shrink reliably
               <FormControl fullWidth required variant="standard" error={!!error || !!supplierError}>
-                <InputLabel id="supplier-label" shrink={!!field.value || isSupplierDisabled}>
+                <InputLabel id="supplier-label" shrink={!!watchedSupplierId || isSupplierDisabled}>
                   Fornecedor
                 </InputLabel>
                 <Select
@@ -361,8 +359,8 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 4: Custo, Preço Venda, Quantidade */}
-        <Grid item xs={12} sm={4}>
+        {/* Row 3: Custo, Preço Venda (2 columns) */}
+        <Grid item xs={12} sm={6}>
           <Controller
             name="cost"
             control={control}
@@ -386,7 +384,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Controller
             name="retailPrice"
             control={control}
@@ -410,7 +408,9 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={4}>
+
+        {/* Row 4: Quantidade, Data Compra (2 columns) */}
+        <Grid item xs={12} sm={6}>
           <Controller
             name="quantity"
             control={control}
@@ -427,15 +427,13 @@ const ProductForm = ({ onProductAdded }) => {
                 fullWidth
                 variant="standard"
                 type="number"
-                InputProps={{ inputProps: { min: 0 } }} // HTML5 validation
+                InputProps={{ inputProps: { min: 0 } }}
                 error={!!error}
                 helperText={error ? error.message : " "}
               />
             )}
           />
         </Grid>
-
-        {/* Row 5: Data Compra */}
         <Grid item xs={12} sm={6}>
           <Controller
             name="purchaseDate"
@@ -448,7 +446,7 @@ const ProductForm = ({ onProductAdded }) => {
                 fullWidth
                 variant="standard"
                 InputLabelProps={{
-                  shrink: true, // Always shrink for date input
+                  shrink: true,
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
@@ -457,7 +455,7 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 6: Submit Button and Messages */}
+        {/* Row 5: Submit Button and Messages */}
         <Grid item xs={12}>
           {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
           {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
@@ -467,7 +465,7 @@ const ProductForm = ({ onProductAdded }) => {
             type="submit"
             variant="contained"
             disabled={isSubmitting || loadingOptions}
-            sx={{ mt: 2 }}
+            sx={{ mt: 2 }} // Margin top for spacing
           >
             {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
           </Button>
