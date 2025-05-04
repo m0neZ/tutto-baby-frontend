@@ -46,17 +46,22 @@ const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backen
 
 // Helper component for Date Range Filtering
 function DateRangeColumnFilter({ column, isActive }) {
-  // *** FIX: Return null if not the active filter type ***
-  if (!column || !isActive) return null;
-
-  const filterValue = column.getFilterValue();
+  // *** FIX: Moved hooks before the early return ***
+  const filterValue = column?.getFilterValue(); // Use optional chaining
   const [startDate, setStartDate] = useState(filterValue?.[0] || '');
   const [endDate, setEndDate] = useState(filterValue?.[1] || '');
 
   useEffect(() => {
-    setStartDate(filterValue?.[0] || '');
-    setEndDate(filterValue?.[1] || '');
-  }, [filterValue]);
+    // Only run effect if column exists
+    if (column) {
+        const currentFilterValue = column.getFilterValue();
+        setStartDate(currentFilterValue?.[0] || '');
+        setEndDate(currentFilterValue?.[1] || '');
+    }
+  }, [column, filterValue]); // Depend on column as well
+
+  // Early return if not active or column is missing
+  if (!column || !isActive) return null;
 
   const handleStartDateChange = (e) => {
     const newStartDate = e.target.value;
@@ -98,7 +103,7 @@ function DateRangeColumnFilter({ column, isActive }) {
 
 // Helper component for general column filtering
 function Filter({ column, isActive }) {
-  // *** FIX: Return null if not the active filter type ***
+  // Early return if not active or column is missing
   if (!column || !isActive) return null;
 
   const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
@@ -545,7 +550,7 @@ const EstoquePage = () => {
           horizontal: 'left',
         }}
       >
-        {/* *** FIX: Always render both filters, control visibility internally *** */}
+        {/* Always render both filters, control visibility internally */}
         <DateRangeColumnFilter 
           column={currentFilterColumn} 
           isActive={currentFilterColumn?.id === 'data_compra'} 
