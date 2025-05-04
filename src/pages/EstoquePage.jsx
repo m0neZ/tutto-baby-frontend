@@ -310,11 +310,13 @@ const EstoquePage = () => {
   });
 
   const handleFilterIconClick = (event, columnId) => {
+    console.log("[DEBUG] Filter icon clicked for column:", columnId);
     setFilterAnchorEl(event.currentTarget);
     setCurrentFilterColumnId(columnId);
   };
 
   const handleFilterPopoverClose = () => {
+    console.log("[DEBUG] Closing filter popover");
     setFilterAnchorEl(null);
     setCurrentFilterColumnId(null);
   };
@@ -322,9 +324,11 @@ const EstoquePage = () => {
   const openFilterPopover = Boolean(filterAnchorEl);
   const filterPopoverId = openFilterPopover ? 'filter-popover' : undefined;
 
-  const currentFilterColumn = useMemo(() => 
-    table.getAllLeafColumns().find(col => col.id === currentFilterColumnId)
-  , [currentFilterColumnId, table]);
+  const currentFilterColumn = useMemo(() => {
+    const foundColumn = table.getAllLeafColumns().find(col => col.id === currentFilterColumnId);
+    console.log("[DEBUG] Current filter column resolved:", foundColumn?.id);
+    return foundColumn;
+  }, [currentFilterColumnId, table]);
 
   const handleOpenAddModal = () => setOpenAddModal(true);
   const handleCloseAddModal = () => setOpenAddModal(false);
@@ -336,6 +340,32 @@ const EstoquePage = () => {
     if (newAggFn !== null) setAggregationFn(newAggFn);
   };
   const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
+
+  // *** FIX: Render Popover content conditionally based on currentFilterColumn being ready ***
+  const renderPopoverContent = () => {
+    if (!currentFilterColumn) {
+      console.log("[DEBUG] Popover content: currentFilterColumn is null, rendering nothing.");
+      return null; // Don't render filters if column isn't resolved yet
+    }
+    console.log("[DEBUG] Popover content: Rendering filters for column:", currentFilterColumn.id);
+    try {
+      return (
+        <>
+          <DateRangeColumnFilter 
+            column={currentFilterColumn} 
+            isActive={currentFilterColumn.id === 'data_compra'} 
+          />
+          <Filter 
+            column={currentFilterColumn} 
+            isActive={currentFilterColumn.id !== 'data_compra'} 
+          />
+        </>
+      );
+    } catch (popoverError) {
+      console.error("Error rendering filter popover content:", popoverError);
+      return <Alert severity="error" sx={{ p: 1 }}>Erro ao renderizar filtro.</Alert>;
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -411,10 +441,9 @@ const EstoquePage = () => {
       )}
 
       {!loading && !error && (
-        // *** FIX: Ensure TableContainer allows scroll, but Table itself doesn't force it ***
+        // *** FIX: Use table-layout: fixed and ensure container allows scroll ***
         <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
-          {/* Removed minWidth from Table */}
-          <Table sx={{ tableLayout: 'auto' /* Allow browser to manage layout */ }} aria-label="estoque table">
+          <Table sx={{ tableLayout: 'fixed', width: '100%' }} aria-label="estoque table">
             <TableHead>
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id}>
@@ -423,14 +452,15 @@ const EstoquePage = () => {
                       key={header.id}
                       colSpan={header.colSpan}
                       sortDirection={header.column.getIsSorted()}
-                      // *** FIX: Use column size from definition ***
+                      // *** FIX: Apply width based on column size ***
                       sx={{ 
                         fontWeight: 'bold', 
                         whiteSpace: 'nowrap',
                         py: 1,
                         px: 1,
-                        width: header.getSize(), // Apply defined size
-                        minWidth: header.getSize(), // Ensure minimum width
+                        width: `${header.getSize()}px`, // Use px for fixed layout
+                        overflow: 'hidden', // Prevent header content overflow
+                        textOverflow: 'ellipsis',
                       }}
                     >
                       {header.isPlaceholder ? null : (
@@ -439,9 +469,7 @@ const EstoquePage = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
-                            // Prevent header content from causing overflow
                             overflow: 'hidden',
-                            textOverflow: 'ellipsis',
                           }}
                         >
                           <Box 
@@ -450,8 +478,9 @@ const EstoquePage = () => {
                               cursor: header.column.getCanSort() ? 'pointer' : 'default', 
                               display: 'flex', 
                               alignItems: 'center',
-                              // Allow header text to shrink if needed
                               minWidth: 0, 
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                             }}
                           >
                             {flexRender(
@@ -502,10 +531,11 @@ const EstoquePage = () => {
                           sx={{ 
                             py: 0.75,
                             px: 1,
-                            // Allow text wrap for most cells
-                            whiteSpace: ['custo', 'preco_venda', 'quantidade_atual'].includes(cell.column.id) ? 'nowrap' : 'normal',
-                            overflowWrap: 'break-word', // Ensure long words break
-                            width: cell.column.getSize(), // Apply defined size
+                            // *** FIX: Allow wrap, prevent overflow ***
+                            whiteSpace: 'normal',
+                            overflowWrap: 'break-word',
+                            wordBreak: 'break-word',
+                            width: `${cell.column.getSize()}px`, // Use px for fixed layout
                             ...(cell.getIsGrouped() && { 
                               fontWeight: 'bold',
                               cursor: 'pointer',
@@ -572,26 +602,8 @@ const EstoquePage = () => {
           horizontal: 'left',
         }}
       >
-        {/* *** FIX: Add try-catch around filter rendering *** */}
-        {(() => {
-          try {
-            return (
-              <>
-                <DateRangeColumnFilter 
-                  column={currentFilterColumn} 
-                  isActive={currentFilterColumn?.id === 'data_compra'} 
-                />
-                <Filter 
-                  column={currentFilterColumn} 
-                  isActive={currentFilterColumn?.id !== 'data_compra'} 
-                />
-              </>
-            );
-          } catch (popoverError) {
-            console.error("Error rendering filter popover content:", popoverError);
-            return <Alert severity="error" sx={{ p: 1 }}>Erro ao renderizar filtro.</Alert>;
-          }
-        })()}
+        {/* Render content conditionally based on column being ready */}
+        {renderPopoverContent()}
       </Popover>
 
       <AddProductModal 
