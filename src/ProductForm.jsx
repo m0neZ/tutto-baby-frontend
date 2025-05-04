@@ -80,7 +80,6 @@ const ProductForm = ({ onProductAdded }) => {
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
 
-  // Watch supplierId to manage label shrink
   const watchedSupplierId = watch("supplierId");
 
   useEffect(() => {
@@ -92,7 +91,6 @@ const ProductForm = ({ onProductAdded }) => {
       setSupplierError("");
 
       try {
-        // Fetch suppliers first
         try {
           const supplierList = await fetchSuppliers();
           if (isMounted) {
@@ -110,7 +108,6 @@ const ProductForm = ({ onProductAdded }) => {
           }
         }
 
-        // Fetch other options
         const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
           fetchFieldOptions("tamanho"),
@@ -211,11 +208,15 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
+  // Define common styles for standard variant fields
+  const standardFieldSx = {
+    // Ensure consistent height and alignment
+    // No specific height needed, rely on standard variant's default
+  };
+
   return (
-    // Increased padding slightly for better spacing from modal edges
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 1 }}> 
-      {/* Grid container with spacing matching the sketch's feel */}
-      <Grid container spacing={3}> 
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2 }}> {/* Increased paddingX */}
+      <Grid container spacing={2.5}> {/* Adjusted spacing */}
         {/* Row 1: Nome (Full Width) */}
         <Grid item xs={12}>
           <Controller
@@ -240,10 +241,11 @@ const ProductForm = ({ onProductAdded }) => {
                     {...params}
                     label="Nome do Produto"
                     required
-                    fullWidth // Ensures it takes full grid item width
+                    fullWidth
                     variant="standard"
                     error={!!error}
                     helperText={error ? error.message : " "}
+                    sx={standardFieldSx} // Apply common style
                   />
                 )}
               />
@@ -251,14 +253,15 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 2: Sexo, Tamanho, Cor/Estampa, Fornecedor (4 columns on medium screens) */}
-        <Grid item xs={12} sm={6} md={3}>
+        {/* Row 2: Sexo, Tamanho, Cor/Estampa, Fornecedor (4 columns) */}
+        {/* Use explicit width percentage for better control */}
+        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
           <Controller
             name="gender"
             control={control}
             rules={{ required: "Sexo é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}>
+              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
                 <InputLabel id="gender-label">Sexo</InputLabel>
                 <Select
                   {...field}
@@ -275,13 +278,13 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
           <Controller
             name="size"
             control={control}
             rules={{ required: "Tamanho é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}>
+              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
                 <InputLabel id="size-label">Tamanho</InputLabel>
                 <Select
                   {...field}
@@ -300,13 +303,13 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
           <Controller
             name="colorPrint"
             control={control}
             rules={{ required: "Cor/Estampa é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}>
+              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
                 <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
                 <Select
                   {...field}
@@ -325,15 +328,15 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
           <Controller
             name="supplierId"
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              // Use watchedSupplierId (from watch()) to determine shrink reliably
-              <FormControl fullWidth required variant="standard" error={!!error || !!supplierError}>
-                <InputLabel id="supplier-label" shrink={!!watchedSupplierId || isSupplierDisabled}>
+              <FormControl fullWidth required variant="standard" error={!!error || !!supplierError} sx={standardFieldSx}>
+                {/* Ensure label shrinks correctly */}
+                <InputLabel id="supplier-label" shrink={!!watchedSupplierId || isSupplierDisabled || loadingOptions || !!supplierError}>
                   Fornecedor
                 </InputLabel>
                 <Select
@@ -360,7 +363,7 @@ const ProductForm = ({ onProductAdded }) => {
         </Grid>
 
         {/* Row 3: Custo, Preço Venda (2 columns) */}
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
           <Controller
             name="cost"
             control={control}
@@ -380,11 +383,12 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
+                sx={standardFieldSx}
               />
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
           <Controller
             name="retailPrice"
             control={control}
@@ -404,13 +408,14 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
+                sx={standardFieldSx}
               />
             )}
           />
         </Grid>
 
         {/* Row 4: Quantidade, Data Compra (2 columns) */}
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
           <Controller
             name="quantity"
             control={control}
@@ -430,11 +435,12 @@ const ProductForm = ({ onProductAdded }) => {
                 InputProps={{ inputProps: { min: 0 } }}
                 error={!!error}
                 helperText={error ? error.message : " "}
+                sx={standardFieldSx}
               />
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
           <Controller
             name="purchaseDate"
             control={control}
@@ -450,6 +456,7 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
+                sx={standardFieldSx}
               />
             )}
           />
@@ -465,7 +472,7 @@ const ProductForm = ({ onProductAdded }) => {
             type="submit"
             variant="contained"
             disabled={isSubmitting || loadingOptions}
-            sx={{ mt: 2 }} // Margin top for spacing
+            sx={{ mt: 1, mb: 1 }} // Adjusted margins
           >
             {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
           </Button>
