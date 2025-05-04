@@ -81,13 +81,10 @@ const ProductForm = ({ onProductAdded }) => {
       setFormError("");
       setSupplierError("");
 
-      // let supplierFetchSuccess = false; // Removed unused variable
-
       try {
         try {
           console.log("[FORM DEBUG] Fetching suppliers...");
           const supplierList = await fetchSuppliers();
-          // supplierFetchSuccess = true; // Removed unused variable
           console.log("[FORM DEBUG] Raw Fetched Suppliers in Form:", supplierList);
           if (isMounted) {
             if (Array.isArray(supplierList) && supplierList.length > 0) {
@@ -105,12 +102,9 @@ const ProductForm = ({ onProductAdded }) => {
             setSuppliers([]);
             setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`);
           }
-          // Avoid throwing error here to allow other fetches to proceed
-          // throw new Error("Supplier fetch failed, stopping initial data load.");
         }
 
         console.log("[FORM DEBUG] Fetching products, sizes, colors...");
-        // Fetch secondary data even if suppliers failed
         const [productList, sizeOpts, colorOpts] = await Promise.all([
           fetchProducts(),
           fetchFieldOptions("tamanho"),
@@ -126,7 +120,6 @@ const ProductForm = ({ onProductAdded }) => {
       } catch (err) {
         console.error("[FORM DEBUG] Error during secondary data load:", err);
         if (isMounted) {
-          // Only set general form error if supplier error hasn't already been set
           if (!supplierError) {
             setFormError(
               `Erro ao carregar dados adicionais: ${err.message}. Verifique a conexão.`
@@ -267,7 +260,7 @@ const ProductForm = ({ onProductAdded }) => {
     <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}>
       <Grid container spacing={3}> {/* Increased spacing for standard variant */}
         {/* Row 1: Nome (Full Width) */}
-        <Grid item xs={12}>
+        <Grid item xs={12}> {/* Ensure Nome takes full width */}
           <Autocomplete
             freeSolo
             options={productNames}
@@ -278,7 +271,6 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleAutocompleteChange}
             onInputChange={handleAutocompleteInputChange}
             disabled={loading}
-            // size="small" // Remove size for standard variant
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -286,8 +278,7 @@ const ProductForm = ({ onProductAdded }) => {
                 name="name"
                 required
                 fullWidth
-                variant="standard" // *** CHANGE: Use standard variant ***
-                // size="small" // Remove size
+                variant="standard"
                 helperText={!formData.name ? "Nome é obrigatório" : " "}
                 error={!formData.name}
               />
@@ -297,13 +288,12 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 2: Sexo, Tamanho */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.gender}> {/* *** CHANGE: Use standard variant *** */}
+          <FormControl fullWidth required variant="standard" error={!formData.gender}>
             <InputLabel id="gender-label">Sexo</InputLabel>
             <Select
               labelId="gender-label"
               name="gender"
               value={formData.gender}
-              // label="Sexo" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading}
             >
@@ -316,13 +306,12 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.size}> {/* *** CHANGE: Use standard variant *** */}
+          <FormControl fullWidth required variant="standard" error={!formData.size}>
             <InputLabel id="size-label">Tamanho</InputLabel>
             <Select
               labelId="size-label"
               name="size"
               value={formData.size}
-              // label="Tamanho" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading || sizeOptions.length === 0}
             >
@@ -339,13 +328,12 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 3: Cor/Estampa, Fornecedor */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.colorPrint}> {/* *** CHANGE: Use standard variant *** */}
+          <FormControl fullWidth required variant="standard" error={!formData.colorPrint}>
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
               name="colorPrint"
               value={formData.colorPrint}
-              // label="Cor / Estampa" // Label provided by InputLabel
               onChange={handleChange}
               disabled={loading || colorOptions.length === 0}
             >
@@ -360,18 +348,19 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={(!loading && !formData.supplierId) || !!supplierError}> {/* *** CHANGE: Use standard variant *** */}
-            <InputLabel id="supplier-label">
+          {/* *** FIX: Ensure label shrinks correctly for standard variant Select *** */}
+          <FormControl fullWidth required variant="standard" error={(!loading && !formData.supplierId) || !!supplierError}>
+            <InputLabel id="supplier-label" shrink={!!formData.supplierId || isSupplierDisabled || open}> {/* Force shrink if value exists or disabled */}
               Fornecedor
             </InputLabel>
             <Select
               labelId="supplier-label"
               name="supplierId"
               value={formData.supplierId}
-              // label="Fornecedor" // Label provided by InputLabel
               onChange={handleChange}
               disabled={isSupplierDisabled}
               displayEmpty
+              // No label prop needed for standard variant
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
@@ -397,8 +386,7 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard" // *** CHANGE: Use standard variant ***
-            // size="small" // Remove size
+            variant="standard"
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -417,8 +405,7 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard" // *** CHANGE: Use standard variant ***
-            // size="small" // Remove size
+            variant="standard"
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -438,39 +425,45 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard" // *** CHANGE: Use standard variant ***
-            // size="small" // Remove size
-            inputProps={{ min: "0", step: "1" }}
+            variant="standard"
+            InputProps={{ inputProps: { min: 0 } }}
             helperText={!formData.quantity ? "Obrigatório" : " "}
-            error={!formData.quantity || parseInt(formData.quantity) < 0}
+            error={!formData.quantity}
           />
         </Grid>
 
-        {/* Row 5: Data da Compra (Full Width) */}
-        <Grid item xs={12}>
+        {/* Row 5: Data Compra */}
+        <Grid item xs={12} sm={4}> {/* Adjusted width for better alignment */}
           <TextField
-            label="Data da Compra"
+            label="Data Compra"
             name="purchaseDate"
             type="date"
             value={formData.purchaseDate}
             onChange={handleChange}
             fullWidth
-            variant="standard" // *** CHANGE: Use standard variant ***
-            // size="small" // Remove size
-            InputLabelProps={{
-              shrink: true,
-            }}
-            helperText=" " // Add space for consistent height
+            variant="standard"
+            InputLabelProps={{ shrink: true }}
+            helperText=" " // Keep space for alignment
           />
         </Grid>
 
         {/* Row 6: Submit Button */}
-        <Grid item xs={12} sx={{ textAlign: "right", mt: 2 }}>
-          {formError && <Alert severity="error" sx={{ mb: 2, textAlign: "left" }}>{formError}</Alert>}
-          {formSuccess && <Alert severity="success" sx={{ mb: 2, textAlign: "left" }}>{formSuccess}</Alert>}
-          <Button type="submit" variant="contained" disabled={loading}>
+        <Grid item xs={12} sx={{ mt: 2 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={loading}
+            fullWidth
+          >
             {loading ? "Adicionando..." : "Adicionar Produto"}
           </Button>
+        </Grid>
+
+        {/* Row 7: Feedback Messages */}
+        <Grid item xs={12}>
+          {formError && <Alert severity="error">{formError}</Alert>}
+          {formSuccess && <Alert severity="success">{formSuccess}</Alert>}
         </Grid>
       </Grid>
     </Box>
