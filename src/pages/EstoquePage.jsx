@@ -6,7 +6,8 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import { DataGrid, GridToolbar, ptBR } from '@mui/x-data-grid/locales'; // Import ptBR from locales
+import { DataGrid, GridToolbar } from '@mui/x-data-grid';
+import { ptBR } from '@mui/x-data-grid/locales';
 
 import AddProductModal from '../components/AddProductModal';
 
