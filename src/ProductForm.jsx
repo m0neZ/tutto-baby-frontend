@@ -71,6 +71,7 @@ const ProductForm = ({ onProductAdded }) => {
   const [formSuccess, setFormSuccess] = useState("");
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
+  const [isSupplierOpen, setIsSupplierOpen] = useState(false); // *** FIX: State for Select open status ***
 
   useEffect(() => {
     let isMounted = true;
@@ -348,9 +349,9 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          {/* *** FIX: Ensure label shrinks correctly for standard variant Select *** */}
           <FormControl fullWidth required variant="standard" error={(!loading && !formData.supplierId) || !!supplierError}>
-            <InputLabel id="supplier-label" shrink={!!formData.supplierId || isSupplierDisabled || open}> {/* Force shrink if value exists or disabled */}
+            {/* *** FIX: Use local state 'isSupplierOpen' for shrink condition *** */}
+            <InputLabel id="supplier-label" shrink={!!formData.supplierId || isSupplierDisabled || isSupplierOpen}> 
               Fornecedor
             </InputLabel>
             <Select
@@ -360,7 +361,8 @@ const ProductForm = ({ onProductAdded }) => {
               onChange={handleChange}
               disabled={isSupplierDisabled}
               displayEmpty
-              // No label prop needed for standard variant
+              onOpen={() => setIsSupplierOpen(true)} // *** FIX: Set state on open ***
+              onClose={() => setIsSupplierOpen(false)} // *** FIX: Set state on close ***
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
