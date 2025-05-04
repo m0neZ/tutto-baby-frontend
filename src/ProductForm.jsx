@@ -208,17 +208,16 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
-  // Define common styles for standard variant fields
   const standardFieldSx = {
-    // Ensure consistent height and alignment
-    // No specific height needed, rely on standard variant's default
+    // Common styles if needed, otherwise rely on Grid sizing
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2 }}> {/* Increased paddingX */}
-      <Grid container spacing={2.5}> {/* Adjusted spacing */}
-        {/* Row 1: Nome (Full Width) */}
-        <Grid item xs={12}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2 }}>
+      <Grid container spacing={2.5}> {/* Consistent spacing */}
+        
+        {/* Line 1: NOME (large), SEXO (small), TAMANHO (small) */}
+        <Grid item xs={12} sm={12} md={6}> {/* Large field */} 
           <Controller
             name="name"
             control={control}
@@ -245,17 +244,14 @@ const ProductForm = ({ onProductAdded }) => {
                     variant="standard"
                     error={!!error}
                     helperText={error ? error.message : " "}
-                    sx={standardFieldSx} // Apply common style
+                    sx={standardFieldSx}
                   />
                 )}
               />
             )}
           />
         </Grid>
-
-        {/* Row 2: Sexo, Tamanho, Cor/Estampa, Fornecedor (4 columns) */}
-        {/* Use explicit width percentage for better control */}
-        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
+        <Grid item xs={6} sm={6} md={3}> {/* Small field */} 
           <Controller
             name="gender"
             control={control}
@@ -278,7 +274,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
+        <Grid item xs={6} sm={6} md={3}> {/* Small field */} 
           <Controller
             name="size"
             control={control}
@@ -303,7 +299,9 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
+
+        {/* Line 2: COR/ESTAMPA (medium), FORNECEDOR (medium) */}
+        <Grid item xs={12} sm={6} md={6}> {/* Medium field */} 
           <Controller
             name="colorPrint"
             control={control}
@@ -328,14 +326,13 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={6} sm={3} sx={{ width: '25%' }}>
+        <Grid item xs={12} sm={6} md={6}> {/* Medium field */} 
           <Controller
             name="supplierId"
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
               <FormControl fullWidth required variant="standard" error={!!error || !!supplierError} sx={standardFieldSx}>
-                {/* Ensure label shrinks correctly */}
                 <InputLabel id="supplier-label" shrink={!!watchedSupplierId || isSupplierDisabled || loadingOptions || !!supplierError}>
                   Fornecedor
                 </InputLabel>
@@ -362,8 +359,8 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
 
-        {/* Row 3: Custo, Preço Venda (2 columns) */}
-        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
+        {/* Line 3: Custo (larger), Preço Venda (larger), Quantidade (smaller) */}
+        <Grid item xs={12} sm={5} md={5}> {/* Larger field */} 
           <Controller
             name="cost"
             control={control}
@@ -388,7 +385,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
+        <Grid item xs={12} sm={5} md={5}> {/* Larger field */} 
           <Controller
             name="retailPrice"
             control={control}
@@ -413,9 +410,7 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-
-        {/* Row 4: Quantidade, Data Compra (2 columns) */}
-        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
+        <Grid item xs={12} sm={2} md={2}> {/* Smaller field */} 
           <Controller
             name="quantity"
             control={control}
@@ -440,7 +435,9 @@ const ProductForm = ({ onProductAdded }) => {
             )}
           />
         </Grid>
-        <Grid item xs={12} sm={6} sx={{ width: '50%' }}>
+
+        {/* Line 4: DATA DE COMPRA */}
+        <Grid item xs={12} sm={6} md={6}> {/* Positioned on the left half */} 
           <Controller
             name="purchaseDate"
             control={control}
@@ -472,7 +469,7 @@ const ProductForm = ({ onProductAdded }) => {
             type="submit"
             variant="contained"
             disabled={isSubmitting || loadingOptions}
-            sx={{ mt: 1, mb: 1 }} // Adjusted margins
+            sx={{ mt: 1, mb: 1 }}
           >
             {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
           </Button>
