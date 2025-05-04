@@ -237,7 +237,7 @@ const EstoquePageContent = () => {
                '& .MuiDataGrid-cell': {
                   padding: '0 8px',
                },
-               '& .MuiDataGrid-toolbarContainer": {
+               '& .MuiDataGrid-toolbarContainer': {
                   padding: '8px',
                   flexWrap: 'wrap',
                }
