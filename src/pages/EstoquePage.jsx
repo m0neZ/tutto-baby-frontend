@@ -88,7 +88,16 @@ const EstoquePageContent = () => {
         throw new Error(errorMsg);
       }
       const data = await response.json();
-      const fetchedProdutos = (data.produtos || (data.success && data.produtos) || []).map(p => ({ ...p, id: p.id_produto }));
+      const rawProdutos = (data.produtos || (data.success && data.produtos) || []);
+      // Filter out products without a valid id_produto and map id_produto to id
+      const fetchedProdutos = rawProdutos
+        .filter(p => p && p.id_produto != null)
+        .map(p => ({ ...p, id: p.id_produto }));
+      
+      // Optional: Log if any products were filtered out
+      if (rawProdutos.length !== fetchedProdutos.length) {
+        console.warn("Some products were filtered out due to missing id_produto:", rawProdutos.filter(p => !p || p.id_produto == null));
+      }
       setProdutos(fetchedProdutos);
       setError(null); // Clear error on success
     } catch (e) {
