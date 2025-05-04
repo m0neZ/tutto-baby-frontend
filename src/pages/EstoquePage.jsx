@@ -62,6 +62,22 @@ const formatDate = (value) => {
   }
 };
 
+// --- Safe Aggregation Function Wrappers ---
+const safeMean = (values) => {
+  const validValues = Array.isArray(values) ? values.filter(v => typeof v === 'number' && !isNaN(v)) : [];
+  if (validValues.length === 0) return 0; // Return 0 if no valid numbers
+  // Use the original MRT mean function on the filtered array
+  return MRT_AggregationFns.mean(validValues);
+};
+
+const safeSum = (values) => {
+  const validValues = Array.isArray(values) ? values.filter(v => typeof v === 'number' && !isNaN(v)) : [];
+  if (validValues.length === 0) return 0; // Return 0 if no valid numbers
+  // Use the original MRT sum function on the filtered array
+  return MRT_AggregationFns.sum(validValues);
+};
+// --- End Safe Aggregation Function Wrappers ---
+
 // Error Boundary Component (unchanged)
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -146,7 +162,7 @@ const EstoquePageContent = () => {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
         size: 80,
-        aggregationFn: 'sum', // Always sum quantity
+        aggregationFn: safeSum, // Use safe sum
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 Total: {cell.getValue()}
@@ -154,10 +170,19 @@ const EstoquePageContent = () => {
         ),
         // Footer definition for overall aggregation
         Footer: ({ table }) => {
-            const total = useMemo(
-                () => table.getFilteredRowModel().rows.reduce((sum, row) => sum + row.getValue('quantidade_atual'), 0),
-                [table.getFilteredRowModel().rows]
-            );
+            const total = useMemo(() => {
+                let values = [];
+                try {
+                    const filteredRowModel = table.getFilteredRowModel();
+                    if (filteredRowModel && Array.isArray(filteredRowModel.rows)) {
+                        values = filteredRowModel.rows.map(row => row.getValue('quantidade_atual')).filter(v => v != null);
+                    }
+                } catch (e) {
+                    console.error("Error getting values for qtd footer aggregation:", e);
+                    values = [];
+                }
+                return safeSum(values); // Use safe sum
+            }, [table.getFilteredRowModel]);
             return (
                 <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                     Total: {total}
@@ -172,7 +197,7 @@ const EstoquePageContent = () => {
         accessorKey: 'custo',
         header: 'Custo Unit.',
         size: 110,
-        aggregationFn: priceAggregationMode, // Use state for aggregation
+        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum, // Use safe functions
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -181,13 +206,20 @@ const EstoquePageContent = () => {
         ),
         // Footer definition for overall aggregation
         Footer: ({ table }) => {
-            const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
+            const aggregationFunc = priceAggregationMode === 'mean' ? safeMean : safeSum; // Use safe functions
             const value = useMemo(() => {
-                const rows = table.getFilteredRowModel().rows;
-                const values = rows ? rows.map(row => row.getValue('custo')) : [];
-                // Ensure aggregation function receives a valid array
-                return aggregationFunc(values || []);
-            }, [table.getFilteredRowModel().rows, priceAggregationMode]);
+                let values = [];
+                try {
+                    const filteredRowModel = table.getFilteredRowModel();
+                    if (filteredRowModel && Array.isArray(filteredRowModel.rows)) {
+                        values = filteredRowModel.rows.map(row => row.getValue('custo')).filter(v => v != null);
+                    }
+                } catch (e) {
+                    console.error("Error getting values for custo footer aggregation:", e);
+                    values = [];
+                }
+                return aggregationFunc(values); // Call the selected safe function
+            }, [table.getFilteredRowModel, priceAggregationMode]);
             return (
                 <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                     {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -200,12 +232,11 @@ const EstoquePageContent = () => {
         muiTableHeadCellProps: { align: 'right' },
         muiTableFooterCellProps: { align: 'right' }, // Align footer cell
       },
-      // Removed Custo Total column
       {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
         size: 120,
-        aggregationFn: priceAggregationMode, // Use state for aggregation
+        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum, // Use safe functions
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -214,13 +245,20 @@ const EstoquePageContent = () => {
         ),
         // Footer definition for overall aggregation
         Footer: ({ table }) => {
-            const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
+            const aggregationFunc = priceAggregationMode === 'mean' ? safeMean : safeSum; // Use safe functions
             const value = useMemo(() => {
-                const rows = table.getFilteredRowModel().rows;
-                const values = rows ? rows.map(row => row.getValue("preco_venda")) : [];
-                // Ensure aggregation function receives a valid array
-                return aggregationFunc(values || []);
-            }, [table.getFilteredRowModel().rows, priceAggregationMode]);
+                let values = [];
+                try {
+                    const filteredRowModel = table.getFilteredRowModel();
+                    if (filteredRowModel && Array.isArray(filteredRowModel.rows)) {
+                        values = filteredRowModel.rows.map(row => row.getValue('preco_venda')).filter(v => v != null);
+                    }
+                } catch (e) {
+                    console.error("Error getting values for preco_venda footer aggregation:", e);
+                    values = [];
+                }
+                return aggregationFunc(values); // Call the selected safe function
+            }, [table.getFilteredRowModel, priceAggregationMode]);
             return (
                 <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                     {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -233,7 +271,6 @@ const EstoquePageContent = () => {
         muiTableHeadCellProps: { align: 'right' },
         muiTableFooterCellProps: { align: 'right' }, // Align footer cell
       },
-      // Removed Preço Venda Total column
       { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
       {
         accessorKey: 'data_compra',
@@ -259,7 +296,7 @@ const EstoquePageContent = () => {
         muiTableHeadCellProps: { align: 'left' },
       },
     ],
-    [priceAggregationMode], // Keep dependency for label and function update
+    [priceAggregationMode],
   );
 
   // --- Modal Handlers (unchanged) ---
@@ -443,45 +480,42 @@ const EstoquePageContent = () => {
   });
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" sx={{ color: 'primary.main', fontWeight: 'bold', mb: 2 }}>
-        Estoque de Produtos
-      </Typography>
-
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <MaterialReactTable table={table} />
-      </LocalizationProvider>
-
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box sx={{ width: '100%' }}>
+        {table && <MaterialReactTable table={table} />}
+      </Box>
       <AddProductModal
-        key={editingProduct ? `edit-${editingProduct.id}` : 'add'}
         open={openAddModal || openEditModal}
-        onClose={editingProduct ? handleCloseEditModal : handleCloseAddModal}
+        onClose={openEditModal ? handleCloseEditModal : handleCloseAddModal}
         onSuccess={handleProductAddedOrEdited}
-        initialData={editingProduct}
+        productData={editingProduct} // Pass editing product data
+        isEditMode={!!editingProduct} // Indicate if it's edit mode
       />
-
+      {/* Confirmation Dialog for Delete */}
       <Dialog
         open={openConfirmDelete}
         onClose={handleCloseConfirmDelete}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
       >
-        <DialogTitle>Confirmar Exclusão</DialogTitle>
+        <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText id="alert-dialog-description">
             Tem certeza que deseja excluir o produto "{deletingProduct?.nome}"? Esta ação não pode ser desfeita.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirmDelete}>Cancelar</Button>
-          <Button onClick={handleDeleteProduct} color="error" autoFocus>
-            Excluir
+          <Button onClick={handleDeleteProduct} color="error" autoFocus disabled={loading}>
+            {loading ? <CircularProgress size={24} /> : 'Excluir'}
           </Button>
         </DialogActions>
       </Dialog>
-
-    </Container>
+    </LocalizationProvider>
   );
 };
 
+// Wrap the content component with the Error Boundary
 const EstoquePage = () => (
   <ErrorBoundary>
     <EstoquePageContent />
