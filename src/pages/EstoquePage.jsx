@@ -182,10 +182,12 @@ const EstoquePageContent = () => {
         // Footer definition for overall aggregation
         Footer: ({ table }) => {
             const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
-            const value = useMemo(
-                () => aggregationFunc(table.getFilteredRowModel().rows.map(row => row.getValue('custo'))),
-                [table.getFilteredRowModel().rows, priceAggregationMode]
-            );
+            const value = useMemo(() => {
+                const rows = table.getFilteredRowModel().rows;
+                const values = rows ? rows.map(row => row.getValue('custo')) : [];
+                // Ensure aggregation function receives a valid array
+                return aggregationFunc(values || []);
+            }, [table.getFilteredRowModel().rows, priceAggregationMode]);
             return (
                 <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                     {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -213,10 +215,12 @@ const EstoquePageContent = () => {
         // Footer definition for overall aggregation
         Footer: ({ table }) => {
             const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
-            const value = useMemo(
-                () => aggregationFunc(table.getFilteredRowModel().rows.map(row => row.getValue('preco_venda'))),
-                [table.getFilteredRowModel().rows, priceAggregationMode]
-            );
+            const value = useMemo(() => {
+                const rows = table.getFilteredRowModel().rows;
+                const values = rows ? rows.map(row => row.getValue("preco_venda")) : [];
+                // Ensure aggregation function receives a valid array
+                return aggregationFunc(values || []);
+            }, [table.getFilteredRowModel().rows, priceAggregationMode]);
             return (
                 <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                     {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
