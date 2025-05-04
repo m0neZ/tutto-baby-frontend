@@ -71,7 +71,7 @@ const ProductForm = ({ onProductAdded }) => {
   const [formSuccess, setFormSuccess] = useState("");
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
-  const [isSupplierOpen, setIsSupplierOpen] = useState(false); // *** FIX: State for Select open status ***
+  // Removed isSupplierOpen state as outlined variant handles label better
 
   useEffect(() => {
     let isMounted = true;
@@ -185,8 +185,8 @@ const ProductForm = ({ onProductAdded }) => {
       return;
     }
     const parseCurrency = (value) => {
-      if (typeof value !== 'string') return NaN;
-      const cleanedValue = value.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.');
+      if (typeof value !== "string") return NaN;
+      const cleanedValue = value.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".");
       return parseFloat(cleanedValue);
     };
     const parsedSupplierId = parseInt(formData.supplierId);
@@ -259,9 +259,10 @@ const ProductForm = ({ onProductAdded }) => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ paddingTop: 1, paddingX: 0 }}>
-      <Grid container spacing={3}> {/* Increased spacing for standard variant */}
+      {/* *** FIX: Use spacing={2} for tighter layout *** */}
+      <Grid container spacing={2}> 
         {/* Row 1: Nome (Full Width) */}
-        <Grid item xs={12}> {/* Ensure Nome takes full width */}
+        <Grid item xs={12}> 
           <Autocomplete
             freeSolo
             options={productNames}
@@ -279,7 +280,8 @@ const ProductForm = ({ onProductAdded }) => {
                 name="name"
                 required
                 fullWidth
-                variant="standard"
+                variant="outlined" // *** FIX: Revert to outlined variant ***
+                size="small" // *** FIX: Use small size for consistency ***
                 helperText={!formData.name ? "Nome é obrigatório" : " "}
                 error={!formData.name}
               />
@@ -289,12 +291,14 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 2: Sexo, Tamanho */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.gender}>
+          {/* *** FIX: Revert to outlined variant *** */}
+          <FormControl fullWidth required variant="outlined" size="small" error={!formData.gender}> 
             <InputLabel id="gender-label">Sexo</InputLabel>
             <Select
               labelId="gender-label"
               name="gender"
               value={formData.gender}
+              label="Sexo" // Label needed for outlined variant
               onChange={handleChange}
               disabled={loading}
             >
@@ -307,12 +311,14 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.size}>
+          {/* *** FIX: Revert to outlined variant *** */}
+          <FormControl fullWidth required variant="outlined" size="small" error={!formData.size}> 
             <InputLabel id="size-label">Tamanho</InputLabel>
             <Select
               labelId="size-label"
               name="size"
               value={formData.size}
+              label="Tamanho" // Label needed for outlined variant
               onChange={handleChange}
               disabled={loading || sizeOptions.length === 0}
             >
@@ -329,12 +335,14 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 3: Cor/Estampa, Fornecedor */}
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={!formData.colorPrint}>
+          {/* *** FIX: Revert to outlined variant *** */}
+          <FormControl fullWidth required variant="outlined" size="small" error={!formData.colorPrint}> 
             <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
             <Select
               labelId="colorPrint-label"
               name="colorPrint"
               value={formData.colorPrint}
+              label="Cor / Estampa" // Label needed for outlined variant
               onChange={handleChange}
               disabled={loading || colorOptions.length === 0}
             >
@@ -349,20 +357,17 @@ const ProductForm = ({ onProductAdded }) => {
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth required variant="standard" error={(!loading && !formData.supplierId) || !!supplierError}>
-            {/* *** FIX: Use local state 'isSupplierOpen' for shrink condition *** */}
-            <InputLabel id="supplier-label" shrink={!!formData.supplierId || isSupplierDisabled || isSupplierOpen}> 
-              Fornecedor
-            </InputLabel>
+          {/* *** FIX: Revert to outlined variant *** */}
+          <FormControl fullWidth required variant="outlined" size="small" error={(!loading && !formData.supplierId) || !!supplierError}> 
+            <InputLabel id="supplier-label">Fornecedor</InputLabel>
             <Select
               labelId="supplier-label"
               name="supplierId"
               value={formData.supplierId}
+              label="Fornecedor" // Label needed for outlined variant
               onChange={handleChange}
               disabled={isSupplierDisabled}
               displayEmpty
-              onOpen={() => setIsSupplierOpen(true)} // *** FIX: Set state on open ***
-              onClose={() => setIsSupplierOpen(false)} // *** FIX: Set state on close ***
             >
               <MenuItem value="" disabled>
                 <em>{loading ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
@@ -381,6 +386,7 @@ const ProductForm = ({ onProductAdded }) => {
 
         {/* Row 4: Custo, Preço Venda, Quantidade */}
         <Grid item xs={12} sm={4}>
+          {/* *** FIX: Revert to outlined variant *** */}
           <TextField
             label="Custo"
             name="cost"
@@ -388,7 +394,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard"
+            variant="outlined" 
+            size="small" 
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -400,6 +407,7 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
         <Grid item xs={12} sm={4}>
+          {/* *** FIX: Revert to outlined variant *** */}
           <TextField
             label="Preço Venda"
             name="retailPrice"
@@ -407,7 +415,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard"
+            variant="outlined" 
+            size="small" 
             InputProps={{
               inputComponent: CurrencyInputAdapter,
               startAdornment: (
@@ -419,6 +428,7 @@ const ProductForm = ({ onProductAdded }) => {
           />
         </Grid>
         <Grid item xs={12} sm={4}>
+          {/* *** FIX: Revert to outlined variant *** */}
           <TextField
             label="Quantidade"
             name="quantity"
@@ -427,7 +437,8 @@ const ProductForm = ({ onProductAdded }) => {
             onChange={handleChange}
             required
             fullWidth
-            variant="standard"
+            variant="outlined" 
+            size="small" 
             InputProps={{ inputProps: { min: 0 } }}
             helperText={!formData.quantity ? "Obrigatório" : " "}
             error={!formData.quantity}
@@ -435,7 +446,8 @@ const ProductForm = ({ onProductAdded }) => {
         </Grid>
 
         {/* Row 5: Data Compra */}
-        <Grid item xs={12} sm={4}> {/* Adjusted width for better alignment */}
+        <Grid item xs={12} sm={4}> 
+          {/* *** FIX: Revert to outlined variant *** */}
           <TextField
             label="Data Compra"
             name="purchaseDate"
@@ -443,7 +455,8 @@ const ProductForm = ({ onProductAdded }) => {
             value={formData.purchaseDate}
             onChange={handleChange}
             fullWidth
-            variant="standard"
+            variant="outlined" 
+            size="small" 
             InputLabelProps={{ shrink: true }}
             helperText=" " // Keep space for alignment
           />
