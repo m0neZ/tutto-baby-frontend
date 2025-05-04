@@ -208,10 +208,6 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
-  const standardFieldSx = {
-    // Common styles if needed, otherwise rely on Grid sizing
-  };
-
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2 }}>
       <Grid container spacing={2.5}> {/* Consistent spacing */}
@@ -241,10 +237,10 @@ const ProductForm = ({ onProductAdded }) => {
                     label="Nome do Produto"
                     required
                     fullWidth
-                    variant="standard"
+                    variant="outlined" // Changed variant
                     error={!!error}
                     helperText={error ? error.message : " "}
-                    sx={standardFieldSx}
+                    size="small" // Use smaller size for outlined
                   />
                 )}
               />
@@ -257,11 +253,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Sexo é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
                 <InputLabel id="gender-label">Sexo</InputLabel>
                 <Select
                   {...field}
                   labelId="gender-label"
+                  label="Sexo" // Required for outlined variant
                   disabled={loadingOptions}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -280,11 +277,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Tamanho é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
                 <InputLabel id="size-label">Tamanho</InputLabel>
                 <Select
                   {...field}
                   labelId="size-label"
+                  label="Tamanho" // Required for outlined variant
                   disabled={loadingOptions || sizeOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -307,11 +305,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Cor/Estampa é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error} sx={standardFieldSx}>
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
                 <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
                 <Select
                   {...field}
                   labelId="colorPrint-label"
+                  label="Cor / Estampa" // Required for outlined variant
                   disabled={loadingOptions || colorOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -332,13 +331,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error || !!supplierError} sx={standardFieldSx}>
-                <InputLabel id="supplier-label" shrink={!!watchedSupplierId || isSupplierDisabled || loadingOptions || !!supplierError}>
-                  Fornecedor
-                </InputLabel>
+              <FormControl fullWidth required variant="outlined" error={!!error || !!supplierError} size="small"> {/* Changed variant */} 
+                <InputLabel id="supplier-label">Fornecedor</InputLabel>
                 <Select
                   {...field}
                   labelId="supplier-label"
+                  label="Fornecedor" // Required for outlined variant
                   disabled={isSupplierDisabled}
                   displayEmpty
                 >
@@ -371,7 +369,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Custo"
                 required
                 fullWidth
-                variant="standard"
+                variant="outlined" // Changed variant
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -380,7 +378,7 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                sx={standardFieldSx}
+                size="small" // Use smaller size for outlined
               />
             )}
           />
@@ -396,7 +394,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Preço Venda"
                 required
                 fullWidth
-                variant="standard"
+                variant="outlined" // Changed variant
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -405,7 +403,7 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                sx={standardFieldSx}
+                size="small" // Use smaller size for outlined
               />
             )}
           />
@@ -425,12 +423,12 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Quantidade"
                 required
                 fullWidth
-                variant="standard"
+                variant="outlined" // Changed variant
                 type="number"
                 InputProps={{ inputProps: { min: 0 } }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                sx={standardFieldSx}
+                size="small" // Use smaller size for outlined
               />
             )}
           />
@@ -447,13 +445,13 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Data da Compra (Opcional)"
                 type="date"
                 fullWidth
-                variant="standard"
+                variant="outlined" // Changed variant
                 InputLabelProps={{
                   shrink: true,
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                sx={standardFieldSx}
+                size="small" // Use smaller size for outlined
               />
             )}
           />
