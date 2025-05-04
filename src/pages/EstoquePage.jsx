@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   MaterialReactTable,
   useMaterialReactTable,
+  MRT_AggregationFns, // Import aggregation functions
 } from 'material-react-table';
 import {
   Box,
@@ -19,6 +20,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  TableFooter, // Import TableFooter
+  TableRow, // Import TableRow
+  TableCell, // Import TableCell
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FunctionsIcon from '@mui/icons-material/Functions'; // Sum icon
@@ -30,7 +34,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs'; // Import dayjs for date comparison
 import isBetween from 'dayjs/plugin/isBetween'; // Import isBetween plugin
-dayjs.extend(isBetween);
+dayjs.extend(isBetween); // Extend dayjs with the plugin *after* importing both
 
 import AddProductModal from '../components/AddProductModal'; // Assuming AddProductModal can handle editing
 
@@ -141,18 +145,31 @@ const EstoquePageContent = () => {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
         size: 80,
-        aggregationFn: 'sum',
+        aggregationFn: 'sum', // Always sum quantity
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 Total: {cell.getValue()}
             </Box>
         ),
+        // Footer definition for overall aggregation
+        Footer: ({ table }) => {
+            const total = useMemo(
+                () => table.getFilteredRowModel().rows.reduce((sum, row) => sum + row.getValue('quantidade_atual'), 0),
+                [table.getFilteredRowModel().rows]
+            );
+            return (
+                <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                    Total: {total}
+                </Box>
+            );
+        },
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' }, // Align footer cell
       },
       {
         accessorKey: 'custo',
-        header: 'Custo Unit.', // Renamed header
+        header: 'Custo Unit.',
         size: 110,
         aggregationFn: priceAggregationMode, // Use state for aggregation
         AggregatedCell: ({ cell }) => (
@@ -161,28 +178,29 @@ const EstoquePageContent = () => {
                 {formatCurrency(cell.getValue())}
             </Box>
         ),
+        // Footer definition for overall aggregation
+        Footer: ({ table }) => {
+            const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
+            const value = useMemo(
+                () => aggregationFunc(table.getFilteredRowModel().rows.map(row => row.getValue('custo'))),
+                [table.getFilteredRowModel().rows, priceAggregationMode]
+            );
+            return (
+                <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                    {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+                    {formatCurrency(value)}
+                </Box>
+            );
+        },
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' }, // Align footer cell
       },
-      {
-        accessorFn: (row) => row.custo * row.quantidade_atual, // Calculate total cost
-        id: 'custo_total',
-        header: 'Custo Total',
-        size: 120,
-        aggregationFn: 'sum', // Always sum totals
-        AggregatedCell: ({ cell }) => (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-                Total: {formatCurrency(cell.getValue())}
-            </Box>
-        ),
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-      },
+      // Removed Custo Total column
       {
         accessorKey: 'preco_venda',
-        header: 'Preço Venda Unit.', // Renamed header
+        header: 'Preço Venda Unit.',
         size: 120,
         aggregationFn: priceAggregationMode, // Use state for aggregation
         AggregatedCell: ({ cell }) => (
@@ -191,25 +209,26 @@ const EstoquePageContent = () => {
                 {formatCurrency(cell.getValue())}
             </Box>
         ),
+        // Footer definition for overall aggregation
+        Footer: ({ table }) => {
+            const aggregationFunc = priceAggregationMode === 'mean' ? MRT_AggregationFns.mean : MRT_AggregationFns.sum;
+            const value = useMemo(
+                () => aggregationFunc(table.getFilteredRowModel().rows.map(row => row.getValue('preco_venda'))),
+                [table.getFilteredRowModel().rows, priceAggregationMode]
+            );
+            return (
+                <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                    {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+                    {formatCurrency(value)}
+                </Box>
+            );
+        },
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' }, // Align footer cell
       },
-      {
-        accessorFn: (row) => row.preco_venda * row.quantidade_atual, // Calculate total selling price
-        id: 'preco_venda_total',
-        header: 'Preço Venda Total',
-        size: 130,
-        aggregationFn: 'sum', // Always sum totals
-        AggregatedCell: ({ cell }) => (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-                Total: {formatCurrency(cell.getValue())}
-            </Box>
-        ),
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-      },
+      // Removed Preço Venda Total column
       { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
       {
         accessorKey: 'data_compra',
@@ -306,7 +325,7 @@ const EstoquePageContent = () => {
     }
   };
 
-  // --- Table Definition (unchanged) ---
+  // --- Table Definition ---
   const table = useMaterialReactTable({
     columns,
     data: produtos,
@@ -316,6 +335,7 @@ const EstoquePageContent = () => {
     enableDensityToggle: false,
     enableRowActions: true,
     positionActionsColumn: 'last',
+    enableTableFooter: true, // Enable the footer
     initialState: {
         density: 'compact',
         sorting: [{ id: 'nome', desc: false }],
@@ -349,7 +369,7 @@ const EstoquePageContent = () => {
         >
           Adicionar Produto
         </Button>
-        <Tooltip title="Alternar Agregação de Preços Unitários (Média/Soma)"> {/* Updated tooltip */}
+        <Tooltip title="Alternar Agregação de Preços Unitários (Média/Soma)">
           <ToggleButtonGroup
             value={priceAggregationMode}
             exclusive
@@ -404,6 +424,15 @@ const EstoquePageContent = () => {
             '& tr:nth-of-type(even) > td': {
                 backgroundColor: theme.palette.action.hover,
             },
+        }),
+    },
+    // Style the footer row
+    muiTableFooterProps: {
+        sx: (theme) => ({
+            backgroundColor: theme.palette.grey[200], // Example footer background
+            '& td': {
+                fontWeight: 'bold',
+            }
         }),
     },
   });
