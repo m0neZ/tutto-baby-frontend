@@ -7,7 +7,7 @@ import {
   fetchFieldOptions,
 } from "./api";
 import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
+// Removed Grid import
 import TextField from "@mui/material/TextField";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -71,6 +71,7 @@ const ProductForm = ({ onProductAdded }) => {
     },
   });
 
+  // State hooks remain the same...
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [sizeOptions, setSizeOptions] = useState([]);
@@ -82,6 +83,7 @@ const ProductForm = ({ onProductAdded }) => {
 
   const watchedSupplierId = watch("supplierId");
 
+  // useEffect and onSubmit remain the same...
   useEffect(() => {
     let isMounted = true;
     const loadInitialData = async () => {
@@ -208,12 +210,13 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
+  // *** NEW LAYOUT using Box and Flexbox ***
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2 }}>
-      <Grid container spacing={2.5}> {/* Consistent spacing */}
-        
-        {/* Line 1: NOME (large), SEXO (small), TAMANHO (small) */}
-        <Grid item xs={12} sm={12} md={6}> {/* Large field */} 
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      
+      {/* Line 1: NOME (large), SEXO (small), TAMANHO (small) */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Box sx={{ flexGrow: 1, flexBasis: { sm: '50%', md: '50%' } }}> {/* Large field */} 
           <Controller
             name="name"
             control={control}
@@ -237,28 +240,28 @@ const ProductForm = ({ onProductAdded }) => {
                     label="Nome do Produto"
                     required
                     fullWidth
-                    variant="outlined" // Changed variant
+                    variant="outlined"
                     error={!!error}
                     helperText={error ? error.message : " "}
-                    size="small" // Use smaller size for outlined
+                    size="small"
                   />
                 )}
               />
             )}
           />
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}> {/* Small field */} 
+        </Box>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '25%', md: '25%' } }}> {/* Small field */} 
           <Controller
             name="gender"
             control={control}
             rules={{ required: "Sexo é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
                 <InputLabel id="gender-label">Sexo</InputLabel>
                 <Select
                   {...field}
                   labelId="gender-label"
-                  label="Sexo" // Required for outlined variant
+                  label="Sexo"
                   disabled={loadingOptions}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -270,19 +273,19 @@ const ProductForm = ({ onProductAdded }) => {
               </FormControl>
             )}
           />
-        </Grid>
-        <Grid item xs={6} sm={6} md={3}> {/* Small field */} 
+        </Box>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '25%', md: '25%' } }}> {/* Small field */} 
           <Controller
             name="size"
             control={control}
             rules={{ required: "Tamanho é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
                 <InputLabel id="size-label">Tamanho</InputLabel>
                 <Select
                   {...field}
                   labelId="size-label"
-                  label="Tamanho" // Required for outlined variant
+                  label="Tamanho"
                   disabled={loadingOptions || sizeOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -296,21 +299,23 @@ const ProductForm = ({ onProductAdded }) => {
               </FormControl>
             )}
           />
-        </Grid>
+        </Box>
+      </Box>
 
-        {/* Line 2: COR/ESTAMPA (medium), FORNECEDOR (medium) */}
-        <Grid item xs={12} sm={6} md={6}> {/* Medium field */} 
+      {/* Line 2: COR/ESTAMPA (medium), FORNECEDOR (medium) */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Medium field */} 
           <Controller
             name="colorPrint"
             control={control}
             rules={{ required: "Cor/Estampa é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small"> {/* Changed variant */} 
+              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
                 <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
                 <Select
                   {...field}
                   labelId="colorPrint-label"
-                  label="Cor / Estampa" // Required for outlined variant
+                  label="Cor / Estampa"
                   disabled={loadingOptions || colorOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -324,21 +329,23 @@ const ProductForm = ({ onProductAdded }) => {
               </FormControl>
             )}
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={6}> {/* Medium field */} 
+        </Box>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Medium field */} 
           <Controller
             name="supplierId"
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error || !!supplierError} size="small"> {/* Changed variant */} 
+              <FormControl fullWidth required variant="outlined" error={!!error || !!supplierError} size="small">
                 <InputLabel id="supplier-label">Fornecedor</InputLabel>
                 <Select
                   {...field}
                   labelId="supplier-label"
-                  label="Fornecedor" // Required for outlined variant
+                  label="Fornecedor"
                   disabled={isSupplierDisabled}
                   displayEmpty
+                  // Fix overlap by ensuring label shrinks when value exists
+                  value={field.value || ""} 
                 >
                   <MenuItem value="" disabled>
                     <em>{loadingOptions ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
@@ -355,10 +362,12 @@ const ProductForm = ({ onProductAdded }) => {
               </FormControl>
             )}
           />
-        </Grid>
+        </Box>
+      </Box>
 
-        {/* Line 3: Custo (larger), Preço Venda (larger), Quantidade (smaller) */}
-        <Grid item xs={12} sm={5} md={5}> {/* Larger field */} 
+      {/* Line 3: Custo (larger), Preço Venda (larger), Quantidade (smaller) */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '40%', md: '40%' } }}> {/* Larger field */} 
           <Controller
             name="cost"
             control={control}
@@ -369,7 +378,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Custo"
                 required
                 fullWidth
-                variant="outlined" // Changed variant
+                variant="outlined"
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -378,12 +387,12 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small" // Use smaller size for outlined
+                size="small"
               />
             )}
           />
-        </Grid>
-        <Grid item xs={12} sm={5} md={5}> {/* Larger field */} 
+        </Box>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '40%', md: '40%' } }}> {/* Larger field */} 
           <Controller
             name="retailPrice"
             control={control}
@@ -394,7 +403,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Preço Venda"
                 required
                 fullWidth
-                variant="outlined" // Changed variant
+                variant="outlined"
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -403,12 +412,12 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small" // Use smaller size for outlined
+                size="small"
               />
             )}
           />
-        </Grid>
-        <Grid item xs={12} sm={2} md={2}> {/* Smaller field */} 
+        </Box>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '20%', md: '20%' } }}> {/* Smaller field */} 
           <Controller
             name="quantity"
             control={control}
@@ -423,19 +432,21 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Quantidade"
                 required
                 fullWidth
-                variant="outlined" // Changed variant
+                variant="outlined"
                 type="number"
                 InputProps={{ inputProps: { min: 0 } }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small" // Use smaller size for outlined
+                size="small"
               />
             )}
           />
-        </Grid>
+        </Box>
+      </Box>
 
-        {/* Line 4: DATA DE COMPRA */}
-        <Grid item xs={12} sm={6} md={6}> {/* Positioned on the left half */} 
+      {/* Line 4: DATA DE COMPRA */}
+      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
+        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Positioned on the left half */} 
           <Controller
             name="purchaseDate"
             control={control}
@@ -445,34 +456,35 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Data da Compra (Opcional)"
                 type="date"
                 fullWidth
-                variant="outlined" // Changed variant
+                variant="outlined"
                 InputLabelProps={{
                   shrink: true,
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small" // Use smaller size for outlined
+                size="small"
               />
             )}
           />
-        </Grid>
+        </Box>
+        <Box sx={{ flexBasis: { xs: '0%', sm: '50%', md: '50%' } }} /> {/* Spacer */} 
+      </Box>
 
-        {/* Row 5: Submit Button and Messages */}
-        <Grid item xs={12}>
-          {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
-          {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
-        </Grid>
-        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isSubmitting || loadingOptions}
-            sx={{ mt: 1, mb: 1 }}
-          >
-            {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
-          </Button>
-        </Grid>
-      </Grid>
+      {/* Row 5: Submit Button and Messages */}
+      <Box>
+        {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
+        {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isSubmitting || loadingOptions}
+          sx={{ mt: 1, mb: 1 }}
+        >
+          {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
+        </Button>
+      </Box>
     </Box>
   );
 };
