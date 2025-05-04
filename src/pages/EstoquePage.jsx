@@ -28,6 +28,9 @@ import DeleteIcon from '@mui/icons-material/Delete'; // Delete icon
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import dayjs from 'dayjs'; // Import dayjs for date comparison
+import isBetween from 'dayjs/plugin/isBetween'; // Import isBetween plugin
+dayjs.extend(isBetween);
 
 import AddProductModal from '../components/AddProductModal'; // Assuming AddProductModal can handle editing
 
@@ -44,10 +47,11 @@ const formatCurrency = (value) => {
 const formatDate = (value) => {
   if (!value) return '-';
   try {
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return '-';
-    const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    return utcDate.toLocaleDateString("pt-BR");
+    // Use dayjs for consistent parsing and formatting
+    const date = dayjs(value);
+    if (!date.isValid()) return '-';
+    // Ensure we display the date as interpreted (likely UTC from backend)
+    return date.format('DD/MM/YYYY');
   } catch (e) {
     return '-';
   }
@@ -88,11 +92,9 @@ const EstoquePageContent = () => {
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [priceAggregationMode, setPriceAggregationMode] = useState('mean');
-  // State for editing
-  const [editingProduct, setEditingProduct] = useState(null); // Store product being edited
+  const [editingProduct, setEditingProduct] = useState(null);
   const [openEditModal, setOpenEditModal] = useState(false);
-  // State for deletion confirmation
-  const [deletingProduct, setDeletingProduct] = useState(null); // Store product being deleted
+  const [deletingProduct, setDeletingProduct] = useState(null);
   const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
 
   const fetchProdutos = useCallback(async () => {
@@ -131,11 +133,10 @@ const EstoquePageContent = () => {
 
   const columns = useMemo(
     () => [
-      // ... other columns remain unchanged ...
-      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
-      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
-      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
-      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
+      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
+      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
+      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
+      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
       {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
@@ -151,13 +152,28 @@ const EstoquePageContent = () => {
       },
       {
         accessorKey: 'custo',
-        header: 'Custo',
+        header: 'Custo Unit.', // Renamed header
         size: 110,
-        aggregationFn: priceAggregationMode,
+        aggregationFn: priceAggregationMode, // Use state for aggregation
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
                 {formatCurrency(cell.getValue())}
+            </Box>
+        ),
+        Cell: ({ cell }) => formatCurrency(cell.getValue()),
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+      },
+      {
+        accessorFn: (row) => row.custo * row.quantidade_atual, // Calculate total cost
+        id: 'custo_total',
+        header: 'Custo Total',
+        size: 120,
+        aggregationFn: 'sum', // Always sum totals
+        AggregatedCell: ({ cell }) => (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                Total: {formatCurrency(cell.getValue())}
             </Box>
         ),
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
@@ -166,9 +182,9 @@ const EstoquePageContent = () => {
       },
       {
         accessorKey: 'preco_venda',
-        header: 'Preço Venda',
+        header: 'Preço Venda Unit.', // Renamed header
         size: 120,
-        aggregationFn: priceAggregationMode,
+        aggregationFn: priceAggregationMode, // Use state for aggregation
         AggregatedCell: ({ cell }) => (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
                 {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
@@ -179,27 +195,58 @@ const EstoquePageContent = () => {
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
       },
-      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
+      {
+        accessorFn: (row) => row.preco_venda * row.quantidade_atual, // Calculate total selling price
+        id: 'preco_venda_total',
+        header: 'Preço Venda Total',
+        size: 130,
+        aggregationFn: 'sum', // Always sum totals
+        AggregatedCell: ({ cell }) => (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                Total: {formatCurrency(cell.getValue())}
+            </Box>
+        ),
+        Cell: ({ cell }) => formatCurrency(cell.getValue()),
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+      },
+      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
       {
         accessorKey: 'data_compra',
         header: 'Data Compra',
         size: 120,
         Cell: ({ cell }) => formatDate(cell.getValue()),
         filterVariant: 'date-range',
+        filterFn: (row, id, filterValue) => {
+          const rowDate = dayjs(row.getValue(id));
+          const [startDate, endDate] = filterValue;
+          if (!rowDate.isValid()) return false;
+          const start = startDate ? dayjs(startDate).startOf('day') : null;
+          const end = endDate ? dayjs(endDate).endOf('day') : null;
+          if (start && end) {
+            return rowDate.isBetween(start, end, 'day', '[]');
+          } else if (start) {
+            return rowDate.isAfter(start, 'day') || rowDate.isSame(start, 'day');
+          } else if (end) {
+            return rowDate.isBefore(end, 'day') || rowDate.isSame(end, 'day');
+          }
+          return true;
+        },
+        muiTableHeadCellProps: { align: 'left' },
       },
     ],
-    [priceAggregationMode],
+    [priceAggregationMode], // Keep dependency for label and function update
   );
 
-  // --- Modal Handlers ---
+  // --- Modal Handlers (unchanged) ---
   const handleOpenAddModal = () => {
-    setEditingProduct(null); // Ensure we are adding, not editing
+    setEditingProduct(null);
     setOpenAddModal(true);
   };
   const handleCloseAddModal = () => setOpenAddModal(false);
 
   const handleOpenEditModal = (product) => {
-    setEditingProduct(product); // Set the product to edit
+    setEditingProduct(product);
     setOpenEditModal(true);
   };
   const handleCloseEditModal = () => {
@@ -216,12 +263,12 @@ const EstoquePageContent = () => {
     setDeletingProduct(null);
   };
 
-  // --- Action Handlers ---
+  // --- Action Handlers (unchanged) ---
   const handleProductAddedOrEdited = async () => {
     handleCloseAddModal();
     handleCloseEditModal();
     try {
-      await fetchProdutos(); // Refresh data after adding/editing
+      await fetchProdutos();
     } catch (refreshError) {
       console.error("Error refreshing products:", refreshError);
       setError("Falha ao atualizar a lista de produtos.");
@@ -230,7 +277,7 @@ const EstoquePageContent = () => {
 
   const handleDeleteProduct = async () => {
     if (!deletingProduct) return;
-    setLoading(true); // Indicate loading during delete
+    setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/produtos/${deletingProduct.id}`, {
         method: 'DELETE',
@@ -243,25 +290,23 @@ const EstoquePageContent = () => {
         } catch (jsonError) { /* Ignore */ }
         throw new Error(errorMsg);
       }
-      // Success
       handleCloseConfirmDelete();
-      await fetchProdutos(); // Refresh data
+      await fetchProdutos();
     } catch (e) {
       setError(`Falha ao excluir produto: ${e.message}`);
       console.error("Delete error:", e);
-      setLoading(false); // Stop loading indicator on error
+      setLoading(false);
     }
-    // setLoading(false) is handled in fetchProdutos' finally block if successful
   };
 
-  // --- Aggregation Toggle Handler ---
+  // --- Aggregation Toggle Handler (unchanged) ---
   const handleAggregationModeChange = (event, newMode) => {
     if (newMode !== null) {
       setPriceAggregationMode(newMode);
     }
   };
 
-  // --- Table Definition ---
+  // --- Table Definition (unchanged) ---
   const table = useMaterialReactTable({
     columns,
     data: produtos,
@@ -269,14 +314,14 @@ const EstoquePageContent = () => {
     enableGrouping: true,
     enableStickyHeader: true,
     enableDensityToggle: false,
-    enableRowActions: true, // Enable row actions
-    positionActionsColumn: 'last', // Put actions column at the end
+    enableRowActions: true,
+    positionActionsColumn: 'last',
     initialState: {
         density: 'compact',
         sorting: [{ id: 'nome', desc: false }],
         grouping: [],
         pagination: { pageIndex: 0, pageSize: 50 },
-        columnPinning: { right: ['mrt-row-actions'] }, // Pin actions column to the right
+        columnPinning: { right: ['mrt-row-actions'] },
     },
     state: {
         isLoading: loading,
@@ -304,7 +349,7 @@ const EstoquePageContent = () => {
         >
           Adicionar Produto
         </Button>
-        <Tooltip title="Alternar Agregação de Preços (Média/Soma)">
+        <Tooltip title="Alternar Agregação de Preços Unitários (Média/Soma)"> {/* Updated tooltip */}
           <ToggleButtonGroup
             value={priceAggregationMode}
             exclusive
@@ -322,7 +367,6 @@ const EstoquePageContent = () => {
         </Tooltip>
       </Box>
     ),
-    // Define Row Actions
     renderRowActions: ({ row }) => (
       <Box sx={{ display: 'flex', gap: '0.1rem', justifyContent: 'center' }}>
         <Tooltip title="Editar">
@@ -337,7 +381,6 @@ const EstoquePageContent = () => {
         </Tooltip>
       </Box>
     ),
-    // Styling props remain unchanged...
     muiTablePaperProps: {
         elevation: 1,
         sx: {
@@ -351,14 +394,6 @@ const EstoquePageContent = () => {
             backgroundColor: theme.palette.secondary.main,
             color: theme.palette.secondary.contrastText,
             fontWeight: 'bold',
-            '& .Mui-TableHeadCell-Content': {
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-            },
-            '&.MuiTableCell-alignRight .Mui-TableHeadCell-Content': {
-                flexDirection: 'row-reverse',
-            }
         }),
     },
     muiTableBodyProps: {
@@ -383,16 +418,14 @@ const EstoquePageContent = () => {
         <MaterialReactTable table={table} />
       </LocalizationProvider>
 
-      {/* Add/Edit Modal - Assuming AddProductModal can handle editing via 'initialData' prop */}
       <AddProductModal
         key={editingProduct ? `edit-${editingProduct.id}` : 'add'}
         open={openAddModal || openEditModal}
         onClose={editingProduct ? handleCloseEditModal : handleCloseAddModal}
         onSuccess={handleProductAddedOrEdited}
-        initialData={editingProduct} // Pass product data for editing
+        initialData={editingProduct}
       />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={openConfirmDelete}
         onClose={handleCloseConfirmDelete}
