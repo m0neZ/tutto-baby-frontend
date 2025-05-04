@@ -27,8 +27,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Popover from '@mui/material/Popover';
-import FilterListIcon from '@mui/icons-material/FilterList';
+// Removed Popover and FilterListIcon imports
 
 import {
   useReactTable,
@@ -44,8 +43,8 @@ import AddProductModal from '../components/AddProductModal';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper component for Date Range Filtering
-function DateRangeColumnFilter({ column, isActive }) {
+// Helper component for Date Range Filtering (Inline)
+function DateRangeColumnFilter({ column }) { // Removed isActive prop
   const filterValue = column?.getFilterValue();
   const [startDate, setStartDate] = useState(filterValue?.[0] || '');
   const [endDate, setEndDate] = useState(filterValue?.[1] || '');
@@ -58,7 +57,7 @@ function DateRangeColumnFilter({ column, isActive }) {
     }
   }, [column, filterValue]);
 
-  if (!column || !isActive) return null;
+  // Removed early return
 
   const handleStartDateChange = (e) => {
     const newStartDate = e.target.value;
@@ -73,7 +72,7 @@ function DateRangeColumnFilter({ column, isActive }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', p: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
       <TextField
         label="De"
         type="date"
@@ -82,7 +81,7 @@ function DateRangeColumnFilter({ column, isActive }) {
         value={startDate}
         onChange={handleStartDateChange}
         InputLabelProps={{ shrink: true }}
-        sx={{ width: '150px' }}
+        sx={{ flexGrow: 1 }}
       />
       <TextField
         label="Até"
@@ -92,21 +91,21 @@ function DateRangeColumnFilter({ column, isActive }) {
         value={endDate}
         onChange={handleEndDateChange}
         InputLabelProps={{ shrink: true }}
-        sx={{ width: '150px' }}
+        sx={{ flexGrow: 1 }}
       />
     </Box>
   );
 }
 
-// Helper component for general column filtering
-function Filter({ column, isActive }) {
-  if (!column || !isActive) return null;
+// Helper component for general column filtering (Inline)
+function Filter({ column }) { // Removed isActive prop
+  // Removed early return
 
   const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
   const filterValue = column.getFilterValue();
 
   return typeof firstValue === 'number' ? (
-    <Box sx={{ display: 'flex', gap: 1, p: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
       <TextField
         size="small"
         type="number"
@@ -115,7 +114,7 @@ function Filter({ column, isActive }) {
           column.setFilterValue((old) => [e.target.value, old?.[1]])
         }
         placeholder={`Min`}
-        sx={{ width: '80px' }}
+        sx={{ flexGrow: 1 }}
         variant="outlined"
       />
       <TextField
@@ -126,7 +125,7 @@ function Filter({ column, isActive }) {
           column.setFilterValue((old) => [old?.[0], e.target.value])
         }
         placeholder={`Max`}
-        sx={{ width: '80px' }}
+        sx={{ flexGrow: 1 }}
         variant="outlined"
       />
     </Box>
@@ -135,14 +134,14 @@ function Filter({ column, isActive }) {
       size="small"
       value={(filterValue ?? '')}
       onChange={e => column.setFilterValue(e.target.value)}
-      placeholder={`Buscar ${typeof column.columnDef.header === 'string' ? column.columnDef.header : ''}...`}
+      placeholder={`Buscar...`}
       variant="outlined"
-      sx={{ width: '100%', p: 1 }}
+      sx={{ width: '100%' }}
     />
   );
 }
 
-// Custom filter function for date range
+// Custom filter function for date range (Unchanged)
 const dateBetweenFilterFn = (row, columnId, filterValue) => {
   const rowValue = row.getValue(columnId);
   const [start, end] = filterValue || [];
@@ -165,8 +164,7 @@ const EstoquePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddModal, setOpenAddModal] = useState(false);
-  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [currentFilterColumnId, setCurrentFilterColumnId] = useState(null);
+  // Removed Popover state
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
@@ -207,7 +205,7 @@ const EstoquePage = () => {
         </Typography>
       ),
       enableColumnFilter: true,
-      size: 200, // Give Nome more space
+      minSize: 200, // Use minSize for natural layout
     },
     {
       accessorKey: 'sexo',
@@ -215,7 +213,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
-      size: 80,
+      minSize: 80,
     },
     {
       accessorKey: 'cor_estampa',
@@ -223,7 +221,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
-      size: 150,
+      minSize: 150,
     },
     {
       accessorKey: 'tamanho',
@@ -231,7 +229,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
-      size: 100,
+      minSize: 100,
     },
     {
       accessorKey: 'quantidade_atual',
@@ -241,7 +239,7 @@ const EstoquePage = () => {
       aggregatedCell: info => info.getValue(),
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
-      size: 60,
+      minSize: 60,
     },
     {
       accessorKey: 'custo',
@@ -251,7 +249,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
-      size: 100,
+      minSize: 100,
     },
     {
       accessorKey: 'preco_venda',
@@ -261,7 +259,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
-      size: 110,
+      minSize: 110,
     },
     {
       accessorKey: 'nome_fornecedor',
@@ -269,7 +267,7 @@ const EstoquePage = () => {
       cell: info => info.getValue() ?? '-', 
       enableGrouping: true,
       enableColumnFilter: true,
-      size: 150,
+      minSize: 150,
     },
     {
       accessorKey: 'data_compra',
@@ -279,7 +277,7 @@ const EstoquePage = () => {
       enableGrouping: true, 
       enableColumnFilter: true,
       filterFn: dateBetweenFilterFn,
-      size: 120,
+      minSize: 120,
     },
   ], [aggregationFn]);
 
@@ -309,26 +307,7 @@ const EstoquePage = () => {
     debugTable: false,
   });
 
-  const handleFilterIconClick = (event, columnId) => {
-    console.log("[DEBUG] Filter icon clicked for column:", columnId);
-    setFilterAnchorEl(event.currentTarget);
-    setCurrentFilterColumnId(columnId);
-  };
-
-  const handleFilterPopoverClose = () => {
-    console.log("[DEBUG] Closing filter popover");
-    setFilterAnchorEl(null);
-    setCurrentFilterColumnId(null);
-  };
-
-  const openFilterPopover = Boolean(filterAnchorEl);
-  const filterPopoverId = openFilterPopover ? 'filter-popover' : undefined;
-
-  const currentFilterColumn = useMemo(() => {
-    const foundColumn = table.getAllLeafColumns().find(col => col.id === currentFilterColumnId);
-    console.log("[DEBUG] Current filter column resolved:", foundColumn?.id);
-    return foundColumn;
-  }, [currentFilterColumnId, table]);
+  // Removed Popover handlers
 
   const handleOpenAddModal = () => setOpenAddModal(true);
   const handleCloseAddModal = () => setOpenAddModal(false);
@@ -341,31 +320,7 @@ const EstoquePage = () => {
   };
   const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
 
-  // *** FIX: Render Popover content conditionally based on currentFilterColumn being ready ***
-  const renderPopoverContent = () => {
-    if (!currentFilterColumn) {
-      console.log("[DEBUG] Popover content: currentFilterColumn is null, rendering nothing.");
-      return null; // Don't render filters if column isn't resolved yet
-    }
-    console.log("[DEBUG] Popover content: Rendering filters for column:", currentFilterColumn.id);
-    try {
-      return (
-        <>
-          <DateRangeColumnFilter 
-            column={currentFilterColumn} 
-            isActive={currentFilterColumn.id === 'data_compra'} 
-          />
-          <Filter 
-            column={currentFilterColumn} 
-            isActive={currentFilterColumn.id !== 'data_compra'} 
-          />
-        </>
-      );
-    } catch (popoverError) {
-      console.error("Error rendering filter popover content:", popoverError);
-      return <Alert severity="error" sx={{ p: 1 }}>Erro ao renderizar filtro.</Alert>;
-    }
-  };
+  // Removed Popover rendering logic
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -441,76 +396,82 @@ const EstoquePage = () => {
       )}
 
       {!loading && !error && (
-        // *** FIX: Use table-layout: fixed and ensure container allows scroll ***
+        // *** FIX: Remove table-layout: fixed, allow natural sizing ***
         <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
-          <Table sx={{ tableLayout: 'fixed', width: '100%' }} aria-label="estoque table">
+          <Table sx={{ width: '100%' }} aria-label="estoque table">
             <TableHead>
               {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <TableCell
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      sortDirection={header.column.getIsSorted()}
-                      // *** FIX: Apply width based on column size ***
-                      sx={{ 
-                        fontWeight: 'bold', 
-                        whiteSpace: 'nowrap',
-                        py: 1,
-                        px: 1,
-                        width: `${header.getSize()}px`, // Use px for fixed layout
-                        overflow: 'hidden', // Prevent header content overflow
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <Box 
-                            onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                            sx={{ 
-                              cursor: header.column.getCanSort() ? 'pointer' : 'default', 
-                              display: 'flex', 
+                <React.Fragment key={headerGroup.id}>
+                  <TableRow>
+                    {headerGroup.headers.map(header => (
+                      <TableCell
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        sortDirection={header.column.getIsSorted()}
+                        // *** FIX: Use minWidth, remove explicit width ***
+                        sx={{ 
+                          fontWeight: 'bold', 
+                          whiteSpace: 'nowrap',
+                          py: 1,
+                          px: 1,
+                          minWidth: `${header.getSize()}px`, // Use minWidth
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <Box
+                            sx={{
+                              display: 'flex',
                               alignItems: 'center',
-                              minWidth: 0, 
+                              gap: 0.5,
                               overflow: 'hidden',
-                              textOverflow: 'ellipsis',
                             }}
                           >
-                            {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                            {header.column.getCanSort() && (
-                              <TableSortLabel
-                                active={!!header.column.getIsSorted()}
-                                direction={header.column.getIsSorted() || 'asc'}
-                                sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
-                              />
-                            )}
-                          </Box>
-                          {header.column.getCanFilter() && (
-                            <IconButton
-                              size="small"
-                              onClick={(e) => handleFilterIconClick(e, header.column.id)}
-                              color={header.column.getIsFiltered() ? 'primary' : 'default'}
-                              aria-describedby={filterPopoverId}
-                              sx={{ p: 0.25 }}
+                            <Box 
+                              onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                              sx={{ 
+                                cursor: header.column.getCanSort() ? 'pointer' : 'default', 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                minWidth: 0, 
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
                             >
-                              <FilterListIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                        </Box>
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {header.column.getCanSort() && (
+                                <TableSortLabel
+                                  active={!!header.column.getIsSorted()}
+                                  direction={header.column.getIsSorted() || 'asc'}
+                                  sx={{ '& .MuiTableSortLabel-icon': { opacity: 0.7 } }} 
+                                />
+                              )}
+                            </Box>
+                            {/* Removed Filter Icon Button */}
+                          </Box>
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {/* *** FIX: Add inline filter row *** */}
+                  <TableRow>
+                    {headerGroup.headers.map(header => (
+                      <TableCell key={`${header.id}-filter`} sx={{ py: 0.5, px: 1 }}>
+                        {header.column.getCanFilter() ? (
+                          header.column.id === 'data_compra' ? (
+                            <DateRangeColumnFilter column={header.column} />
+                          ) : (
+                            <Filter column={header.column} />
+                          )
+                        ) : null}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </React.Fragment>
               ))}
             </TableHead>
             <TableBody>
@@ -531,11 +492,10 @@ const EstoquePage = () => {
                           sx={{ 
                             py: 0.75,
                             px: 1,
-                            // *** FIX: Allow wrap, prevent overflow ***
                             whiteSpace: 'normal',
                             overflowWrap: 'break-word',
                             wordBreak: 'break-word',
-                            width: `${cell.column.getSize()}px`, // Use px for fixed layout
+                            minWidth: `${cell.column.getSize()}px`, // Use minWidth
                             ...(cell.getIsGrouped() && { 
                               fontWeight: 'bold',
                               cursor: 'pointer',
@@ -587,24 +547,7 @@ const EstoquePage = () => {
         </TableContainer>
       )}
 
-      {/* Filter Popover */}
-      <Popover
-        id={filterPopoverId}
-        open={openFilterPopover}
-        anchorEl={filterAnchorEl}
-        onClose={handleFilterPopoverClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-      >
-        {/* Render content conditionally based on column being ready */}
-        {renderPopoverContent()}
-      </Popover>
+      {/* Removed Filter Popover */}
 
       <AddProductModal 
         open={openAddModal} 
