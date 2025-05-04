@@ -95,10 +95,9 @@ function DateRangeColumnFilter({ column }) {
 }
 
 // Helper component for general column filtering (Inline)
-// *** FIX: Accept 'table' instance as prop ***
 function Filter({ column, table }) { 
-  // *** FIX: Use table.getPreFilteredRowModel() ***
-  const firstValue = table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+  // *** FIX: Check if table and method exist before calling ***
+  const firstValue = table?.getPreFilteredRowModel ? table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id) : undefined;
   const filterValue = column.getFilterValue();
 
   return typeof firstValue === 'number' ? (
@@ -453,8 +452,8 @@ const EstoquePage = () => {
                           header.column.id === 'data_compra' ? (
                             <DateRangeColumnFilter column={header.column} />
                           ) : (
-                            // *** FIX: Pass 'table' instance to Filter ***
-                            <Filter column={header.column} table={table} /> 
+                            // *** FIX: Add check for table existence before rendering Filter ***
+                            table ? <Filter column={header.column} table={table} /> : null
                           )
                         ) : null}
                       </TableCell>
