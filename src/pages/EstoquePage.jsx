@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  MaterialReactTable,
+  useMaterialReactTable,
+} from 'material-react-table';
+import { Box, Button, Container, Typography, CircularProgress, Alert } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import { DataGrid, GridToolbar } from '@mui/x-data-grid';
-import { ptBR } from '@mui/x-data-grid/locales';
+import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR'; // Import MRT localization
 
 import AddProductModal from '../components/AddProductModal';
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
-// Helper function to format currency
+// Helper function to format currency (unchanged)
 const formatCurrency = (value) => {
   if (value == null) return 'R$ 0,00';
   const numValue = Number(value);
@@ -21,19 +19,21 @@ const formatCurrency = (value) => {
   return `R$ ${numValue.toFixed(2).replace('.', ',')}`;
 };
 
-// Helper function to format date
+// Helper function to format date (unchanged)
 const formatDate = (value) => {
   if (!value) return '-';
   try {
     const date = new Date(value);
     if (isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString("pt-BR", { timeZone: 'UTC' });
+    // Ensure UTC date is interpreted correctly for display
+    const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    return utcDate.toLocaleDateString("pt-BR");
   } catch (e) {
     return '-';
   }
 };
 
-// Error Boundary Component (Simple version)
+// Error Boundary Component (unchanged)
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -41,18 +41,15 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error: error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
     console.error("Uncaught error in EstoquePage:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
       return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
           <Alert severity="error">
@@ -62,7 +59,6 @@ class ErrorBoundary extends React.Component {
         </Container>
       );
     }
-
     return this.props.children;
   }
 }
@@ -72,10 +68,10 @@ const EstoquePageContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddModal, setOpenAddModal] = useState(false);
+  const [grouping, setGrouping] = useState([]); // State for grouping
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 }); // Control pagination
 
   const fetchProdutos = useCallback(async () => {
-    // Reset error before fetching
-    // setError(null); // Keep previous error visible until loading finishes? Maybe not.
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/produtos/`);
@@ -88,22 +84,20 @@ const EstoquePageContent = () => {
         throw new Error(errorMsg);
       }
       const data = await response.json();
-      const rawProdutos = (data.produtos || (data.success && data.produtos) || []);
-      // Filter out products without a valid id (primary key from backend) and map id to DataGrid's id prop
-      const fetchedProdutos = rawProdutos
-        .filter(p => p && p.id != null) // Check for backend's primary key 'id'
-        .map(p => ({ ...p, id: p.id })); // Map backend 'id' to DataGrid 'id'
-      
-      // Optional: Log if any products were filtered out
-      if (rawProdutos.length !== fetchedProdutos.length) {
-        console.warn("Some products were filtered out due to missing id:", rawProdutos.filter(p => !p || p.id == null));
+      // MRT uses the data directly, no need to map 'id' if 'id' exists in the data
+      const fetchedProdutos = (data.produtos || (data.success && data.produtos) || []);
+      // Ensure 'id' exists, otherwise MRT might complain
+      if (fetchedProdutos.length > 0 && fetchedProdutos[0].id === undefined) {
+          console.warn("Backend data does not contain 'id' field, attempting to use 'id_produto'.");
+          setProdutos(fetchedProdutos.map(p => ({ ...p, id: p.id_produto })));
+      } else {
+          setProdutos(fetchedProdutos);
       }
-      setProdutos(fetchedProdutos);
-      setError(null); // Clear error on success
+      setError(null);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
       console.error("Fetch error:", e);
-      setProdutos([]); // Clear products on error to avoid rendering stale data
+      setProdutos([]);
     } finally {
       setLoading(false);
     }
@@ -113,70 +107,107 @@ const EstoquePageContent = () => {
     fetchProdutos();
   }, [fetchProdutos]);
 
-  const columns = [
-    { field: 'nome', headerName: 'Nome', flex: 1.5, minWidth: 180 },
-    { field: 'sexo', headerName: 'Sexo', width: 90 },
-    { field: 'cor_estampa', headerName: 'Cor/Estampa', flex: 1, minWidth: 130 },
-    { field: 'tamanho', headerName: 'Tamanho', width: 100 },
-    {
-      field: 'quantidade_atual',
-      headerName: 'Qtd.',
-      type: 'number',
-      width: 80,
-      align: 'right',
-      headerAlign: 'right'
-    },
-    {
-      field: 'custo',
-      headerName: 'Custo',
-      type: 'number',
-      width: 110,
-      valueFormatter: (value) => formatCurrency(value),
-      align: 'right',
-      headerAlign: 'right'
-    },
-    {
-      field: 'preco_venda',
-      headerName: 'Preço Venda',
-      type: 'number',
-      width: 120,
-      valueFormatter: (value) => formatCurrency(value),
-      align: 'right',
-      headerAlign: 'right'
-    },
-    { field: 'nome_fornecedor', headerName: 'Fornecedor', flex: 1, minWidth: 140 },
-    {
-      field: 'data_compra',
-      headerName: 'Data Compra',
-      type: 'date',
-      width: 120,
-      valueGetter: (value) => value ? new Date(value) : null,
-      valueFormatter: (value) => formatDate(value)
-    },
-  ];
+  const columns = useMemo(
+    () => [
+      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true }, // Enable grouping for these columns
+      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
+      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
+      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
+      {
+        accessorKey: 'quantidade_atual',
+        header: 'Qtd.',
+        size: 80,
+        aggregationFn: 'sum', // Enable aggregation
+        AggregatedCell: ({ cell }) => (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                Total: {cell.getValue()}
+            </Box>
+        ),
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+      },
+      {
+        accessorKey: 'custo',
+        header: 'Custo',
+        size: 110,
+        aggregationFn: 'mean', // Default to average, can add toggle later if needed
+        AggregatedCell: ({ cell }) => (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                Média: {formatCurrency(cell.getValue())}
+            </Box>
+        ),
+        Cell: ({ cell }) => formatCurrency(cell.getValue()), // Format in regular cells
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+      },
+      {
+        accessorKey: 'preco_venda',
+        header: 'Preço Venda',
+        size: 120,
+        aggregationFn: 'mean', // Default to average
+        AggregatedCell: ({ cell }) => (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+                Média: {formatCurrency(cell.getValue())}
+            </Box>
+        ),
+        Cell: ({ cell }) => formatCurrency(cell.getValue()), // Format in regular cells
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+      },
+      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
+      {
+        accessorKey: 'data_compra',
+        header: 'Data Compra',
+        size: 120,
+        Cell: ({ cell }) => formatDate(cell.getValue()), // Format date
+        filterVariant: 'date-range', // Enable date range filtering
+      },
+    ],
+    [],
+  );
 
   const handleOpenAddModal = () => setOpenAddModal(true);
   const handleCloseAddModal = () => setOpenAddModal(false);
 
-  // Wrap fetchProdutos in try-catch inside the handler to prevent crashes
   const handleProductAdded = async () => {
     handleCloseAddModal();
     try {
-      await fetchProdutos(); // Refresh data after adding
+      await fetchProdutos();
     } catch (refreshError) {
-      // Error during refresh is already handled within fetchProdutos and sets the error state
       console.error("Error refreshing products after add:", refreshError);
-      // Optionally set a specific error message for refresh failure
-      // setError("Falha ao atualizar a lista de produtos após adição.");
     }
   };
 
-  return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" component="h1" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-          Estoque de Produtos
-        </Typography>
+  const table = useMaterialReactTable({
+    columns,
+    data: produtos, // Pass fetched data
+    localization: MRT_Localization_PT_BR, // Apply localization
+    enableGrouping: true,
+    enableStickyHeader: true,
+    enableDensityToggle: false,
+    initialState: {
+        density: 'compact',
+        sorting: [{ id: 'nome', desc: false }], // Initial sort
+        grouping: [], // Initial grouping state
+        pagination: { pageIndex: 0, pageSize: 50 },
+    },
+    state: {
+        isLoading: loading,
+        showAlertBanner: !!error,
+        showProgressBars: loading,
+        grouping,
+        pagination,
+    },
+    muiToolbarAlertBannerProps: error
+      ? {
+          color: 'error',
+          children: error,
+        }
+      : undefined,
+    onGroupingChange: setGrouping, // Control grouping state
+    onPaginationChange: setPagination, // Control pagination state
+    muiTableContainerProps: { sx: { maxHeight: '650px' } }, // Set max height for scroll
+    renderTopToolbarCustomActions: () => (
         <Button
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
@@ -185,83 +216,49 @@ const EstoquePageContent = () => {
         >
           Adicionar Produto
         </Button>
-      </Box>
+    ),
+    // Styling
+    muiTablePaperProps: {
+        elevation: 1, // Optional: add slight shadow
+        sx: {
+            borderRadius: '0',
+            border: '1px solid',
+            borderColor: 'divider',
+        },
+    },
+    muiTableHeadCellProps: {
+        sx: (theme) => ({
+            backgroundColor: theme.palette.secondary.main, // Pink header
+            color: theme.palette.secondary.contrastText,
+            fontWeight: 'bold',
+        }),
+    },
+    muiTableBodyProps: {
+        sx: (theme) => ({
+            '& tr:nth-of-type(odd) > td': {
+                backgroundColor: theme.palette.background.paper, // White background for odd rows
+            },
+            '& tr:nth-of-type(even) > td': {
+                backgroundColor: theme.palette.action.hover, // Slightly off-white for even rows (optional zebra striping)
+            },
+        }),
+    },
+  });
 
-      {/* Display error prominently if it occurs */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-      )}
+  return (
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" component="h1" sx={{ color: 'primary.main', fontWeight: 'bold', mb: 2 }}>
+        Estoque de Produtos
+      </Typography>
 
-      <Box sx={{ height: 650, width: '100%' }}>
-        {/* Show loading indicator */}
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <CircularProgress />
-          </Box>
-        )}
-        {/* Only render DataGrid if not loading AND no critical error occurred (error state is set) */}
-        {/* If fetch fails, error is set, and products might be empty, preventing render errors */}
-        {!loading && (
-          <DataGrid
-            rows={produtos} // Use potentially empty products array if fetch failed
-            columns={columns}
-            localeText={ptBR.components.MuiDataGrid.defaultProps.localeText}
-            slots={{
-              toolbar: GridToolbar,
-            }}
-            slotProps={{
-              toolbar: {
-                showQuickFilter: true,
-                quickFilterProps: { debounceMs: 500 },
-              },
-            }}
-            initialState={{
-              sorting: {
-                sortModel: [{ field: 'nome', sort: 'asc' }],
-              },
-              pagination: {
-                  paginationModel: { page: 0, pageSize: 100 },
-              },
-              filter: {
-                filterModel: {
-                  items: [],
-                },
-              },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-            density="compact"
-            sx={{
-               backgroundColor: 'background.paper', // Set background to white/paper color
-               boxShadow: 1,
-               border: '1px solid',
-               borderColor: 'divider',
-               '& .MuiDataGrid-columnHeader': {
-                  // *** FIX: Use secondary color for header background ***
-                  backgroundColor: 'secondary.main', 
-                  color: 'secondary.contrastText', // Ensure text color contrasts with pink
-                  fontWeight: 'bold',
-               },
-               '& .MuiDataGrid-columnHeaderTitleContainer': {
-                  padding: '0 8px',
-               },
-               '& .MuiDataGrid-cell': {
-                  padding: '0 8px',
-               },
-               '& .MuiDataGrid-toolbarContainer': {
-                  padding: '8px',
-                  flexWrap: 'wrap',
-               }
-            }}
-          />
-        )}
-      </Box>
+      {/* Render the table */} 
+      <MaterialReactTable table={table} />
 
       <AddProductModal
         open={openAddModal}
         onClose={handleCloseAddModal}
         onSuccess={handleProductAdded}
       />
-
     </Container>
   );
 };
