@@ -89,14 +89,14 @@ const EstoquePageContent = () => {
       }
       const data = await response.json();
       const rawProdutos = (data.produtos || (data.success && data.produtos) || []);
-      // Filter out products without a valid id_produto and map id_produto to id
+      // Filter out products without a valid id (primary key from backend) and map id to DataGrid's id prop
       const fetchedProdutos = rawProdutos
-        .filter(p => p && p.id_produto != null)
-        .map(p => ({ ...p, id: p.id_produto }));
+        .filter(p => p && p.id != null) // Check for backend's primary key 'id'
+        .map(p => ({ ...p, id: p.id })); // Map backend 'id' to DataGrid 'id'
       
       // Optional: Log if any products were filtered out
       if (rawProdutos.length !== fetchedProdutos.length) {
-        console.warn("Some products were filtered out due to missing id_produto:", rawProdutos.filter(p => !p || p.id_produto == null));
+        console.warn("Some products were filtered out due to missing id:", rawProdutos.filter(p => !p || p.id == null));
       }
       setProdutos(fetchedProdutos);
       setError(null); // Clear error on success
