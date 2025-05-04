@@ -34,9 +34,10 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs'; // Import dayjs for date comparison
 import isBetween from 'dayjs/plugin/isBetween'; // Import isBetween plugin
-dayjs.extend(isBetween); // Extend dayjs with the plugin *after* importing both
-
 import AddProductModal from '../components/AddProductModal'; // Assuming AddProductModal can handle editing
+
+// Extend dayjs with the plugin *after* all imports
+dayjs.extend(isBetween);
 
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
