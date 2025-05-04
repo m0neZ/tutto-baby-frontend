@@ -7,7 +7,6 @@ import {
   fetchFieldOptions,
 } from "./api";
 import Box from "@mui/material/Box";
-// Removed Grid import
 import TextField from "@mui/material/TextField";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -210,7 +209,7 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
-  // *** NEW LAYOUT using Box and Flexbox ***
+  // *** Flexbox Layout with Standard Variant ***
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       
@@ -240,10 +239,10 @@ const ProductForm = ({ onProductAdded }) => {
                     label="Nome do Produto"
                     required
                     fullWidth
-                    variant="outlined"
+                    variant="standard" // Changed variant
                     error={!!error}
                     helperText={error ? error.message : " "}
-                    size="small"
+                    // Removed size="small"
                   />
                 )}
               />
@@ -256,12 +255,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Sexo é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
+              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
                 <InputLabel id="gender-label">Sexo</InputLabel>
                 <Select
                   {...field}
                   labelId="gender-label"
-                  label="Sexo"
+                  // Removed label prop
                   disabled={loadingOptions}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -280,12 +279,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Tamanho é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
+              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
                 <InputLabel id="size-label">Tamanho</InputLabel>
                 <Select
                   {...field}
                   labelId="size-label"
-                  label="Tamanho"
+                  // Removed label prop
                   disabled={loadingOptions || sizeOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -310,12 +309,12 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Cor/Estampa é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error} size="small">
+              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
                 <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
                 <Select
                   {...field}
                   labelId="colorPrint-label"
-                  label="Cor / Estampa"
+                  // Removed label prop
                   disabled={loadingOptions || colorOptions.length === 0}
                 >
                   <MenuItem value=""><em>Selecione...</em></MenuItem>
@@ -336,20 +335,25 @@ const ProductForm = ({ onProductAdded }) => {
             control={control}
             rules={{ required: "Fornecedor é obrigatório" }}
             render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="outlined" error={!!error || !!supplierError} size="small">
-                <InputLabel id="supplier-label">Fornecedor</InputLabel>
+              // *** FIX: Use standard variant, remove displayEmpty, ensure label shrinks ***
+              <FormControl fullWidth required variant="standard" error={!!error || !!supplierError}> 
+                <InputLabel id="supplier-label" shrink={!!field.value || loadingOptions || !!supplierError || suppliers.length === 0}>
+                  Fornecedor
+                </InputLabel>
                 <Select
                   {...field}
                   labelId="supplier-label"
-                  label="Fornecedor"
+                  // Removed label prop
                   disabled={isSupplierDisabled}
-                  displayEmpty
-                  // Fix overlap by ensuring label shrinks when value exists
-                  value={field.value || ""} 
+                  // Removed displayEmpty
+                  value={field.value || ""} // Keep controlled value
                 >
-                  <MenuItem value="" disabled>
-                    <em>{loadingOptions ? "Carregando..." : (supplierError ? "Erro" : (suppliers.length === 0 ? "Nenhum" : "Selecione..."))}</em>
-                  </MenuItem>
+                  {/* Use placeholder MenuItem only when needed */}
+                  {loadingOptions && <MenuItem value="" disabled><em>Carregando...</em></MenuItem>}
+                  {supplierError && <MenuItem value="" disabled><em>Erro</em></MenuItem>}
+                  {!loadingOptions && !supplierError && suppliers.length === 0 && <MenuItem value="" disabled><em>Nenhum</em></MenuItem>}
+                  {!loadingOptions && !supplierError && suppliers.length > 0 && <MenuItem value=""><em>Selecione...</em></MenuItem>}
+                  
                   {Array.isArray(suppliers) && suppliers.map((s) => (
                     <MenuItem key={s.id} value={s.id}>
                       {s.nome}
@@ -378,7 +382,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Custo"
                 required
                 fullWidth
-                variant="outlined"
+                variant="standard" // Changed variant
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -387,7 +391,7 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small"
+                // Removed size="small"
               />
             )}
           />
@@ -403,7 +407,7 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Preço Venda"
                 required
                 fullWidth
-                variant="outlined"
+                variant="standard" // Changed variant
                 InputProps={{
                   inputComponent: CurrencyInputAdapter,
                   startAdornment: (
@@ -412,7 +416,7 @@ const ProductForm = ({ onProductAdded }) => {
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small"
+                // Removed size="small"
               />
             )}
           />
@@ -432,12 +436,12 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Quantidade"
                 required
                 fullWidth
-                variant="outlined"
+                variant="standard" // Changed variant
                 type="number"
                 InputProps={{ inputProps: { min: 0 } }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small"
+                // Removed size="small"
               />
             )}
           />
@@ -456,13 +460,13 @@ const ProductForm = ({ onProductAdded }) => {
                 label="Data da Compra (Opcional)"
                 type="date"
                 fullWidth
-                variant="outlined"
+                variant="standard" // Changed variant
                 InputLabelProps={{
                   shrink: true,
                 }}
                 error={!!error}
                 helperText={error ? error.message : " "}
-                size="small"
+                // Removed size="small"
               />
             )}
           />
