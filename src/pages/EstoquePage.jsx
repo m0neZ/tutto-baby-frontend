@@ -46,21 +46,18 @@ const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backen
 
 // Helper component for Date Range Filtering
 function DateRangeColumnFilter({ column, isActive }) {
-  // *** FIX: Moved hooks before the early return ***
-  const filterValue = column?.getFilterValue(); // Use optional chaining
+  const filterValue = column?.getFilterValue();
   const [startDate, setStartDate] = useState(filterValue?.[0] || '');
   const [endDate, setEndDate] = useState(filterValue?.[1] || '');
 
   useEffect(() => {
-    // Only run effect if column exists
     if (column) {
         const currentFilterValue = column.getFilterValue();
         setStartDate(currentFilterValue?.[0] || '');
         setEndDate(currentFilterValue?.[1] || '');
     }
-  }, [column, filterValue]); // Depend on column as well
+  }, [column, filterValue]);
 
-  // Early return if not active or column is missing
   if (!column || !isActive) return null;
 
   const handleStartDateChange = (e) => {
@@ -103,7 +100,6 @@ function DateRangeColumnFilter({ column, isActive }) {
 
 // Helper component for general column filtering
 function Filter({ column, isActive }) {
-  // Early return if not active or column is missing
   if (!column || !isActive) return null;
 
   const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
@@ -211,6 +207,7 @@ const EstoquePage = () => {
         </Typography>
       ),
       enableColumnFilter: true,
+      size: 200, // Give Nome more space
     },
     {
       accessorKey: 'sexo',
@@ -218,6 +215,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      size: 80,
     },
     {
       accessorKey: 'cor_estampa',
@@ -225,6 +223,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      size: 150,
     },
     {
       accessorKey: 'tamanho',
@@ -232,6 +231,7 @@ const EstoquePage = () => {
       cell: info => info.getValue(),
       enableGrouping: true,
       enableColumnFilter: true,
+      size: 100,
     },
     {
       accessorKey: 'quantidade_atual',
@@ -241,6 +241,7 @@ const EstoquePage = () => {
       aggregatedCell: info => info.getValue(),
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      size: 60,
     },
     {
       accessorKey: 'custo',
@@ -250,6 +251,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      size: 100,
     },
     {
       accessorKey: 'preco_venda',
@@ -259,6 +261,7 @@ const EstoquePage = () => {
       aggregatedCell: info => `R$ ${info.getValue()?.toFixed(2) ?? '0.00'}`, 
       enableColumnFilter: true,
       filterFn: 'inNumberRange',
+      size: 110,
     },
     {
       accessorKey: 'nome_fornecedor',
@@ -266,6 +269,7 @@ const EstoquePage = () => {
       cell: info => info.getValue() ?? '-', 
       enableGrouping: true,
       enableColumnFilter: true,
+      size: 150,
     },
     {
       accessorKey: 'data_compra',
@@ -275,6 +279,7 @@ const EstoquePage = () => {
       enableGrouping: true, 
       enableColumnFilter: true,
       filterFn: dateBetweenFilterFn,
+      size: 120,
     },
   ], [aggregationFn]);
 
@@ -406,8 +411,10 @@ const EstoquePage = () => {
       )}
 
       {!loading && !error && (
+        // *** FIX: Ensure TableContainer allows scroll, but Table itself doesn't force it ***
         <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
-          <Table sx={{ /* minWidth: 650 */ }} aria-label="estoque table">
+          {/* Removed minWidth from Table */}
+          <Table sx={{ tableLayout: 'auto' /* Allow browser to manage layout */ }} aria-label="estoque table">
             <TableHead>
               {table.getHeaderGroups().map(headerGroup => (
                 <TableRow key={headerGroup.id}>
@@ -416,11 +423,14 @@ const EstoquePage = () => {
                       key={header.id}
                       colSpan={header.colSpan}
                       sortDirection={header.column.getIsSorted()}
+                      // *** FIX: Use column size from definition ***
                       sx={{ 
                         fontWeight: 'bold', 
                         whiteSpace: 'nowrap',
                         py: 1,
                         px: 1,
+                        width: header.getSize(), // Apply defined size
+                        minWidth: header.getSize(), // Ensure minimum width
                       }}
                     >
                       {header.isPlaceholder ? null : (
@@ -429,11 +439,20 @@ const EstoquePage = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
+                            // Prevent header content from causing overflow
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                           }}
                         >
                           <Box 
                             onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
-                            sx={{ cursor: header.column.getCanSort() ? 'pointer' : 'default', display: 'flex', alignItems: 'center' }}
+                            sx={{ 
+                              cursor: header.column.getCanSort() ? 'pointer' : 'default', 
+                              display: 'flex', 
+                              alignItems: 'center',
+                              // Allow header text to shrink if needed
+                              minWidth: 0, 
+                            }}
                           >
                             {flexRender(
                               header.column.columnDef.header,
@@ -483,7 +502,10 @@ const EstoquePage = () => {
                           sx={{ 
                             py: 0.75,
                             px: 1,
+                            // Allow text wrap for most cells
                             whiteSpace: ['custo', 'preco_venda', 'quantidade_atual'].includes(cell.column.id) ? 'nowrap' : 'normal',
+                            overflowWrap: 'break-word', // Ensure long words break
+                            width: cell.column.getSize(), // Apply defined size
                             ...(cell.getIsGrouped() && { 
                               fontWeight: 'bold',
                               cursor: 'pointer',
@@ -550,15 +572,26 @@ const EstoquePage = () => {
           horizontal: 'left',
         }}
       >
-        {/* Always render both filters, control visibility internally */}
-        <DateRangeColumnFilter 
-          column={currentFilterColumn} 
-          isActive={currentFilterColumn?.id === 'data_compra'} 
-        />
-        <Filter 
-          column={currentFilterColumn} 
-          isActive={currentFilterColumn?.id !== 'data_compra'} 
-        />
+        {/* *** FIX: Add try-catch around filter rendering *** */}
+        {(() => {
+          try {
+            return (
+              <>
+                <DateRangeColumnFilter 
+                  column={currentFilterColumn} 
+                  isActive={currentFilterColumn?.id === 'data_compra'} 
+                />
+                <Filter 
+                  column={currentFilterColumn} 
+                  isActive={currentFilterColumn?.id !== 'data_compra'} 
+                />
+              </>
+            );
+          } catch (popoverError) {
+            console.error("Error rendering filter popover content:", popoverError);
+            return <Alert severity="error" sx={{ p: 1 }}>Erro ao renderizar filtro.</Alert>;
+          }
+        })()}
       </Popover>
 
       <AddProductModal 
