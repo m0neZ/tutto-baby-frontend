@@ -27,7 +27,6 @@ import InputLabel from '@mui/material/InputLabel';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-// Removed Popover and FilterListIcon imports
 
 import {
   useReactTable,
@@ -44,7 +43,7 @@ import AddProductModal from '../components/AddProductModal';
 const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
 // Helper component for Date Range Filtering (Inline)
-function DateRangeColumnFilter({ column }) { // Removed isActive prop
+function DateRangeColumnFilter({ column }) {
   const filterValue = column?.getFilterValue();
   const [startDate, setStartDate] = useState(filterValue?.[0] || '');
   const [endDate, setEndDate] = useState(filterValue?.[1] || '');
@@ -56,8 +55,6 @@ function DateRangeColumnFilter({ column }) { // Removed isActive prop
         setEndDate(currentFilterValue?.[1] || '');
     }
   }, [column, filterValue]);
-
-  // Removed early return
 
   const handleStartDateChange = (e) => {
     const newStartDate = e.target.value;
@@ -98,10 +95,10 @@ function DateRangeColumnFilter({ column }) { // Removed isActive prop
 }
 
 // Helper component for general column filtering (Inline)
-function Filter({ column }) { // Removed isActive prop
-  // Removed early return
-
-  const firstValue = column.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+// *** FIX: Accept 'table' instance as prop ***
+function Filter({ column, table }) { 
+  // *** FIX: Use table.getPreFilteredRowModel() ***
+  const firstValue = table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
   const filterValue = column.getFilterValue();
 
   return typeof firstValue === 'number' ? (
@@ -164,7 +161,6 @@ const EstoquePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddModal, setOpenAddModal] = useState(false);
-  // Removed Popover state
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
@@ -205,7 +201,7 @@ const EstoquePage = () => {
         </Typography>
       ),
       enableColumnFilter: true,
-      minSize: 200, // Use minSize for natural layout
+      minSize: 200, 
     },
     {
       accessorKey: 'sexo',
@@ -307,8 +303,6 @@ const EstoquePage = () => {
     debugTable: false,
   });
 
-  // Removed Popover handlers
-
   const handleOpenAddModal = () => setOpenAddModal(true);
   const handleCloseAddModal = () => setOpenAddModal(false);
   const handleProductAdded = () => {
@@ -319,8 +313,6 @@ const EstoquePage = () => {
     if (newAggFn !== null) setAggregationFn(newAggFn);
   };
   const allowedGroupingColumns = ['cor_estampa', 'sexo', 'tamanho', 'nome_fornecedor', 'data_compra'];
-
-  // Removed Popover rendering logic
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -396,7 +388,6 @@ const EstoquePage = () => {
       )}
 
       {!loading && !error && (
-        // *** FIX: Remove table-layout: fixed, allow natural sizing ***
         <TableContainer component={Paper} sx={{ boxShadow: 1, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
           <Table sx={{ width: '100%' }} aria-label="estoque table">
             <TableHead>
@@ -408,13 +399,12 @@ const EstoquePage = () => {
                         key={header.id}
                         colSpan={header.colSpan}
                         sortDirection={header.column.getIsSorted()}
-                        // *** FIX: Use minWidth, remove explicit width ***
                         sx={{ 
                           fontWeight: 'bold', 
                           whiteSpace: 'nowrap',
                           py: 1,
                           px: 1,
-                          minWidth: `${header.getSize()}px`, // Use minWidth
+                          minWidth: `${header.getSize()}px`, 
                           overflow: 'hidden', 
                           textOverflow: 'ellipsis',
                         }}
@@ -451,13 +441,11 @@ const EstoquePage = () => {
                                 />
                               )}
                             </Box>
-                            {/* Removed Filter Icon Button */}
                           </Box>
                         )}
                       </TableCell>
                     ))}
                   </TableRow>
-                  {/* *** FIX: Add inline filter row *** */}
                   <TableRow>
                     {headerGroup.headers.map(header => (
                       <TableCell key={`${header.id}-filter`} sx={{ py: 0.5, px: 1 }}>
@@ -465,7 +453,8 @@ const EstoquePage = () => {
                           header.column.id === 'data_compra' ? (
                             <DateRangeColumnFilter column={header.column} />
                           ) : (
-                            <Filter column={header.column} />
+                            // *** FIX: Pass 'table' instance to Filter ***
+                            <Filter column={header.column} table={table} /> 
                           )
                         ) : null}
                       </TableCell>
@@ -495,7 +484,7 @@ const EstoquePage = () => {
                             whiteSpace: 'normal',
                             overflowWrap: 'break-word',
                             wordBreak: 'break-word',
-                            minWidth: `${cell.column.getSize()}px`, // Use minWidth
+                            minWidth: `${cell.column.getSize()}px`, 
                             ...(cell.getIsGrouped() && { 
                               fontWeight: 'bold',
                               cursor: 'pointer',
@@ -546,8 +535,6 @@ const EstoquePage = () => {
           </Table>
         </TableContainer>
       )}
-
-      {/* Removed Filter Popover */}
 
       <AddProductModal 
         open={openAddModal} 
