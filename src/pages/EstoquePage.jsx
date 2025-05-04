@@ -231,6 +231,7 @@ const EstoquePageContent = () => {
             pageSizeOptions={[25, 50, 100]}
             density="compact"
             sx={{
+               backgroundColor: 'background.paper', // Set background to white/paper color
                boxShadow: 1,
                border: '1px solid',
                borderColor: 'divider',
