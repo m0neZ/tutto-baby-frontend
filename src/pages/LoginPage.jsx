@@ -1,5 +1,6 @@
-// src/pages/LoginPage.jsx
-import React, { useState, useContext, useEffect } from 'react';
+// File: src/pages/LoginPage.jsx
+
+import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import {
   Grid,
@@ -11,12 +12,9 @@ import {
   useTheme
 } from '@mui/material';
 import { styled } from '@mui/system';
+import bgImage from '../assets/LoginPage.jpg';  // keep import from assets
 
-// 1) Static import (webpack/Vite will return the final URL)
-import bgImage from '../assets/LoginPage.jpg';
-
-console.log('LoginPage background URL:', bgImage);  // ← Debug: check this in your browser console
-
+// Styled container for the login form
 const FormContainer = styled(Paper)(({ theme }) => ({
   margin: theme.spacing(4),
   padding: theme.spacing(4),
@@ -28,6 +26,7 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   },
 }));
 
+// Styled box for the background image with overlay
 const ImageContainer = styled(Box)(({ theme }) => ({
   height: '100vh',
   width: '100%',
@@ -39,10 +38,8 @@ const ImageContainer = styled(Box)(({ theme }) => ({
     content: '""',
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor:
-      theme.palette.mode === 'light'
-        ? 'rgba(255,255,255,0.6)'
-        : 'rgba(0,0,0,0.6)',
+    // Lighter white overlay for readability
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
 }));
 
@@ -52,11 +49,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    // Check that the URL actually resolves (in DevTools Network tab)
-    console.log('Attempting to load background from:', bgImage);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,8 +62,11 @@ export default function LoginPage() {
 
   return (
     <Grid container sx={{ minHeight: '100vh' }}>
+      {/* Left: login form */}
       <Grid
-        item xs={12} md={6}
+        item
+        xs={12}
+        md={6}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -90,21 +85,42 @@ export default function LoginPage() {
             </Typography>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ display:'flex', flexDirection:'column', gap:2, mt:1 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              mt: 1,
+            }}
+          >
             <TextField
-              label="E-mail" type="email" required fullWidth
-              value={email} onChange={e => setEmail(e.target.value)}
+              label="E-mail"
+              type="email"
+              required
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <TextField
-              label="Senha" type="password" required fullWidth
-              value={password} onChange={e => setPassword(e.target.value)}
+              label="Senha"
+              type="password"
+              required
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
             <Button
-              type="submit" variant="contained" fullWidth
+              type="submit"
+              variant="contained"
+              fullWidth
               sx={{
-                mt:1,
+                mt: 1,
                 backgroundColor: theme.palette.primary.main,
-                '&:hover': { backgroundColor: theme.palette.primary.dark },
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.dark,
+                },
               }}
             >
               Entrar
@@ -113,7 +129,8 @@ export default function LoginPage() {
         </FormContainer>
       </Grid>
 
-      <Grid item xs={false} md={6}>
+      {/* Right: background image */}
+      <Grid item xs={12} md={6}>
         <ImageContainer />
       </Grid>
     </Grid>
