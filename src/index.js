@@ -3,11 +3,15 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
-import './index.css';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';           // your existing theme.js
+import './index.css';                  // your existing global styles
 
 ReactDOM.render(
   <AuthProvider>
-    <App />
+    <ThemeProvider theme={theme}>
+      <App />
+    </ThemeProvider>
   </AuthProvider>,
   document.getElementById('root')
 );
