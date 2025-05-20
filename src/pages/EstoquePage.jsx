@@ -10,7 +10,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Tooltip,
   IconButton,
   ToggleButtonGroup,
   ToggleButton,
@@ -74,7 +73,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const EstoquePageContent = () => {
+const EstoquePage = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
