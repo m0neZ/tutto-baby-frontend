@@ -27,7 +27,7 @@ export default function LoginPage() {
       {/* LEFT: Form with Canvas pattern background */}
       <Box
         sx={{
-          flex: 0.4,
+          flex: 0.3,
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
@@ -98,7 +98,7 @@ export default function LoginPage() {
       {/* RIGHT: Background image */}
       <Box
         sx={{
-          flex: 0.6,
+          flex: 0.7,
           position: 'relative',
           '& img': { width: '100%', height: '100%', objectFit: 'cover' }
         }}
