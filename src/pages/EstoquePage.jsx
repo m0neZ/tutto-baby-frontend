@@ -23,16 +23,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  TableFooter,
-  TableRow,
-  TableCell,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FunctionsIcon from '@mui/icons-material/Functions';
 import MovingIcon from '@mui/icons-material/Moving';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
@@ -45,22 +41,22 @@ dayjs.extend(isBetween);
 // Formatting helpers
 const formatCurrency = (value) => {
   if (value == null) return 'R$ 0,00';
-  const numValue = Number(value);
-  if (isNaN(numValue)) return 'R$ -';
-  return `R$ ${numValue.toFixed(2).replace('.', ',')}`;
+  const num = Number(value);
+  if (isNaN(num)) return 'R$ -';
+  return `R$ ${num.toFixed(2).replace('.', ',')}`;
 };
 
 const formatDate = (value) => {
   if (!value) return '-';
-  const date = dayjs(value);
-  return date.isValid() ? date.format('DD/MM/YYYY') : '-';
+  const d = dayjs(value);
+  return d.isValid() ? d.format('DD/MM/YYYY') : '-';
 };
 
-const safeSum = (values) =>
-  MRT_AggregationFns.sum(values.filter((v) => typeof v === 'number' && !isNaN(v)));
-
-const safeMean = (values) =>
-  MRT_AggregationFns.mean(values.filter((v) => typeof v === 'number' && !isNaN(v)));
+// Aggregation wrappers
+const safeSum = (vals) =>
+  MRT_AggregationFns.sum(vals.filter((n) => typeof n === 'number' && !isNaN(n)));
+const safeMean = (vals) =>
+  MRT_AggregationFns.mean(vals.filter((n) => typeof n === 'number' && !isNaN(n)));
 
 // Error Boundary
 class ErrorBoundary extends React.Component {
@@ -91,27 +87,27 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Main content
 const EstoquePageContent = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [openAddModal, setOpenAddModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(null);
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [priceAggregationMode, setPriceAggregationMode] = useState('mean');
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [deletingProduct, setDeletingProduct] = useState(null);
-  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
 
+  // Fetch products
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiFetch('/produtos/');
-      const fetched = data.produtos || [];
-      setProdutos(
-        fetched.map((p) => ({ id: p.id ?? p.id_produto, ...p }))
-      );
+      const res = await apiFetch('/produtos/');
+      const list = res.produtos || [];
+      setProdutos(list.map((p) => ({ id: p.id ?? p.id_produto, ...p })));
       setError(null);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
@@ -125,97 +121,58 @@ const EstoquePageContent = () => {
     fetchProdutos();
   }, [fetchProdutos]);
 
+  // Columns definition
   const columns = useMemo(
     () => [
-      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
-      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
-      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
-      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true, muiTableHeadCellProps: { align: 'left' } },
+      { accessorKey: 'nome', header: 'Nome', enableGrouping: true },
+      { accessorKey: 'sexo', header: 'Sexo', enableGrouping: true },
+      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', enableGrouping: true },
+      { accessorKey: 'tamanho', header: 'Tamanho', enableGrouping: true },
       {
-        accessorKey: 'quantidade_atual',
-        header: 'Qtd.',
-        size: 80,
-        aggregationFn: safeSum,
-        AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            Total: {cell.getValue()}
-          </Box>
-        ),
+        accessorKey: 'quantidade_atual', header: 'Qtd.', aggregationFn: safeSum,
+        Cell: ({ cell }) => cell.getValue(),
+        AggregatedCell: ({ cell }) => <strong>Total: {cell.getValue()}</strong>,
         Footer: ({ table }) => {
-          const total = table
-            .getFilteredRowModel()
-            .rows.reduce((sum, row) => sum + (row.getValue('quantidade_atual') || 0), 0);
-          return (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              Total: {total}
-            </Box>
+          const total = table.getFilteredRowModel().rows.reduce(
+            (sum, row) => sum + (row.getValue('quantidade_atual') || 0),
+            0
           );
+          return <strong>Total: {total}</strong>;
         },
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
       },
       {
-        accessorKey: 'custo',
-        header: 'Custo Unit.',
-        size: 110,
-        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
+        accessorKey: 'custo', header: 'Custo Unit.', aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+          <strong>
             {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
             {formatCurrency(cell.getValue())}
-          </Box>
+          </strong>
         ),
         Footer: ({ table }) => {
-          const vals = table
-            .getFilteredRowModel()
-            .rows.map((r) => r.getValue('custo') || 0);
+          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('custo') || 0);
           const val = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
-          return (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(val)}
-            </Box>
-          );
+          return <strong>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(val)}</strong>;
         },
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
       },
       {
-        accessorKey: 'preco_venda',
-        header: 'Preço Venda Unit.',
-        size: 120,
-        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
+        accessorKey: 'preco_venda', header: 'Preço Venda Unit.', aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+          <strong>
             {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
             {formatCurrency(cell.getValue())}
-          </Box>
+          </strong>
         ),
         Footer: ({ table }) => {
-          const vals = table
-            .getFilteredRowModel()
-            .rows.map((r) => r.getValue('preco_venda') || 0);
+          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('preco_venda') || 0);
           const val = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
-          return (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(val)}
-            </Box>
-          );
+          return <strong>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(val)}</strong>;
         },
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
       },
-      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
+      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', enableGrouping: true },
       {
-        accessorKey: 'data_compra',
-        header: 'Data Compra',
-        size: 120,
+        accessorKey: 'data_compra', header: 'Data Compra',
         Cell: ({ cell }) => formatDate(cell.getValue()),
         filterVariant: 'date-range',
         filterFn: (row, id, filter) => {
@@ -224,18 +181,17 @@ const EstoquePageContent = () => {
           if (start && end) {
             return date.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
           } else if (start) {
-            return date.isSameOrAfter(dayjs(start).startOf('day'));  // requires isSameOrAfter plugin if needed
-          } else if (end) {
-            return date.isSameOrBefore(dayjs(end).endOf('day'));      // requires isSameOrBefore plugin if needed
-          }
+            return date.isSameOrAfter(dayjs(start).startOf('day')); }
+          else if (end) {
+            return date.isSameOrBefore(dayjs(end).endOf('day')); }
           return true;
         },
-        muiTableHeadCellProps: { align: 'left' },
       },
     ],
     [priceAggregationMode]
   );
 
+  // Table instance
   const table = useMaterialReactTable({
     columns,
     data: produtos,
@@ -246,104 +202,48 @@ const EstoquePageContent = () => {
     enableRowActions: true,
     positionActionsColumn: 'last',
     enableTableFooter: true,
-    initialState: {
-      density: 'compact',
-      sorting: [{ id: 'nome', desc: false }],
-      grouping: [],
-      pagination: { pageIndex: 0, pageSize: 50 },
-      columnPinning: { right: ['mrt-row-actions'] },
-    },
-    state: {
-      isLoading: loading,
-      showAlertBanner: !!error,
-      grouping,
-      pagination,
-    },
+    initialState: { grouping, pagination },
+    state: { isLoading: loading, showAlertBanner: !!error, grouping, pagination },
     onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
-    muiToolbarAlertBannerProps: error
-      ? { color: 'error', children: error }
-      : undefined,
-    muiTableContainerProps: { sx: { maxHeight: '650px' } },
     renderTopToolbarCustomActions: () => (
-      <Box sx={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 2 }}>
         <Button
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
-          sx={{ textTransform: 'none' }}
-          onClick={() => setOpenAddModal(true)}
+          onClick={() => { setEditingProduct(null); setOpenAddModal(true); }}
         >
           Adicionar Produto
         </Button>
-        <Tooltip title="Alternar Agregação de Preços Unitários (Média/Soma)">
-          <ToggleButtonGroup
-            value={priceAggregationMode}
-            exclusive
-            onChange={(_, newMode) => newMode && setPriceAggregationMode(newMode)}
-            size="small"
-          >
-            <ToggleButton value="mean" aria-label="average">
-              <MovingIcon fontSize="small" /> Média
-            </ToggleButton>
-            <ToggleButton value="sum" aria-label="sum">
-              <FunctionsIcon fontSize="small" /> Soma
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Tooltip>
+        <ToggleButtonGroup
+          value={priceAggregationMode}
+          exclusive
+          onChange={(_, v) => v && setPriceAggregationMode(v)}
+        >
+          <ToggleButton value="mean">Média</ToggleButton>
+          <ToggleButton value="sum">Soma</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
     ),
     renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.1rem', justifyContent: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 1 }}>
         <Tooltip title="Editar">
-          <IconButton size="small" onClick={() => { setEditingProduct(row.original); setOpenEditModal(true); }}>
-            <EditIcon fontSize="small" />
+          <IconButton onClick={() => { setEditingProduct(row.original); setOpenEditModal(true); }}>
+            <EditIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Excluir">
-          <IconButton size="small" color="error" onClick={() => setOpenConfirmDelete(true)}>
-            <DeleteIcon fontSize="small" />
+          <IconButton color="error" onClick={() => setOpenConfirmDelete(true)}>
+            <DeleteIcon />
           </IconButton>
         </Tooltip>
       </Box>
     ),
-    muiTablePaperProps: {
-      elevation: 1,
-      sx: {
-        borderRadius: 0,
-        border: '1px solid',
-        borderColor: 'divider',
-      },
-    },
-    muiTableHeadCellProps: {
-      sx: (theme) => ({
-        backgroundColor: theme.palette.secondary.main,
-        color: theme.palette.secondary.contrastText,
-        fontWeight: 'bold',
-      }),
-    },
-    muiTableBodyProps: {
-      sx: (theme) => ({
-        '& tr:nth-of-type(odd) > td': {
-          backgroundColor: theme.palette.background.paper,
-        },
-        '& tr:nth-of-type(even) > td': {
-          backgroundColor: theme.palette.action.hover,
-        },
-      }),
-    },
-    muiTableFooterProps: {
-      sx: (theme) => ({
-        backgroundColor: theme.palette.grey[200],
-        '& td': {
-          fontWeight: 'bold',
-        },
-      }),
-    },
   });
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+    <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
         Estoque de produtos
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
@@ -358,26 +258,28 @@ const EstoquePageContent = () => {
       <AddProductModal
         open={openAddModal || openEditModal}
         onClose={() => { openEditModal ? setOpenEditModal(false) : setOpenAddModal(false); }}
-        onSuccess={() => { setOpenAddModal(false); setOpenEditModal(false); fetchProdutos(); }}
+        onSuccess={() => { fetchProdutos(); setOpenAddModal(false); setOpenEditModal(false); }}
         productData={editingProduct}
         isEditMode={!!editingProduct}
       />
 
-      <Dialog
-        open={openConfirmDelete}
-        onClose={() => setOpenConfirmDelete(false)}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">Confirmar Exclusão</DialogTitle>
+      <Dialog open={openConfirmDelete} onClose={() => setOpenConfirmDelete(false)}>
+        <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Tem certeza que deseja excluir o produto "{deletingProduct?.nome}"?
+          <DialogContentText>
+            Tem certeza que deseja excluir "{deletingProduct?.nome}"?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenConfirmDelete(false)}>Cancelar</Button>
-          <Button onClick={async () => { await apiFetch(`/produtos/${deletingProduct.id}`, { method: 'DELETE' }); fetchProdutos(); setOpenConfirmDelete(false); }} color="error" autoFocus>
+          <Button
+            color="error"
+            onClick={async () => {
+              await apiFetch(`/produtos/${deletingProduct.id}`, { method: 'DELETE' });
+              fetchProdutos();
+              setOpenConfirmDelete(false);
+            }}
+          >
             Excluir
           </Button>
         </DialogActions>
