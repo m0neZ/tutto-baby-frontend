@@ -2,15 +2,9 @@
 
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  useTheme
-} from '@mui/material';
-import bgImage from '../assets/LoginPage.jpg'; // Make sure this file exists
+import { Box, Paper, Typography, TextField, Button, useTheme } from '@mui/material';
+import bgImage from '../assets/LoginPage.jpg';                  // background image (right side)
+import patternImage from '../assets/cotton_illustration.png';   // tile pattern
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -19,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     try {
       await login(email, password);
@@ -31,14 +25,19 @@ export default function LoginPage() {
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', width: '100%' }}>
-      {/* LEFT SIDE: Login form */}
+      
+      {/* LEFT SIDE: Form with tiled pattern background */}
       <Box
         sx={{
-          flex: 1,
+          flex: 0.4,
+          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: theme.palette.background.default,
+          bgcolor: theme.palette.primary.main,
+          backgroundImage: `url(${patternImage})`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '80px 80px',    // adjust tile size as desired
           p: 2,
         }}
       >
@@ -46,7 +45,7 @@ export default function LoginPage() {
           elevation={6}
           sx={{
             width: '100%',
-            maxWidth: 400,
+            maxWidth: 360,
             p: 4,
           }}
         >
@@ -71,7 +70,7 @@ export default function LoginPage() {
               required
               fullWidth
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
             />
             <TextField
               label="Senha"
@@ -79,7 +78,7 @@ export default function LoginPage() {
               required
               fullWidth
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
             />
             <Button
               type="submit"
@@ -87,8 +86,8 @@ export default function LoginPage() {
               fullWidth
               sx={{
                 mt: 1,
-                backgroundColor: theme.palette.primary.main,
-                '&:hover': { backgroundColor: theme.palette.primary.dark },
+                backgroundColor: theme.palette.primary.dark,
+                '&:hover': { backgroundColor: theme.palette.primary.main },
               }}
             >
               Entrar
@@ -97,16 +96,20 @@ export default function LoginPage() {
         </Paper>
       </Box>
 
-      {/* RIGHT SIDE: Background image */}
-      <Box sx={{ flex: 1, position: 'relative' }}>
-        {/* Real img element */}
-        <Box
-          component="img"
-          src={bgImage}
-          alt="Tutto Baby Background"
-          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        {/* Semi-transparent overlay */}
+      {/* RIGHT SIDE: Full‐height background image */}
+      <Box
+        sx={{
+          flex: 0.6,
+          position: 'relative',
+          '& img': {
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          },
+        }}
+      >
+        <img src={bgImage} alt="Tutto Baby Background" />
         <Box
           sx={{
             position: 'absolute',
