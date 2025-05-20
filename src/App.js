@@ -1,36 +1,65 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import EstoquePage from './pages/EstoquePage'; // Placeholder
-import VendasPage from './pages/VendasPage'; // Placeholder
-import RelatoriosPage from './pages/RelatoriosPage'; // Placeholder
-import ClientesPage from './pages/ClientesPage'; // Placeholder
-import AdminPage from './AdminPage'; // Placeholder for the redesigned Admin page
+// src/App.js
+import React, { useContext } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthContext } from './auth/AuthContext';
+import EstoquePage from './pages/EstoquePage';
+import VendasPage from './pages/VendasPage';
+import ClientesPage from './pages/ClientesPage';
+import RelatoriosPage from './pages/RelatoriosPage';
+import AdminPage from './AdminPage';
+import LoginPage from './pages/LoginPage';
 
-// Placeholder components for pages
-// const EstoquePage = () => <div className="text-xl font-semibold">Página de Estoque</div>;
-// const VendasPage = () => <div className="text-xl font-semibold">Página de Vendas</div>;
-// const RelatoriosPage = () => <div className="text-xl font-semibold">Página de Relatórios</div>;
-// const ClientesPage = () => <div className="text-xl font-semibold">Página de Clientes</div>;
-// const AdminPage = () => <div className="text-xl font-semibold">Página de Admin</div>;
-
-function App() {
-  return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<EstoquePage />} /> {/* Default to Estoque */}
-          <Route path="/estoque" element={<EstoquePage />} />
-          <Route path="/vendas" element={<VendasPage />} />
-          <Route path="/relatorios" element={<RelatoriosPage />} />
-          <Route path="/clientes" element={<ClientesPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          {/* Add other routes as needed */}
-        </Routes>
-      </Layout>
-    </Router>
-  );
+function PrivateRoute({ children }) {
+  const { token } = useContext(AuthContext);
+  return token ? children : <Navigate to="/login" replace />;
 }
 
-export default App;
-
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <EstoquePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/vendas"
+          element={
+            <PrivateRoute>
+              <VendasPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <PrivateRoute>
+              <ClientesPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/relatorios"
+          element={
+            <PrivateRoute>
+              <RelatoriosPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminPage />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
