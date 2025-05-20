@@ -1,7 +1,7 @@
 // src/pages/EstoquePage.jsx
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import MaterialReactTable, { MRT_AggregationFns } from 'material-react-table';
+import { MaterialReactTable, MRT_AggregationFns } from 'material-react-table';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import {
   Box,
@@ -48,10 +48,8 @@ const formatDate = (value) => {
 };
 
 // Safe aggregation
-const safeMean = (vals) =>
-  MRT_AggregationFns.mean(vals.filter((n) => typeof n === 'number'));
-const safeSum = (vals) =>
-  MRT_AggregationFns.sum(vals.filter((n) => typeof n === 'number'));
+const safeMean = (vals) => MRT_AggregationFns.mean(vals.filter((n) => typeof n === 'number'));
+const safeSum = (vals) => MRT_AggregationFns.sum(vals.filter((n) => typeof n === 'number'));
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -68,9 +66,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>
-          <Alert severity="error">
-            Erro ao renderizar Estoque: {this.state.error.toString()}
-          </Alert>
+          <Alert severity="error">Erro ao renderizar Estoque: {this.state.error.toString()}</Alert>
         </Container>
       );
     }
@@ -121,9 +117,7 @@ const EstoquePageContent = () => {
         AggregatedCell: ({ cell }) => <>Total: {cell.getValue()}</>,
         Footer: ({ table }) => {
           const total = safeSum(
-            table
-              .getFilteredRowModel()
-              .rows.map((r) => r.getValue('quantidade_atual'))
+            table.getFilteredRowModel().rows.map((r) => r.getValue('quantidade_atual'))
           );
           return <>Total: {total}</>;
         },
@@ -134,8 +128,7 @@ const EstoquePageContent = () => {
       {
         accessorKey: 'custo',
         header: 'Custo Unit.',
-        aggregationFn:
-          priceAggregationMode === 'mean' ? safeMean : safeSum,
+        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
           <>
@@ -144,19 +137,9 @@ const EstoquePageContent = () => {
           </>
         ),
         Footer: ({ table }) => {
-          const vals = table
-            .getFilteredRowModel()
-            .rows.map((r) => r.getValue('custo'));
-          const value =
-            priceAggregationMode === 'mean'
-              ? safeMean(vals)
-              : safeSum(vals);
-          return (
-            <>
-              {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(value)}
-            </>
-          );
+          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('custo'));
+          const value = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
+          return <>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(value)}</>;
         },
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
@@ -165,8 +148,7 @@ const EstoquePageContent = () => {
       {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
-        aggregationFn:
-          priceAggregationMode === 'mean' ? safeMean : safeSum,
+        aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
           <>
@@ -175,19 +157,9 @@ const EstoquePageContent = () => {
           </>
         ),
         Footer: ({ table }) => {
-          const vals = table
-            .getFilteredRowModel()
-            .rows.map((r) => r.getValue('preco_venda'));
-          const value =
-            priceAggregationMode === 'mean'
-              ? safeMean(vals)
-              : safeSum(vals);
-          return (
-            <>
-              {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(value)}
-            </>
-          );
+          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('preco_venda'));
+          const value = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
+          return <>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(value)}</>;
         },
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
@@ -211,6 +183,18 @@ const EstoquePageContent = () => {
     ],
     [priceAggregationMode]
   );
+
+  const handleDeleteProduct = async () => {
+    setLoading(true);
+    try {
+      await apiFetch(`/produtos/${deletingProduct.id}`, { method: 'DELETE' });
+      setOpenConfirmDelete(false);
+      await fetchProdutos();
+    } catch (e) {
+      setError(`Falha ao excluir produto: ${e.message}`);
+      setLoading(false);
+    }
+  };
 
   return (
     <ErrorBoundary>
