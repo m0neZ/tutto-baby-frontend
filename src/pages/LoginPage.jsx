@@ -1,10 +1,9 @@
 // File: src/pages/LoginPage.jsx
-
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import { Box, Paper, Typography, TextField, Button, useTheme } from '@mui/material';
-import bgImage from '../assets/LoginPage.jpg';                 // Background image (right side)
-import patternImage from '../assets/llama_illustration_2.png'; // Repeating llama pattern
+import bgImage from '../assets/LoginPage.jpg';
+import PatternCanvas from '../components/PatternCanvas';
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -25,8 +24,7 @@ export default function LoginPage() {
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', width: '100%' }}>
-      
-      {/* LEFT SIDE: Form with tiled llama pattern */}
+      {/* LEFT: Form with Canvas pattern background */}
       <Box
         sx={{
           flex: 0.4,
@@ -34,16 +32,17 @@ export default function LoginPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: theme.palette.primary.main,   // Keep your original green
-          backgroundImage: `url(${patternImage})`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '120px 120px',         // Larger tiles for more spacing
+          bgcolor: theme.palette.primary.main,
           p: 2,
         }}
       >
+        {/* Canvas behind */}
+        <PatternCanvas />
+        {/* Form on top */}
         <Paper
           elevation={6}
           sx={{
+            zIndex: 1,
             width: '100%',
             maxWidth: 360,
             p: 4,
@@ -87,7 +86,7 @@ export default function LoginPage() {
               sx={{
                 mt: 1,
                 backgroundColor: theme.palette.primary.dark,
-                '&:hover': { backgroundColor: theme.palette.primary.main },
+                '&:hover': { backgroundColor: theme.palette.primary.main }
               }}
             >
               Entrar
@@ -96,25 +95,22 @@ export default function LoginPage() {
         </Paper>
       </Box>
 
-      {/* RIGHT SIDE: Full‐height background image */}
+      {/* RIGHT: Background image */}
       <Box
         sx={{
           flex: 0.6,
           position: 'relative',
-          '& img': {
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          },
+          '& img': { width: '100%', height: '100%', objectFit: 'cover' }
         }}
       >
         <img src={bgImage} alt="Tutto Baby Background" />
         <Box
           sx={{
             position: 'absolute',
-            top: 0, left: 0,
-            width: '100%', height: '100%',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             bgcolor: 'rgba(255,255,255,0.3)',
           }}
         />
