@@ -11,37 +11,7 @@ import {
   Button,
   useTheme
 } from '@mui/material';
-import { styled } from '@mui/system';
-import bgImage from '../assets/LoginPage.jpg';  // keep import from assets
-
-// Styled container for the login form
-const FormContainer = styled(Paper)(({ theme }) => ({
-  margin: theme.spacing(4),
-  padding: theme.spacing(4),
-  maxWidth: 400,
-  width: '100%',
-  [theme.breakpoints.down('sm')]: {
-    margin: theme.spacing(2),
-    padding: theme.spacing(2),
-  },
-}));
-
-// Styled box for the background image with overlay
-const ImageContainer = styled(Box)(({ theme }) => ({
-  height: '100vh',
-  width: '100%',
-  backgroundImage: `url(${bgImage})`,
-  backgroundSize: 'cover',
-  backgroundPosition: 'center',
-  position: 'relative',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    // Lighter white overlay for readability
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-}));
+import bgImage from '../assets/LoginPage.jpg';  // keep your asset import
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -62,7 +32,7 @@ export default function LoginPage() {
 
   return (
     <Grid container sx={{ minHeight: '100vh' }}>
-      {/* Left: login form */}
+      {/* Left side: Login form */}
       <Grid
         item
         xs={12}
@@ -74,7 +44,19 @@ export default function LoginPage() {
           backgroundColor: theme.palette.background.default,
         }}
       >
-        <FormContainer elevation={6}>
+        <Paper
+          elevation={6}
+          sx={{
+            margin: theme.spacing(4),
+            padding: theme.spacing(4),
+            maxWidth: 400,
+            width: '100%',
+            [theme.breakpoints.down('sm')]: {
+              margin: theme.spacing(2),
+              padding: theme.spacing(2),
+            },
+          }}
+        >
           <Typography variant="h5" align="center" color="primary" gutterBottom>
             Bem-vindos à Tutto Baby
           </Typography>
@@ -126,12 +108,30 @@ export default function LoginPage() {
               Entrar
             </Button>
           </Box>
-        </FormContainer>
+        </Paper>
       </Grid>
 
-      {/* Right: background image */}
+      {/* Right side: Background image */}
       <Grid item xs={12} md={6}>
-        <ImageContainer />
+        <Box
+          sx={{
+            height: '100vh',
+            width: '100%',
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255,255,255,0.3)',
+            },
+          }}
+        />
       </Grid>
     </Grid>
   );
