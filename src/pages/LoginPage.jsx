@@ -1,17 +1,17 @@
-// File: src/pages/LoginPage.jsx
+// src/pages/LoginPage.jsx
 
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import {
   Grid,
-  Box,
   Paper,
   Typography,
   TextField,
   Button,
   useTheme
 } from '@mui/material';
-import bgImage from '../assets/LoginPage.jpg';  // keep your asset import
+import { Box } from '@mui/system';
+import bgImage from '../assets/LoginPage.jpg';  // keep import from assets
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   return (
     <Grid container sx={{ minHeight: '100vh' }}>
-      {/* Left side: Login form */}
+      {/* LEFT: Login form */}
       <Grid
         item
         xs={12}
@@ -47,14 +47,11 @@ export default function LoginPage() {
         <Paper
           elevation={6}
           sx={{
-            margin: theme.spacing(4),
-            padding: theme.spacing(4),
+            m: 4,
+            p: 4,
             maxWidth: 400,
             width: '100%',
-            [theme.breakpoints.down('sm')]: {
-              margin: theme.spacing(2),
-              padding: theme.spacing(2),
-            },
+            [theme.breakpoints.down('sm')]: { m: 2, p: 2 },
           }}
         >
           <Typography variant="h5" align="center" color="primary" gutterBottom>
@@ -70,12 +67,7 @@ export default function LoginPage() {
           <Box
             component="form"
             onSubmit={handleSubmit}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              mt: 1,
-            }}
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}
           >
             <TextField
               label="E-mail"
@@ -100,9 +92,7 @@ export default function LoginPage() {
               sx={{
                 mt: 1,
                 backgroundColor: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                },
+                '&:hover': { backgroundColor: theme.palette.primary.dark },
               }}
             >
               Entrar
@@ -111,28 +101,25 @@ export default function LoginPage() {
         </Paper>
       </Grid>
 
-      {/* Right side: Background image */}
-      <Grid item xs={12} md={6}>
-        <Box
-          sx={{
-            height: '100vh',
-            width: '100%',
-            backgroundImage: `url(${bgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            position: 'relative',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(255,255,255,0.3)',
-            },
-          }}
-        />
-      </Grid>
+      {/* RIGHT: Background image on the Grid item itself */}
+      <Grid
+        item
+        xs={12}
+        md={6}
+        sx={{
+          position: 'relative',
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: '100vh',
+          '&:after': {
+            content: '""',
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(255,255,255,0.3)',
+          },
+        }}
+      />
     </Grid>
   );
 }
