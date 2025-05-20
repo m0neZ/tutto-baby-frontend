@@ -14,8 +14,10 @@ export function AuthProvider({ children }) {
     if (savedToken) setToken(savedToken);
   }, []);
 
-  // Build API base URL from Vite env or default
-  const apiBase = (import.meta.env.VITE_API_URL || "https://tutto-baby-backend.onrender.com").replace(/\/$/, '');
+  // Determine API base URL: try VITE_API_URL, then CRA REACT_APP_API_URL, then default
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL;
+  const craUrl = process.env.REACT_APP_API_URL;
+  const apiBase = (envUrl || craUrl || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '');
 
   // Login function: request tokens and save
   const login = async (email, password) => {
