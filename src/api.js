@@ -4,20 +4,24 @@ const BASE_URL = `${(import.meta.env?.VITE_API_URL || "https://tutto-baby-backen
   .replace(/\/$/, "")}/api`;
 
 /**
- * Helper to perform authenticated fetches.
+ * apiFetch wraps fetch to:
+ *  - attach the JWT from localStorage
+ *  - handle 401 by clearing tokens + redirecting to /login
+ *  - throw on other non-OK statuses (with status code in message)
+ *  - parse JSON (or return empty object if no body)
  */
-async function authFetch(path, options = {}) {
+export async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("access_token");
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const res = await fetch(`${BASE_URL}${path}`, {
     credentials: "omit", // we’re sending auth header manually
     ...options,
-    headers
+    headers,
   });
 
   if (res.status === 401) {
@@ -37,67 +41,42 @@ async function authFetch(path, options = {}) {
     throw new Error(`Erro ${res.status}: ${errText || res.statusText}`);
   }
 
-  // OK
-  // Some endpoints return no JSON body
+  // OK – parse JSON if present
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
 
-// --- Products ---
+// Convenience wrappers for your endpoints
 
-export const fetchProducts = async () => {
-  const data = await authFetch("/produtos/", { method: "GET" });
-  return data.produtos || [];
-};
+export const fetchProducts = () =>
+  apiFetch("/produtos/", { method: "GET" }).then((d) => d.produtos || []);
 
-export const createProduct = async (product) => {
-  console.debug("[API] createProduct payload:", product);
-  const data = await authFetch("/produtos/", {
+export const createProduct = (product) =>
+  apiFetch("/produtos/", {
     method: "POST",
-    body: JSON.stringify(product)
+    body: JSON.stringify(product),
   });
-  return data;
-};
 
-// --- Field Options (admin fields manager) ---
+export const fetchFieldOptions = (fieldType) =>
+  apiFetch(`/opcoes_campo/${fieldType}?incluir_inativos=false`, {
+    method: "GET",
+  }).then((d) => d.opcoes || []);
 
-export const fetchFieldOptions = async (fieldType) => {
-  const data = await authFetch(
-    `/opcoes_campo/${fieldType}?incluir_inativos=false`,
-    { method: "GET" }
-  );
-  return data.opcoes || [];
-};
+export const fetchSummary = () =>
+  apiFetch("/summary", { method: "GET" }).then((d) => d.summary);
 
-// --- Summary & Alerts ---
+export const fetchLowStock = () =>
+  apiFetch("/alerts/low-stock", { method: "GET" }).then((d) => d.products);
 
-export const fetchSummary = async () => {
-  const data = await authFetch("/summary", { method: "GET" });
-  return data.summary;
-};
+export const fetchSuppliers = () =>
+  apiFetch("/fornecedores/", { method: "GET" }).then((d) => {
+    // Handle both { fornecedores: [...] } and direct array
+    if (d.fornecedores) return d.fornecedores;
+    return Array.isArray(d) ? d : [];
+  });
 
-export const fetchLowStock = async () => {
-  const data = await authFetch("/alerts/low-stock", { method: "GET" });
-  return data.products;
-};
-
-// --- Suppliers ---
-
-export const fetchSuppliers = async () => {
-  console.debug("[API] fetching suppliers");
-  const data = await authFetch("/fornecedores/", { method: "GET" });
-  // Handle both { success, fornecedores: [...] } and direct array
-  if (data.fornecedores) return data.fornecedores;
-  if (Array.isArray(data)) return data;
-  return [];
-};
-
-// --- Transactions (Sales & Stock movements) ---
-
-export const createTransaction = async (transaction) => {
-  const data = await authFetch("/transactions/", {
+export const createTransaction = (transaction) =>
+  apiFetch("/transactions/", {
     method: "POST",
-    body: JSON.stringify(transaction)
+    body: JSON.stringify(transaction),
   });
-  return data;
-};
