@@ -12,7 +12,9 @@ import {
   useTheme
 } from '@mui/material';
 import { styled } from '@mui/system';
-import babyImage from '../assets/LoginPage.jpg';  // make sure this file exists
+
+// Vite/ESM–safe way to reference a static asset in src/
+const backgroundUrl = new URL('../assets/LoginPage.jpg', import.meta.url).href;
 
 // Left‐side form container
 const FormContainer = styled(Paper)(({ theme }) => ({
@@ -26,11 +28,11 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   },
 }));
 
-// Right‐side background image with overlay
+// Right‐side background image with semi-transparent overlay
 const ImageContainer = styled(Box)(({ theme }) => ({
   height: '100vh',
   width: '100%',
-  backgroundImage: `url(${babyImage})`,
+  backgroundImage: `url(${backgroundUrl})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   position: 'relative',
@@ -38,9 +40,10 @@ const ImageContainer = styled(Box)(({ theme }) => ({
     content: '""',
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: theme.palette.mode === 'light'
-      ? 'rgba(255,255,255,0.5)'
-      : 'rgba(0,0,0,0.5)',
+    backgroundColor:
+      theme.palette.mode === 'light'
+        ? 'rgba(255,255,255,0.6)'
+        : 'rgba(0,0,0,0.6)',
   },
 }));
 
@@ -82,7 +85,7 @@ export default function LoginPage() {
             color="primary"
             gutterBottom
           >
-            Bem‐vindo ao Tutto Baby
+            Bem-vindos à Tutto Baby
           </Typography>
 
           {error && (
@@ -102,7 +105,7 @@ export default function LoginPage() {
             }}
           >
             <TextField
-              label="E‐mail"
+              label="E-mail"
               type="email"
               required
               fullWidth
@@ -124,9 +127,7 @@ export default function LoginPage() {
               sx={{
                 mt: 1,
                 backgroundColor: theme.palette.primary.main,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                },
+                '&:hover': { backgroundColor: theme.palette.primary.dark },
               }}
             >
               Entrar
