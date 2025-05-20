@@ -1,6 +1,5 @@
 // src/pages/LoginPage.jsx
-
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import {
   Grid,
@@ -13,10 +12,11 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/system';
 
-// Vite/ESM–safe way to reference a static asset in src/
-const backgroundUrl = new URL('../assets/LoginPage.jpg', import.meta.url).href;
+// 1) Static import (webpack/Vite will return the final URL)
+import bgImage from '../assets/LoginPage.jpg';
 
-// Left‐side form container
+console.log('LoginPage background URL:', bgImage);  // ← Debug: check this in your browser console
+
 const FormContainer = styled(Paper)(({ theme }) => ({
   margin: theme.spacing(4),
   padding: theme.spacing(4),
@@ -28,11 +28,10 @@ const FormContainer = styled(Paper)(({ theme }) => ({
   },
 }));
 
-// Right‐side background image with semi-transparent overlay
 const ImageContainer = styled(Box)(({ theme }) => ({
   height: '100vh',
   width: '100%',
-  backgroundImage: `url(${backgroundUrl})`,
+  backgroundImage: `url(${bgImage})`,
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   position: 'relative',
@@ -54,6 +53,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    // Check that the URL actually resolves (in DevTools Network tab)
+    console.log('Attempting to load background from:', bgImage);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -66,11 +70,8 @@ export default function LoginPage() {
 
   return (
     <Grid container sx={{ minHeight: '100vh' }}>
-      {/* Form side */}
       <Grid
-        item
-        xs={12}
-        md={6}
+        item xs={12} md={6}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -79,12 +80,7 @@ export default function LoginPage() {
         }}
       >
         <FormContainer elevation={6}>
-          <Typography
-            variant="h5"
-            align="center"
-            color="primary"
-            gutterBottom
-          >
+          <Typography variant="h5" align="center" color="primary" gutterBottom>
             Bem-vindos à Tutto Baby
           </Typography>
 
@@ -94,38 +90,19 @@ export default function LoginPage() {
             </Typography>
           )}
 
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              mt: 1,
-            }}
-          >
+          <Box component="form" onSubmit={handleSubmit} sx={{ display:'flex', flexDirection:'column', gap:2, mt:1 }}>
             <TextField
-              label="E-mail"
-              type="email"
-              required
-              fullWidth
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="E-mail" type="email" required fullWidth
+              value={email} onChange={e => setEmail(e.target.value)}
             />
             <TextField
-              label="Senha"
-              type="password"
-              required
-              fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              label="Senha" type="password" required fullWidth
+              value={password} onChange={e => setPassword(e.target.value)}
             />
             <Button
-              type="submit"
-              variant="contained"
-              fullWidth
+              type="submit" variant="contained" fullWidth
               sx={{
-                mt: 1,
+                mt:1,
                 backgroundColor: theme.palette.primary.main,
                 '&:hover': { backgroundColor: theme.palette.primary.dark },
               }}
@@ -136,7 +113,6 @@ export default function LoginPage() {
         </FormContainer>
       </Grid>
 
-      {/* Image side (hidden on small screens) */}
       <Grid item xs={false} md={6}>
         <ImageContainer />
       </Grid>
