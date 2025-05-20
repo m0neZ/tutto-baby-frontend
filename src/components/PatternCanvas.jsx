@@ -7,7 +7,7 @@ export default function PatternCanvas() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    let image = new Image();
+    const image = new Image();
     // Load the llama illustration pattern
     image.src = new URL('../assets/llama_illustration_2.png', import.meta.url).href;
 
@@ -20,10 +20,10 @@ export default function PatternCanvas() {
     }
 
     function drawPattern() {
-      const scale = 0.4; // 40% size
+      const scale = 0.2; // Reduced to 20% size for smaller tiles
       const imgW = image.width * scale;
       const imgH = image.height * scale;
-      const spacing = imgW * 3; // three times image width spacing
+      const spacing = imgW * 1.5; // tighter spacing for more repetition
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let x = 0; x < canvas.width + imgW; x += spacing) {
         for (let y = 0; y < canvas.height + imgH; y += spacing) {
@@ -56,8 +56,10 @@ export default function PatternCanvas() {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: 0
+        zIndex: 0,
       }}
     />
   );
 }
+
+
