@@ -3,15 +3,14 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import {
-  Grid,
+  Box,
   Paper,
   Typography,
   TextField,
   Button,
   useTheme
 } from '@mui/material';
-import { Box } from '@mui/system';
-import bgImage from '../assets/LoginPage.jpg';  // keep import from assets
+import bgImage from '../assets/LoginPage.jpg'; // Make sure this file exists
 
 export default function LoginPage() {
   const { login } = useContext(AuthContext);
@@ -31,31 +30,28 @@ export default function LoginPage() {
   };
 
   return (
-    <Grid container sx={{ minHeight: '100vh' }}>
-      {/* LEFT: Login form */}
-      <Grid
-        item
-        xs={12}
-        md={6}
+    <Box sx={{ display: 'flex', height: '100vh', width: '100%' }}>
+      {/* LEFT SIDE: Login form */}
+      <Box
         sx={{
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: theme.palette.background.default,
+          bgcolor: theme.palette.background.default,
+          p: 2,
         }}
       >
         <Paper
           elevation={6}
           sx={{
-            m: 4,
-            p: 4,
-            maxWidth: 400,
             width: '100%',
-            [theme.breakpoints.down('sm')]: { m: 2, p: 2 },
+            maxWidth: 400,
+            p: 4,
           }}
         >
           <Typography variant="h5" align="center" color="primary" gutterBottom>
-            Bem-vindos à Tutto Baby
+            Bem‐vindos à Tutto Baby
           </Typography>
 
           {error && (
@@ -67,10 +63,10 @@ export default function LoginPage() {
           <Box
             component="form"
             onSubmit={handleSubmit}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
           >
             <TextField
-              label="E-mail"
+              label="E‐mail"
               type="email"
               required
               fullWidth
@@ -99,27 +95,27 @@ export default function LoginPage() {
             </Button>
           </Box>
         </Paper>
-      </Grid>
+      </Box>
 
-      {/* RIGHT: Background image on the Grid item itself */}
-      <Grid
-        item
-        xs={12}
-        md={6}
-        sx={{
-          position: 'relative',
-          backgroundImage: `url(${bgImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          minHeight: '100vh',
-          '&:after': {
-            content: '""',
+      {/* RIGHT SIDE: Background image */}
+      <Box sx={{ flex: 1, position: 'relative' }}>
+        {/* Real img element */}
+        <Box
+          component="img"
+          src={bgImage}
+          alt="Tutto Baby Background"
+          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        {/* Semi-transparent overlay */}
+        <Box
+          sx={{
             position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(255,255,255,0.3)',
-          },
-        }}
-      />
-    </Grid>
+            top: 0, left: 0,
+            width: '100%', height: '100%',
+            bgcolor: 'rgba(255,255,255,0.3)',
+          }}
+        />
+      </Box>
+    </Box>
   );
 }
