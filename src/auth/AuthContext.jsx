@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect } from 'react';
 import jwtDecode from 'jwt-decode';
-import { authFetch } from '../api';   // ← named import
+import { authFetch } from '../api';
 
 export const AuthContext = createContext({
   token: null,
