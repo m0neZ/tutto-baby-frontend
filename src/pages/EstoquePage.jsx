@@ -1,17 +1,10 @@
 // src/pages/EstoquePage.jsx
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo
-} from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   MaterialReactTable,
-  useMaterialReactTable,
-  MRT_AggregationFns
+  MRT_AggregationFns,
 } from 'material-react-table';
-import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import {
   Box,
   Button,
@@ -27,75 +20,48 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  TableFooter,
+  TableRow,
+  TableCell,
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import FunctionsIcon from '@mui/icons-material/Functions';
-import MovingIcon from '@mui/icons-material/Moving';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  MRT_Localization_PT_BR
+} from 'material-react-table/locales/pt-BR';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
-
-// ---- Named imports from your API module ----
-import {
-  fetchProducts,
-  createProduct,
-  authFetch
-} from '../api';
-
+import { authFetch } from '../api';
 dayjs.extend(isBetween);
 
-// Formatting helpers
-const formatCurrency = (value) => {
-  if (value == null) return 'R$ 0,00';
-  const n = Number(value);
-  if (isNaN(n)) return 'R$ -';
-  return `R$ ${n.toFixed(2).replace('.', ',')}`;
-};
-
-const formatDate = (value) => {
-  if (!value) return '-';
-  const d = dayjs(value);
+const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
+const formatCurrency = v => v == null ? 'R$ 0,00' : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+const formatDate = v => {
+  if (!v) return '-';
+  const d = dayjs(v);
   return d.isValid() ? d.format('DD/MM/YYYY') : '-';
 };
-
-// Safe aggregation wrappers
-const safeSum = (vals) => {
-  if (!Array.isArray(vals)) return 0;
-  const nums = vals.filter(v => typeof v === 'number' && !isNaN(v));
-  return nums.length ? MRT_AggregationFns.sum(nums) : 0;
+const safeSum = vals => {
+  const arr = Array.isArray(vals) ? vals.filter(n => typeof n === 'number' && !isNaN(n)) : [];
+  return MRT_AggregationFns.sum(arr);
 };
-const safeMean = (vals) => {
-  if (!Array.isArray(vals)) return 0;
-  const nums = vals.filter(v => typeof v === 'number' && !isNaN(v));
-  return nums.length ? MRT_AggregationFns.mean(nums) : 0;
+const safeMean = vals => {
+  const arr = Array.isArray(vals) ? vals.filter(n => typeof n === 'number' && !isNaN(n)) : [];
+  return MRT_AggregationFns.mean(arr);
 };
 
-// Error Boundary
 class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, info) {
-    console.error('Uncaught error in EstoquePage:', error, info);
-  }
-  render() {
-    if (this.state.hasError) {
+  constructor(p){ super(p); this.state={hasError:false,error:null}; }
+  static getDerivedStateFromError(e){ return {hasError:true,error:e}; }
+  componentDidCatch(e,i){ console.error('Uncaught error in EstoquePage:',e,i); }
+  render(){
+    if(this.state.hasError){
       return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="xl" sx={{mt:4,mb:4}}>
           <Alert severity="error">
-            Ocorreu um erro ao renderizar a tabela de estoque.
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-              {this.state.error.toString()}
-            </pre>
+            Ocorreu um erro ao renderizar a tabela de estoque.<pre style={{whiteSpace:'pre-wrap'}}>{this.state.error.toString()}</pre>
           </Alert>
         </Container>
       );
@@ -107,27 +73,24 @@ class ErrorBoundary extends React.Component {
 const EstoquePageContent = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [openAddModal, setOpenAddModal] = useState(false);
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [deletingProduct, setDeletingProduct] = useState(null);
-  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+  const [error, setError] = useState(null);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [openDel, setOpenDel] = useState(false);
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
-  const [priceAggregationMode, setPriceAggregationMode] = useState('mean');
+  const [mode, setMode] = useState('mean');
 
-  // Load products
-  const loadProdutos = useCallback(async () => {
+  const fetchProdutos = useCallback(async () => {
     setLoading(true);
     try {
-      const lista = await fetchProducts();
-      const arr = Array.isArray(lista) ? lista : [];
-      // normalize id
-      setProdutos(arr.map(p => ({ id: p.id ?? p.id_produto, ...p })));
-      setError('');
+      const res = await authFetch('/produtos/');
+      const list = Array.isArray(res.produtos) ? res.produtos : [];
+      setProdutos(list.map(p => ({ id: p.id ?? p.id_produto, ...p })));
+      setError(null);
     } catch (e) {
-      console.error(e);
       setError(`Falha ao carregar produtos: ${e.message}`);
       setProdutos([]);
     } finally {
@@ -136,10 +99,9 @@ const EstoquePageContent = () => {
   }, []);
 
   useEffect(() => {
-    loadProdutos();
-  }, [loadProdutos]);
+    fetchProdutos();
+  }, [fetchProdutos]);
 
-  // Columns
   const columns = useMemo(() => [
     { accessorKey: 'nome', header: 'Nome', enableGrouping: true },
     { accessorKey: 'sexo', header: 'Sexo', enableGrouping: true },
@@ -149,68 +111,64 @@ const EstoquePageContent = () => {
       accessorKey: 'quantidade_atual',
       header: 'Qtd.',
       aggregationFn: safeSum,
-      Cell: ({ cell }) => cell.getValue(),
       AggregatedCell: ({ cell }) => <strong>Total: {cell.getValue()}</strong>,
       Footer: ({ table }) => {
-        const vals = table
-          .getFilteredRowModel()
-          .rows.map(r => r.getValue('quantidade_atual') || 0);
-        return <strong>Total: {safeSum(vals)}</strong>;
+        const rows = table.getFilteredRowModel()?.rows ?? [];
+        const total = rows.reduce((s, r) => s + (r.getValue('quantidade_atual')||0), 0);
+        return (
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={4} />
+              <TableCell align="right"><strong>Total: {total}</strong></TableCell>
+              <TableCell colSpan={3} />
+            </TableRow>
+          </TableFooter>
+        );
       },
     },
     {
       accessorKey: 'custo',
       header: 'Custo Unit.',
-      aggregationFn:
-        priceAggregationMode === 'mean' ? safeMean : safeSum,
+      aggregationFn: mode === 'mean' ? safeMean : safeSum,
       Cell: ({ cell }) => formatCurrency(cell.getValue()),
       AggregatedCell: ({ cell }) => (
-        <strong>
-          {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-          {formatCurrency(cell.getValue())}
-        </strong>
+        <strong>{mode==='mean'?'Média: ':'Soma: '}{formatCurrency(cell.getValue())}</strong>
       ),
       Footer: ({ table }) => {
-        const vals = table
-          .getFilteredRowModel()
-          .rows.map(r => r.getValue('custo') || 0);
-        const val =
-          priceAggregationMode === 'mean'
-            ? safeMean(vals)
-            : safeSum(vals);
+        const rows = table.getFilteredRowModel()?.rows ?? [];
+        const vals = rows.map(r => Number(r.getValue('custo'))||0);
+        const value = mode==='mean' ? safeMean(vals) : safeSum(vals);
         return (
-          <strong>
-            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(val)}
-          </strong>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={5} />
+              <TableCell align="right"><strong>{mode==='mean'?'Média: ':'Soma: '}{formatCurrency(value)}</strong></TableCell>
+              <TableCell colSpan={2} />
+            </TableRow>
+          </TableFooter>
         );
       },
     },
     {
       accessorKey: 'preco_venda',
       header: 'Preço Venda Unit.',
-      aggregationFn:
-        priceAggregationMode === 'mean' ? safeMean : safeSum,
+      aggregationFn: mode === 'mean' ? safeMean : safeSum,
       Cell: ({ cell }) => formatCurrency(cell.getValue()),
       AggregatedCell: ({ cell }) => (
-        <strong>
-          {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-          {formatCurrency(cell.getValue())}
-        </strong>
+        <strong>{mode==='mean'?'Média: ':'Soma: '}{formatCurrency(cell.getValue())}</strong>
       ),
       Footer: ({ table }) => {
-        const vals = table
-          .getFilteredRowModel()
-          .rows.map(r => r.getValue('preco_venda') || 0);
-        const val =
-          priceAggregationMode === 'mean'
-            ? safeMean(vals)
-            : safeSum(vals);
+        const rows = table.getFilteredRowModel()?.rows ?? [];
+        const vals = rows.map(r => Number(r.getValue('preco_venda'))||0);
+        const value = mode==='mean' ? safeMean(vals) : safeSum(vals);
         return (
-          <strong>
-            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(val)}
-          </strong>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={6} />
+              <TableCell align="right"><strong>{mode==='mean'?'Média: ':'Soma: '}{formatCurrency(value)}</strong></TableCell>
+              <TableCell />
+            </TableRow>
+          </TableFooter>
         );
       },
     },
@@ -224,12 +182,7 @@ const EstoquePageContent = () => {
         const date = dayjs(row.getValue(id));
         const [start, end] = filter;
         if (start && end) {
-          return date.isBetween(
-            dayjs(start).startOf('day'),
-            dayjs(end).endOf('day'),
-            'day',
-            '[]'
-          );
+          return date.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
         } else if (start) {
           return date.isSameOrAfter(dayjs(start).startOf('day'));
         } else if (end) {
@@ -238,10 +191,9 @@ const EstoquePageContent = () => {
         return true;
       },
     },
-  ], [priceAggregationMode]);
+  ], [mode]);
 
-  // Table instance
-  const table = useMaterialReactTable({
+  const table = MaterialReactTable.useMaterialReactTable({
     columns,
     data: produtos,
     localization: MRT_Localization_PT_BR,
@@ -251,55 +203,41 @@ const EstoquePageContent = () => {
     enableRowActions: true,
     positionActionsColumn: 'last',
     enableTableFooter: true,
-    initialState: { grouping, pagination },
     state: {
       isLoading: loading,
       showAlertBanner: !!error,
-      grouping,
-      pagination
+      grouping, pagination
     },
     onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
     renderTopToolbarCustomActions: () => (
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ display:'flex', gap:2 }}>
         <Button
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
-          onClick={() => {
-            setEditingProduct(null);
-            setOpenAddModal(true);
-          }}
+          onClick={() => { setEditing(null); setOpenAdd(true); }}
         >
           Adicionar Produto
         </Button>
         <ToggleButtonGroup
-          value={priceAggregationMode}
+          value={mode}
           exclusive
-          onChange={(_, v) => v && setPriceAggregationMode(v)}
+          onChange={(_, v) => v && setMode(v)}
         >
-          <ToggleButton value="mean"><MovingIcon /> Média</ToggleButton>
-          <ToggleButton value="sum"><FunctionsIcon /> Soma</ToggleButton>
+          <ToggleButton value="mean">Média</ToggleButton>
+          <ToggleButton value="sum">Soma</ToggleButton>
         </ToggleButtonGroup>
       </Box>
     ),
     renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: 1 }}>
+      <Box sx={{ display:'flex', gap:1 }}>
         <Tooltip title="Editar">
-          <IconButton onClick={() => {
-            setEditingProduct(row.original);
-            setOpenEditModal(true);
-          }}>
+          <IconButton onClick={() => { setEditing(row.original); setOpenEdit(true); }}>
             <EditIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Excluir">
-          <IconButton
-            color="error"
-            onClick={() => {
-              setDeletingProduct(row.original);
-              setOpenConfirmDelete(true);
-            }}
-          >
+          <IconButton color="error" onClick={() => { setDeleting(row.original); setOpenDel(true); }}>
             <DeleteIcon />
           </IconButton>
         </Tooltip>
@@ -308,56 +246,38 @@ const EstoquePageContent = () => {
   });
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Estoque de produtos
-      </Typography>
+    <Container maxWidth="xl" sx={{mt:4}}>
+      <Typography variant="h4" gutterBottom>Estoque de produtos</Typography>
       {error && <Alert severity="error">{error}</Alert>}
-      {loading ? (
-        <CircularProgress />
-      ) : (
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <MaterialReactTable table={table} />
-        </LocalizationProvider>
-      )}
-
+      {loading
+        ? <CircularProgress/>
+        : (
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <MaterialReactTable table={table} />
+          </LocalizationProvider>
+        )}
       <AddProductModal
-        open={openAddModal || openEditModal}
-        onClose={() => {
-          if (openEditModal) setOpenEditModal(false);
-          else setOpenAddModal(false);
-        }}
-        onSuccess={() => {
-          loadProdutos();
-          setOpenAddModal(false);
-          setOpenEditModal(false);
-        }}
-        productData={editingProduct}
-        isEditMode={!!editingProduct}
+        open={openAdd || openEdit}
+        onClose={() => openEdit ? setOpenEdit(false) : setOpenAdd(false)}
+        onSuccess={() => { fetchProdutos(); setOpenAdd(false); setOpenEdit(false); }}
+        productData={editing}
+        isEditMode={!!editing}
       />
-
-      <Dialog
-        open={openConfirmDelete}
-        onClose={() => setOpenConfirmDelete(false)}
-      >
+      <Dialog open={openDel} onClose={()=>setOpenDel(false)}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Tem certeza que deseja excluir “{deletingProduct?.nome}”?
+            Tem certeza que deseja excluir "{deleting?.nome}"?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenConfirmDelete(false)}>
-            Cancelar
-          </Button>
+          <Button onClick={()=>setOpenDel(false)}>Cancelar</Button>
           <Button
             color="error"
-            onClick={async () => {
-              await authFetch(`/produtos/${deletingProduct.id}`, {
-                method: 'DELETE'
-              });
-              loadProdutos();
-              setOpenConfirmDelete(false);
+            onClick={async()=>{
+              await authFetch(`/produtos/${deleting.id}`,{method:'DELETE'});
+              fetchProdutos();
+              setOpenDel(false);
             }}
           >
             Excluir
@@ -368,10 +288,10 @@ const EstoquePageContent = () => {
   );
 };
 
-export default function EstoquePage() {
+export default function EstoquePage(){
   return (
     <ErrorBoundary>
-      <EstoquePageContent />
+      <EstoquePageContent/>
     </ErrorBoundary>
   );
 }
