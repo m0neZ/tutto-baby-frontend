@@ -1,4 +1,3 @@
-// src/ProductForm.jsx
 import React, { useEffect, useState, useMemo, forwardRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
@@ -21,11 +20,8 @@ import CurrencyInput from "react-currency-input-field";
 import InputAdornment from "@mui/material/InputAdornment";
 import CircularProgress from "@mui/material/CircularProgress";
 
-// Adapter component
-const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
-  props,
-  ref
-) {
+// Adapter for react-currency-input-field
+const CurrencyInputAdapter = forwardRef(function (props, ref) {
   const { onChange, ...other } = props;
   return (
     <CurrencyInput
@@ -43,7 +39,7 @@ const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
   );
 });
 
-const ProductForm = ({ initialData, onSubmit }) => {
+const ProductForm = ({ onProductAdded, initialData }) => {
   const {
     handleSubmit,
     control,
@@ -51,17 +47,29 @@ const ProductForm = ({ initialData, onSubmit }) => {
     formState: { errors, isSubmitting },
     watch,
   } = useForm({
-    defaultValues: {
-      name: "",
-      gender: "",
-      size: "",
-      colorPrint: "",
-      supplierId: "",
-      cost: "",
-      retailPrice: "",
-      quantity: "",
-      purchaseDate: "",
-    },
+    defaultValues: initialData
+      ? {
+          name: initialData.nome,
+          gender: initialData.sexo,
+          size: initialData.tamanho,
+          colorPrint: initialData.cor_estampa,
+          supplierId: String(initialData.fornecedor_id),
+          cost: String(initialData.custo),
+          retailPrice: String(initialData.preco_venda),
+          quantity: String(initialData.quantidade_atual),
+          purchaseDate: initialData.data_compra || "",
+        }
+      : {
+          name: "",
+          gender: "",
+          size: "",
+          colorPrint: "",
+          supplierId: "",
+          cost: "",
+          retailPrice: "",
+          quantity: "",
+          purchaseDate: "",
+        },
   });
 
   const [products, setProducts] = useState([]);
@@ -69,112 +77,159 @@ const ProductForm = ({ initialData, onSubmit }) => {
   const [sizeOptions, setSizeOptions] = useState([]);
   const [colorOptions, setColorOptions] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
-  const [formSuccess, setFormSuccess] = useState("");
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
 
+  // Load suppliers & field options
   useEffect(() => {
     let isMounted = true;
-    (async () => {
+    const load = async () => {
       setLoadingOptions(true);
       try {
-        // Load suppliers
-        try {
-          const supList = await fetchSuppliers();
-          if (isMounted) {
-            setSuppliers(Array.isArray(supList) ? supList : []);
-            if (!Array.isArray(supList) || supList.length === 0) {
-              setSupplierError("Nenhum fornecedor ativo encontrado.");
-            }
-          }
-        } catch (e) {
-          if (isMounted) {
-            setSuppliers([]);
-            setSupplierError(`Erro ao carregar fornecedores: ${e.message}`);
-          }
-        }
-        // Load products, sizes, colors
-        const [prodList, szOpts, clrOpts] = await Promise.all([
+        const [supList, prodList, sizes, colors] = await Promise.all([
+          fetchSuppliers(),
           fetchProducts(),
           fetchFieldOptions("tamanho"),
           fetchFieldOptions("cor_estampa"),
         ]);
-        if (isMounted) {
-          setProducts(Array.isArray(prodList) ? prodList : []);
-          setSizeOptions(Array.isArray(szOpts) ? szOpts : []);
-          setColorOptions(Array.isArray(clrOpts) ? clrOpts : []);
-        }
+        if (!isMounted) return;
+        setSuppliers(Array.isArray(supList) ? supList : []);
+        setProducts(Array.isArray(prodList) ? prodList : []);
+        setSizeOptions(Array.isArray(sizes) ? sizes : []);
+        setColorOptions(Array.isArray(colors) ? colors : []);
       } catch (e) {
-        if (isMounted && !supplierError) {
-          setFormError(`Erro ao carregar dados: ${e.message}`);
-        }
+        console.error(e);
+        setFormError("Erro ao carregar dados: " + e.message);
       } finally {
-        isMounted && setLoadingOptions(false);
+        setLoadingOptions(false);
       }
-    })();
+    };
+    load();
     return () => { isMounted = false; };
   }, []);
 
-  const onSubmitForm = async (data) => {
-    setFormError("");
-    setFormSuccess("");
+  const parseCurrency = (value) => {
+    const cleaned = value.replace(/\./g, "").replace(",", ".");
+    return parseFloat(cleaned);
+  };
 
-    const parseCurrency = (v) =>
-      parseFloat(v.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".")) || NaN;
-    const cost = parseCurrency(data.cost);
-    const price = parseCurrency(data.retailPrice);
-    const qty = parseInt(data.quantity, 10);
-    const supId = parseInt(data.supplierId, 10);
-    const invalid = [];
-    if (isNaN(supId)) invalid.push("Fornecedor");
-    if (isNaN(cost)) invalid.push("Custo");
-    if (isNaN(price)) invalid.push("Preço Venda");
-    if (isNaN(qty)) invalid.push("Quantidade");
-    if (invalid.length) {
-      setFormError(`Valores inválidos em: ${invalid.join(", ")}.`);
-      return;
-    }
+  const onSubmit = async (data) => {
+    setFormError("");
+    const payload = {
+      nome: data.name.trim(),
+      sexo: data.gender,
+      tamanho: data.size,
+      cor_estampa: data.colorPrint,
+      fornecedor_id: parseInt(data.supplierId, 10),
+      custo: parseCurrency(data.cost),
+      preco_venda: parseCurrency(data.retailPrice),
+      quantidade_atual: parseInt(data.quantity, 10),
+      data_compra: data.purchaseDate || null,
+    };
 
     try {
-      await createProduct({
-        nome: data.name.trim(),
-        sexo: data.gender,
-        tamanho: data.size,
-        cor_estampa: data.colorPrint,
-        fornecedor_id: supId,
-        custo: cost,
-        preco_venda: price,
-        quantidade_atual: qty,
-        data_compra: data.purchaseDate || null,
-      });
-      setFormSuccess("Produto adicionado com sucesso!");
-      reset();
-      onSubmit?.();
-    } catch (e) {
-      console.error(e);
-      setFormError(e.message || "Erro ao enviar formulário.");
+      const res = await createProduct(payload);
+      if (res.success) {
+        reset();
+        onProductAdded();
+      } else {
+        setFormError(res.error || "Falha ao adicionar produto.");
+      }
+    } catch (err) {
+      console.error(err);
+      setFormError(err.message || "Erro ao enviar formulário.");
     }
   };
 
+  // Prepare product names for auto-complete
   const productNames = useMemo(
-    () => products.map((p) => ({ label: p.nome, id: p.id_produto })),
+    () => Array.isArray(products)
+      ? products.map((p) => ({ label: p.nome, id: p.id_produto }))
+      : [],
     [products]
   );
-
-  const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
   return (
     <Box
       component="form"
-      onSubmit={handleSubmit(onSubmitForm)}
-      sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ display: "flex", flexDirection: "column", gap: 2, p: 2 }}
     >
-      {/* ...form fields layout as before, using Controller and CurrencyInputAdapter... */}
-      {/* Submit */}
+      {/* NAME, GENDER, SIZE row */}
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+        {/* Name with Autocomplete */}
+        <Controller
+          name="name"
+          control={control}
+          rules={{ required: "Nome é obrigatório" }}
+          render={({ field, fieldState }) => (
+            <Autocomplete
+              {...field}
+              options={productNames}
+              getOptionLabel={(o) => o.label || ""}
+              onInputChange={(_, v) => field.onChange(v)}
+              disabled={loadingOptions}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Nome do Produto"
+                  fullWidth
+                  variant="standard"
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || " "}
+                />
+              )}
+            />
+          )}
+        />
+        {/* Gender */}
+        <Controller
+          name="gender"
+          control={control}
+          rules={{ required: "Sexo é obrigatório" }}
+          render={({ field, fieldState }) => (
+            <FormControl fullWidth variant="standard" error={!!fieldState.error}>
+              <InputLabel id="gender-label">Sexo</InputLabel>
+              <Select {...field} labelId="gender-label" disabled={loadingOptions}>
+                <MenuItem value=""><em>Selecione...</em></MenuItem>
+                <MenuItem value="Masculino">Masculino</MenuItem>
+                <MenuItem value="Feminino">Feminino</MenuItem>
+                <MenuItem value="Unissex">Unissex</MenuItem>
+              </Select>
+              <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
+            </FormControl>
+          )}
+        />
+        {/* Size */}
+        <Controller
+          name="size"
+          control={control}
+          rules={{ required: "Tamanho é obrigatório" }}
+          render={({ field, fieldState }) => (
+            <FormControl fullWidth variant="standard" error={!!fieldState.error}>
+              <InputLabel id="size-label">Tamanho</InputLabel>
+              <Select {...field} labelId="size-label" disabled={loadingOptions}>
+                <MenuItem value=""><em>Selecione...</em></MenuItem>
+                {sizeOptions.map((o) => (
+                  <MenuItem key={o.id} value={o.value}>{o.value}</MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
+            </FormControl>
+          )}
+        />
+      </Box>
+
+      {/* …add the other rows: colorPrint + supplier, cost + retailPrice + quantity, purchaseDate… */}
+
       {formError && <Alert severity="error">{formError}</Alert>}
-      {formSuccess && <Alert severity="success">{formSuccess}</Alert>}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button type="submit" variant="contained" disabled={isSubmitting || loadingOptions}>
+
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isSubmitting || loadingOptions}
+        >
           {isSubmitting ? <CircularProgress size={24} /> : "Salvar"}
         </Button>
       </Box>
