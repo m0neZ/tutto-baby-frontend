@@ -1,10 +1,21 @@
-/* Remove Tailwind directives */
+/* index.css */
 
-body {
-  margin: 0;
-  padding: 0;
-  /* Base font family and background color will be handled by MUI CssBaseline and ThemeProvider */
+/* Global box-sizing to avoid unexpected overflow */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-/* Add other global styles or base component styles here if needed */
+/* Reset margins/paddings and lock down overflow */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;      /* never allow horizontal overflow */
+  overflow-y: auto;        /* enable normal vertical scroll only when content truly exceeds */
+  overscroll-behavior-y: none; /* disable bounce/elastic scroll on mobile */
+}
 
+/* Base font & background are still handled by MUI CssBaseline & ThemeProvider */
+body {
+  /* you can add additional globals here if needed */
+}
