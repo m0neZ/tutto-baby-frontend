@@ -10,7 +10,6 @@ import {
   ListItemText,
   Box,
   Divider,
-  useTheme
 } from '@mui/material';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
@@ -28,8 +27,6 @@ const navItems = [
 ];
 
 export default function Sidebar() {
-  const theme = useTheme();
-  
   return (
     <Drawer
       variant="permanent"
@@ -51,10 +48,10 @@ export default function Sidebar() {
             button
             sx={{
               '&.active': {
-                backgroundColor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
+                backgroundColor: 'primary.main',
+                color: 'primary.contrastText',
                 '& .MuiListItemIcon-root': {
-                  color: theme.palette.primary.contrastText,
+                  color: 'primary.contrastText',
                 },
               },
             }}
