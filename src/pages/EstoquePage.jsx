@@ -4,8 +4,9 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
   MRT_AggregationFns,
-  MRT_Localization_PT_BR,
 } from 'material-react-table';
+import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR'; // ✅ correct locale import
+
 import {
   Box,
   Button,
@@ -25,9 +26,9 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FunctionsIcon from '@mui/icons-material/Functions';
-import MovingIcon   from '@mui/icons-material/Moving';
-import EditIcon     from '@mui/icons-material/Edit';
-import DeleteIcon   from '@mui/icons-material/Delete';
+import MovingIcon from '@mui/icons-material/Moving';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
@@ -36,24 +37,20 @@ import AddProductModal from '../components/AddProductModal';
 
 dayjs.extend(isBetween);
 
-const API_BASE = `${(import.meta.env?.VITE_API_URL
-  || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
+const API_BASE = `${(import.meta.env?.VITE_API_URL ||
+  'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
 
 /* --------------------- helpers --------------------- */
 const formatCurrency = v =>
-  v == null || isNaN(+v)
-    ? 'R$ -'
-    : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+  v == null || isNaN(+v) ? 'R$ -' : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 
 const formatDate = v =>
-  v ? dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-' : '-';
+  v ? (dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-') : '-';
 
 const safeFilterNums = arr =>
-  (Array.isArray(arr) ? arr : []).filter(
-    n => typeof n === 'number' && !Number.isNaN(n)
-  );
+  (Array.isArray(arr) ? arr : []).filter(n => typeof n === 'number' && !Number.isNaN(n));
 
-const safeSum  = vals => MRT_AggregationFns.sum (safeFilterNums(vals));
+const safeSum = vals => MRT_AggregationFns.sum(safeFilterNums(vals));
 const safeMean = vals => MRT_AggregationFns.mean(safeFilterNums(vals));
 
 /* ---------------- Error Boundary ------------------- */
@@ -71,9 +68,7 @@ class ErrorBoundary extends React.Component {
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Ocorreu um erro ao renderizar a tabela de estoque.
-          <pre style={{ whiteSpace: 'pre-wrap' }}>
-            {this.state.error?.toString()}
-          </pre>
+          <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
         </Alert>
       </Container>
     ) : (
@@ -86,18 +81,18 @@ class ErrorBoundary extends React.Component {
 function EstoquePageContent() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error , setError ] = useState(null);
+  const [error, setError] = useState(null);
 
   /* ----- modal state ----- */
-  const [openAdd,  setOpenAdd ] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [editRow , setEditRow ] = useState(null);
-  const [openDel , setOpenDel ] = useState(false);
-  const [delRow  , setDelRow  ] = useState(null);
+  const [editRow, setEditRow] = useState(null);
+  const [openDel, setOpenDel] = useState(false);
+  const [delRow, setDelRow] = useState(null);
 
   const [priceAggMode, setPriceAggMode] = useState('mean'); // 'mean' | 'sum'
-  const [grouping, setGrouping]       = useState([]);
-  const [pagination, setPagination]   = useState({ pageIndex: 0, pageSize: 50 });
+  const [grouping, setGrouping] = useState([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
 
   /* -------- data fetch -------- */
   const fetchProdutos = useCallback(async () => {
@@ -122,43 +117,44 @@ function EstoquePageContent() {
     }
   }, []);
 
-  useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
+  useEffect(() => {
+    fetchProdutos();
+  }, [fetchProdutos]);
 
   /* ------------- columns --------------- */
   const columns = useMemo(() => {
     const footerTotal = accessor => ({ table }) => {
       const vals =
         (table.getFilteredRowModel?.().rows ?? []).map(r => r.getValue(accessor));
-      const fn  = accessor === 'quantidade_atual'
-        ? safeSum
-        : priceAggMode === 'mean'
+      const fn =
+        accessor === 'quantidade_atual'
+          ? safeSum
+          : priceAggMode === 'mean'
           ? safeMean
           : safeSum;
       const label =
         accessor === 'quantidade_atual'
           ? 'Total: '
           : priceAggMode === 'mean'
-            ? 'Média: '
-            : 'Soma: ';
+          ? 'Média: '
+          : 'Soma: ';
       return (
         <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
           {label}
-          {accessor === 'quantidade_atual'
-            ? fn(vals)
-            : formatCurrency(fn(vals))}
+          {accessor === 'quantidade_atual' ? fn(vals) : formatCurrency(fn(vals))}
         </Box>
       );
     };
 
     return [
-      { accessorKey: 'nome',           header: 'Nome',           size: 180, enableGrouping: true },
-      { accessorKey: 'sexo',           header: 'Sexo',           size: 90,  enableGrouping: true },
-      { accessorKey: 'cor_estampa',    header: 'Cor/Estampa',    size: 130, enableGrouping: true },
-      { accessorKey: 'tamanho',        header: 'Tamanho',        size: 100, enableGrouping: true },
+      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
+      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
+      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
+      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
       {
-        accessorKey : 'quantidade_atual',
-        header      : 'Qtd.',
-        size        : 80,
+        accessorKey: 'quantidade_atual',
+        header: 'Qtd.',
+        size: 80,
         aggregationFn: safeSum,
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
@@ -171,9 +167,9 @@ function EstoquePageContent() {
         Footer: footerTotal('quantidade_atual'),
       },
       {
-        accessorKey : 'custo',
-        header      : 'Custo Unit.',
-        size        : 110,
+        accessorKey: 'custo',
+        header: 'Custo Unit.',
+        size: 110,
         aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
@@ -188,9 +184,9 @@ function EstoquePageContent() {
         Footer: footerTotal('custo'),
       },
       {
-        accessorKey : 'preco_venda',
-        header      : 'Preço Venda Unit.',
-        size        : 120,
+        accessorKey: 'preco_venda',
+        header: 'Preço Venda Unit.',
+        size: 120,
         aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
         muiTableBodyCellProps: { align: 'right' },
         muiTableHeadCellProps: { align: 'right' },
@@ -207,16 +203,17 @@ function EstoquePageContent() {
       { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
       {
         accessorKey: 'data_compra',
-        header    : 'Data Compra',
-        size      : 120,
-        Cell      : ({ cell }) => formatDate(cell.getValue()),
+        header: 'Data Compra',
+        size: 120,
+        Cell: ({ cell }) => formatDate(cell.getValue()),
         filterVariant: 'date-range',
-        filterFn  : (row, id, [start, end]) => {
+        filterFn: (row, id, [start, end]) => {
           const d = dayjs(row.getValue(id));
           if (!d.isValid()) return false;
-          if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
-          if (start)       return d.isSameOrAfter(dayjs(start).startOf('day'));
-          if (end)         return d.isSameOrBefore(dayjs(end).endOf('day'));
+          if (start && end)
+            return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
+          if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
+          if (end) return d.isSameOrBefore(dayjs(end).endOf('day'));
           return true;
         },
       },
@@ -234,9 +231,9 @@ function EstoquePageContent() {
     enableRowActions: true,
     positionActionsColumn: 'last',
     enableTableFooter: true,
-    initialState : {
-      density : 'compact',
-      sorting : [{ id: 'nome', desc: false }],
+    initialState: {
+      density: 'compact',
+      sorting: [{ id: 'nome', desc: false }],
       pagination,
     },
     state: {
@@ -245,10 +242,8 @@ function EstoquePageContent() {
       grouping,
       pagination,
     },
-    muiToolbarAlertBannerProps: error
-      ? { color: 'error', children: error }
-      : undefined,
-    onGroupingChange : setGrouping,
+    muiToolbarAlertBannerProps: error ? { color: 'error', children: error } : undefined,
+    onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
     muiTableContainerProps: { sx: { maxHeight: 650 } },
     renderTopToolbarCustomActions: () => (
@@ -257,7 +252,10 @@ function EstoquePageContent() {
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
           sx={{ textTransform: 'none' }}
-          onClick={() => { setEditRow(null); setOpenAdd(true); }}
+          onClick={() => {
+            setEditRow(null);
+            setOpenAdd(true);
+          }}
         >
           Adicionar Produto
         </Button>
@@ -283,7 +281,10 @@ function EstoquePageContent() {
         <Tooltip title="Editar">
           <IconButton
             size="small"
-            onClick={() => { setEditRow(row.original); setOpenEdit(true); }}
+            onClick={() => {
+              setEditRow(row.original);
+              setOpenEdit(true);
+            }}
           >
             <EditIcon fontSize="small" />
           </IconButton>
@@ -292,7 +293,10 @@ function EstoquePageContent() {
           <IconButton
             size="small"
             color="error"
-            onClick={() => { setDelRow(row.original); setOpenDel(true); }}
+            onClick={() => {
+              setDelRow(row.original);
+              setOpenDel(true);
+            }}
           >
             <DeleteIcon fontSize="small" />
           </IconButton>
@@ -302,14 +306,14 @@ function EstoquePageContent() {
     muiTableHeadCellProps: {
       sx: theme => ({
         backgroundColor: theme.palette.secondary.main,
-        color          : theme.palette.secondary.contrastText,
-        fontWeight     : 'bold',
+        color: theme.palette.secondary.contrastText,
+        fontWeight: 'bold',
       }),
     },
     muiTableBodyProps: {
       sx: theme => ({
         '& tr:nth-of-type(odd)  > td': { backgroundColor: theme.palette.background.paper },
-        '& tr:nth-of-type(even) > td': { backgroundColor: theme.palette.action.hover  },
+        '& tr:nth-of-type(even) > td': { backgroundColor: theme.palette.action.hover },
       }),
     },
     muiTableFooterProps: {
@@ -336,7 +340,7 @@ function EstoquePageContent() {
         </Typography>
 
         {loading && <CircularProgress />}
-        {error   && !loading && <Alert severity="error">{error}</Alert>}
+        {error && !loading && <Alert severity="error">{error}</Alert>}
 
         {!loading && (
           <Box sx={{ width: '100%' }}>
@@ -346,7 +350,10 @@ function EstoquePageContent() {
 
         <AddProductModal
           open={openAdd || openEdit}
-          onClose={() => { setOpenAdd(false); setOpenEdit(false); }}
+          onClose={() => {
+            setOpenAdd(false);
+            setOpenEdit(false);
+          }}
           onSuccess={refreshThenClose}
           productData={editRow}
           isEditMode={!!editRow}
@@ -357,8 +364,7 @@ function EstoquePageContent() {
           <DialogTitle>Confirmar Exclusão</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Tem certeza que deseja excluir&nbsp;
-              "{delRow?.nome}"?
+              Tem certeza que deseja excluir "{delRow?.nome}"?
             </DialogContentText>
           </DialogContent>
           <DialogActions>
