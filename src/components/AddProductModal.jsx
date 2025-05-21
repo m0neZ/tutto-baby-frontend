@@ -1,50 +1,47 @@
+// src/components/AddProductModal.jsx
 import React from 'react';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-// Removed unused DialogActions and Button imports
-import IconButton from '@mui/material/IconButton';
-import CloseIcon from '@mui/icons-material/Close';
-import ProductForm from '../ProductForm'; // Import the existing form
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import ProductForm from './ProductForm';
 
-// Accept initialData prop for editing
-const AddProductModal = ({ open, onClose, onSuccess, initialData }) => {
-  const isEditing = !!initialData;
-
+export default function AddProductModal({
+  open,
+  onClose,
+  onSuccess,
+  productData,
+  isEditMode,
+}) {
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm" // Adjust size as needed
-      fullWidth
-    >
-      {/* Dynamically set title based on editing or adding */}
-      <DialogTitle sx={{ m: 0, p: 2, fontWeight: 'bold', color: 'primary.main' }}>
-        {isEditing ? 'Editar Produto' : 'Adicionar Novo Produto'}
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>
-        {/* Pass initialData and onSuccess to ProductForm */}
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{isEditMode ? 'Editar Produto' : 'Adicionar Produto'}</DialogTitle>
+      <DialogContent>
         <ProductForm
-          onProductAdded={onSuccess} // Keep this prop name for now, form handles logic
-          initialData={initialData}
+          initialData={productData}
+          onSubmit={async (formData) => {
+            try {
+              const url = isEditMode
+                ? `/api/produtos/${formData.id}`
+                : '/api/produtos/';
+              const method = isEditMode ? 'PUT' : 'POST';
+              const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+              });
+              if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err || 'Erro na requisição');
+              }
+              onSuccess();
+            } catch (e) {
+              console.error(e);
+              alert(`Falha ao ${isEditMode ? 'editar' : 'adicionar'} produto: ${e.message}`);
+            }
+          }}
         />
       </DialogContent>
-      {/* Actions are handled within ProductForm */}
+      <DialogActions>
+        <Button onClick={onClose}>Cancelar</Button>
+      </DialogActions>
     </Dialog>
   );
-};
-
-export default AddProductModal;
-
+}
