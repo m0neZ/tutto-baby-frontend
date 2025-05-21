@@ -46,23 +46,52 @@ const formatCurrency = v =>
 const formatDate = v =>
   v ? (dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-') : '-';
 
-// More robust implementation with null checks
+// Completely rewritten with maximum safety
 const onlyNums = arr => {
-  if (!arr || !Array.isArray(arr)) return [];
-  return arr.filter(n => typeof n === 'number' && !Number.isNaN(n));
+  // Ensure we have an array
+  if (!arr) return [];
+  if (!Array.isArray(arr)) return [];
+  
+  // Filter out non-numbers and NaN values
+  return arr.filter(n => 
+    n !== null && 
+    n !== undefined && 
+    typeof n === 'number' && 
+    !Number.isNaN(n)
+  );
 };
 
-// Safe aggregation functions with null checks
+// Custom safe aggregation functions that never pass undefined to MRT functions
 const safeSum = vals => {
-  if (!vals || !Array.isArray(vals)) return 0;
-  const filtered = onlyNums(vals);
-  return filtered.length > 0 ? MRT_AggregationFns.sum(filtered) : 0;
+  try {
+    // Ensure we have an array of numbers
+    const safeVals = onlyNums(vals);
+    
+    // If empty, return 0 instead of calling MRT_AggregationFns
+    if (safeVals.length === 0) return 0;
+    
+    // Only call MRT_AggregationFns with a valid array of numbers
+    return MRT_AggregationFns.sum(safeVals);
+  } catch (e) {
+    console.error('Error in safeSum:', e);
+    return 0;
+  }
 };
 
 const safeMean = vals => {
-  if (!vals || !Array.isArray(vals)) return 0;
-  const filtered = onlyNums(vals);
-  return filtered.length > 0 ? MRT_AggregationFns.mean(filtered) : 0;
+  try {
+    // Ensure we have an array of numbers
+    const safeVals = onlyNums(vals);
+    
+    // If empty, return 0 instead of calling MRT_AggregationFns
+    if (safeVals.length === 0) return 0;
+    
+    // Only call MRT_AggregationFns with a valid array of numbers
+    return MRT_AggregationFns.mean(safeVals);
+  } catch (e) {
+    console.error('Error in safeMean:', e);
+    return 0;
+  }
 };
 
 /* -------------- error boundary ----------- */
@@ -112,8 +141,10 @@ function EstoquePageContent() {
     setLoading(true);
     try {
       const data = await authFetch('/produtos/');
-      const list = data?.produtos ?? [];
-      setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto })));
+      // Ensure we always have an array, even if API returns null/undefined
+      const list = Array.isArray(data?.produtos) ? data.produtos : [];
+      // Ensure each item has an id
+      setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto ?? Math.random().toString(36) })));
       setError(null);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
@@ -127,41 +158,85 @@ function EstoquePageContent() {
 
   /* --------------- columns ------------------- */
   const columns = useMemo(() => {
-    // More robust footer function with null checks
+    // Completely rewritten footer function with maximum safety
     const footer = accessor => ({ table }) => {
-      if (!table || !table.getFilteredRowModel || typeof table.getFilteredRowModel !== 'function') {
+      try {
+        // Ensure table exists
+        if (!table) {
+          return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
+        }
+        
+        // Ensure getFilteredRowModel exists and is a function
+        if (!table.getFilteredRowModel || typeof table.getFilteredRowModel !== 'function') {
+          return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
+        }
+        
+        // Get rows safely
+        const rowModel = table.getFilteredRowModel();
+        if (!rowModel) {
+          return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
+        }
+        
+        // Ensure rows is an array
+        const rows = Array.isArray(rowModel.rows) ? rowModel.rows : [];
+        
+        // Create a safe array of values
+        const vals = [];
+        
+        // Safely extract values
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (row && typeof row.getValue === 'function') {
+            try {
+              const value = row.getValue(accessor);
+              // Only include numeric values
+              if (value !== null && value !== undefined && typeof value === 'number' && !isNaN(value)) {
+                vals.push(value);
+              }
+            } catch (e) {
+              console.error(`Error getting value for accessor ${accessor}:`, e);
+              // Continue to next row on error
+            }
+          }
+        }
+        
+        // Choose aggregation function
+        const fn = accessor === 'quantidade_atual'
+          ? safeSum
+          : priceAggMode === 'mean' ? safeMean : safeSum;
+        
+        // Calculate label
+        const label =
+          accessor === 'quantidade_atual'
+            ? 'Total: '
+            : priceAggMode === 'mean' ? 'Média: ' : 'Soma: ';
+        
+        // Calculate result safely
+        let result;
+        try {
+          result = fn(vals);
+        } catch (e) {
+          console.error(`Error calculating ${fn.name} for ${accessor}:`, e);
+          result = 0;
+        }
+        
+        // Return formatted result
+        return (
+          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+            {label}
+            {accessor === 'quantidade_atual'
+              ? result
+              : formatCurrency(result)}
+          </Box>
+        );
+      } catch (e) {
+        console.error('Error in footer function:', e);
         return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
       }
-      
-      const rows = table.getFilteredRowModel()?.rows;
-      if (!rows || !Array.isArray(rows)) {
-        return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
-      }
-      
-      // Safely map values with null checks
-      const vals = rows.map(r => {
-        if (!r || typeof r.getValue !== 'function') return null;
-        return r.getValue(accessor);
-      }).filter(v => v !== null && v !== undefined);
-      
-      const fn = accessor === 'quantidade_atual'
-        ? safeSum
-        : priceAggMode === 'mean' ? safeMean : safeSum;
-      
-      const label =
-        accessor === 'quantidade_atual'
-          ? 'Total: '
-          : priceAggMode === 'mean' ? 'Média: ' : 'Soma: ';
-      
-      return (
-        <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-          {label}
-          {accessor === 'quantidade_atual'
-            ? fn(vals)
-            : formatCurrency(fn(vals))}
-        </Box>
-      );
     };
+
+    // Define custom aggregation functions that never fail
+    const customAggregationFn = (priceAggMode === 'mean' ? safeMean : safeSum);
 
     const baseColumns = [
       { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
@@ -172,34 +247,94 @@ function EstoquePageContent() {
         accessorKey: 'custo',
         header: 'Custo Unit.',
         size: 110,
-        aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
+        // Use custom safe aggregation function
+        aggregationFn: customAggregationFn,
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
-        Cell: ({ cell }) => formatCurrency(cell?.getValue?.() ?? 0),
-        AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell?.getValue?.() ?? 0)}
-          </Box>
-        ),
+        Cell: ({ cell }) => {
+          // Safely get value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in Cell formatter:', e);
+          }
+          return formatCurrency(value);
+        },
+        AggregatedCell: ({ cell }) => {
+          // Safely get aggregated value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in AggregatedCell formatter:', e);
+          }
+          
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
+              {formatCurrency(value)}
+            </Box>
+          );
+        },
         Footer: footer('custo'),
       },
       {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
         size: 120,
-        aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
+        // Use custom safe aggregation function
+        aggregationFn: customAggregationFn,
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
-        Cell: ({ cell }) => formatCurrency(cell?.getValue?.() ?? 0),
-        AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell?.getValue?.() ?? 0)}
-          </Box>
-        ),
+        Cell: ({ cell }) => {
+          // Safely get value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in Cell formatter:', e);
+          }
+          return formatCurrency(value);
+        },
+        AggregatedCell: ({ cell }) => {
+          // Safely get aggregated value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in AggregatedCell formatter:', e);
+          }
+          
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
+              {formatCurrency(value)}
+            </Box>
+          );
+        },
         Footer: footer('preco_venda'),
       },
       { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
@@ -207,20 +342,36 @@ function EstoquePageContent() {
         accessorKey: 'data_compra',
         header: 'Data Compra',
         size: 120,
-        Cell: ({ cell }) => formatDate(cell?.getValue?.()),
+        Cell: ({ cell }) => {
+          // Safely get value
+          let value = null;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              value = cell.getValue();
+            }
+          } catch (e) {
+            console.error('Error in date Cell formatter:', e);
+          }
+          return formatDate(value);
+        },
         filterVariant: 'date-range',
         filterFn: (row, id, [start, end]) => {
-          if (!row || typeof row.getValue !== 'function') return false;
-          const value = row.getValue(id);
-          if (!value) return false;
-          
-          const d = dayjs(value);
-          if (!d.isValid()) return false;
-          
-          if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
-          if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
-          if (end)   return d.isSameOrBefore(dayjs(end).endOf('day'));
-          return true;
+          try {
+            if (!row || typeof row.getValue !== 'function') return false;
+            const value = row.getValue(id);
+            if (!value) return false;
+            
+            const d = dayjs(value);
+            if (!d.isValid()) return false;
+            
+            if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
+            if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
+            if (end)   return d.isSameOrBefore(dayjs(end).endOf('day'));
+            return true;
+          } catch (e) {
+            console.error('Error in date filter function:', e);
+            return false;
+          }
         },
       },
     ];
@@ -231,15 +382,31 @@ function EstoquePageContent() {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
         size: 80,
+        // Use safeSum directly
         aggregationFn: safeSum,
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
-        AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            Total: {cell?.getValue?.() ?? 0}
-          </Box>
-        ),
+        AggregatedCell: ({ cell }) => {
+          // Safely get aggregated value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in quantity AggregatedCell formatter:', e);
+          }
+          
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              Total: {value}
+            </Box>
+          );
+        },
         Footer: footer('quantidade_atual'),
       });
     }
@@ -250,7 +417,8 @@ function EstoquePageContent() {
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
     columns,
-    data: rows || [],
+    // Ensure data is always an array
+    data: Array.isArray(rows) ? rows : [],
     localization: MRT_Localization_PT_BR,
     enableGrouping: true,
     enableStickyHeader: true,
@@ -365,7 +533,7 @@ function EstoquePageContent() {
         </Typography>
 
         {/* Scorecards */}
-        <InventoryScorecard products={rows} loading={loading} />
+        <InventoryScorecard products={Array.isArray(rows) ? rows : []} loading={loading} />
 
         {loading && <CircularProgress />}
         {error && !loading && <Alert severity="error">{error}</Alert>}
