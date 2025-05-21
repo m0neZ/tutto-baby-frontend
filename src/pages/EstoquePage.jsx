@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  useTheme,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
@@ -73,8 +74,8 @@ const safeSum = vals => {
     // If empty, return 0 instead of calling MRT_AggregationFns
     if (safeVals.length === 0) return 0;
     
-    // Only call MRT_AggregationFns with a valid array of numbers
-    return MRT_AggregationFns.sum(safeVals);
+    // Calculate sum manually to avoid MRT_AggregationFns issues
+    return safeVals.reduce((sum, val) => sum + val, 0);
   } catch (e) {
     console.error('Error in safeSum:', e);
     return 0;
@@ -89,8 +90,9 @@ const safeMean = vals => {
     // If empty, return 0 instead of calling MRT_AggregationFns
     if (safeVals.length === 0) return 0;
     
-    // Only call MRT_AggregationFns with a valid array of numbers
-    return MRT_AggregationFns.mean(safeVals);
+    // Calculate mean manually to avoid MRT_AggregationFns issues
+    const sum = safeVals.reduce((sum, val) => sum + val, 0);
+    return safeVals.length > 0 ? sum / safeVals.length : 0;
   } catch (e) {
     console.error('Error in safeMean:', e);
     return 0;
@@ -123,20 +125,22 @@ class ErrorBoundary extends React.Component {
 
 /* -------------- main content ------------- */
 function EstoquePageContent() {
-  const [rows, setRows]       = useState([]);
+  const theme = useTheme();
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,  setError]    = useState(null);
+  const [error, setError] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
 
-  const [openAdd,  setOpenAdd]  = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [editRow,  setEditRow]  = useState(null);
-  const [openDel,  setOpenDel]  = useState(false);
-  const [delRow,   setDelRow]   = useState(null);
+  const [editRow, setEditRow] = useState(null);
+  const [openDel, setOpenDel] = useState(false);
+  const [delRow, setDelRow] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [grouping,      setGrouping]    = useState([]);
-  const [pagination,    setPagination]  = useState({ pageIndex: 0, pageSize: 50 });
+  const [grouping, setGrouping] = useState([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  const [columnFilters, setColumnFilters] = useState([]);
 
   /* ---------- fetch products (auth) ---------- */
   const fetchProdutos = useCallback(async () => {
@@ -157,6 +161,47 @@ function EstoquePageContent() {
   }, []);
 
   useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
+
+  // Filter rows based on column filters for scorecards
+  const filteredRows = useMemo(() => {
+    if (!Array.isArray(rows) || rows.length === 0 || columnFilters.length === 0) {
+      return rows;
+    }
+
+    return rows.filter(row => {
+      return columnFilters.every(filter => {
+        const { id, value } = filter;
+        
+        // Handle date range filters
+        if (id === 'data_compra' && Array.isArray(value)) {
+          const [start, end] = value;
+          const rowDate = dayjs(row[id]);
+          
+          if (!rowDate.isValid()) return false;
+          
+          if (start && end) {
+            return rowDate.isBetween(
+              dayjs(start).startOf('day'), 
+              dayjs(end).endOf('day'), 
+              'day', 
+              '[]'
+            );
+          }
+          if (start) return rowDate.isSameOrAfter(dayjs(start).startOf('day'));
+          if (end) return rowDate.isSameOrBefore(dayjs(end).endOf('day'));
+          return true;
+        }
+        
+        // Handle text filters
+        if (typeof value === 'string') {
+          const rowValue = String(row[id] || '').toLowerCase();
+          return rowValue.includes(value.toLowerCase());
+        }
+        
+        return true;
+      });
+    });
+  }, [rows, columnFilters]);
 
   /* --------------- columns ------------------- */
   const columns = useMemo(() => {
@@ -203,23 +248,15 @@ function EstoquePageContent() {
         }
         
         // Choose aggregation function based on accessor
-        let fn, label;
-        
         if (accessor === 'quantidade_atual') {
-          fn = safeSum;
-          label = 'Total: ';
-        } else if (accessor === 'custo') {
-          // Always show both mean and sum for cost
-          const mean = safeMean(vals);
           const sum = safeSum(vals);
           return (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              <div>Média: {formatCurrency(mean)}</div>
-              <div>Soma: {formatCurrency(sum)}</div>
+              Total: {sum}
             </Box>
           );
-        } else if (accessor === 'preco_venda') {
-          // Always show both mean and sum for selling price
+        } else if (accessor === 'custo' || accessor === 'preco_venda') {
+          // Always show both mean and sum for cost and price
           const mean = safeMean(vals);
           const sum = safeSum(vals);
           return (
@@ -229,28 +266,13 @@ function EstoquePageContent() {
             </Box>
           );
         } else {
-          fn = safeSum;
-          label = 'Total: ';
+          const sum = safeSum(vals);
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              Total: {formatCurrency(sum)}
+            </Box>
+          );
         }
-        
-        // Calculate result safely
-        let result;
-        try {
-          result = fn(vals);
-        } catch (e) {
-          console.error(`Error calculating ${fn.name} for ${accessor}:`, e);
-          result = 0;
-        }
-        
-        // Return formatted result
-        return (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            {label}
-            {accessor === 'quantidade_atual'
-              ? result
-              : formatCurrency(result)}
-          </Box>
-        );
       } catch (e) {
         console.error('Error in footer function:', e);
         return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
@@ -258,20 +280,51 @@ function EstoquePageContent() {
     };
 
     const baseColumns = [
-      { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
-      { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
-      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
-      { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
+      { 
+        accessorKey: 'nome', 
+        header: 'Nome', 
+        size: 180, 
+        enableGrouping: true,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
+      },
+      { 
+        accessorKey: 'sexo', 
+        header: 'Sexo', 
+        size: 90, 
+        enableGrouping: true,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
+      },
+      { 
+        accessorKey: 'cor_estampa', 
+        header: 'Cor/Estampa', 
+        size: 130, 
+        enableGrouping: true,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
+      },
+      { 
+        accessorKey: 'tamanho', 
+        header: 'Tamanho', 
+        size: 100, 
+        enableGrouping: true,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
+      },
       {
         accessorKey: 'quantidade_atual',
         header: 'Qtd.',
         size: 80,
-        // Use safeSum directly
-        aggregationFn: safeSum,
-        muiTableBodyCellProps:  { align: 'right' },
-        muiTableHeadCellProps:  { align: 'right' },
-        muiTableFooterCellProps:{ align: 'right' },
-        AggregatedCell: ({ cell }) => {
+        aggregationFn: 'sum',
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' },
+        AggregatedCell: ({ cell, table }) => {
           // Safely get aggregated value
           let value = 0;
           try {
@@ -297,11 +350,10 @@ function EstoquePageContent() {
         accessorKey: 'custo',
         header: 'Custo Unit.',
         size: 110,
-        // Use both aggregation functions
-        aggregationFn: 'auto',
-        muiTableBodyCellProps:  { align: 'right' },
-        muiTableHeadCellProps:  { align: 'right' },
-        muiTableFooterCellProps:{ align: 'right' },
+        aggregationFn: 'mean', // Default to mean for grouped cells
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' },
         Cell: ({ cell }) => {
           // Safely get value
           let value = 0;
@@ -317,23 +369,31 @@ function EstoquePageContent() {
           }
           return formatCurrency(value);
         },
-        AggregatedCell: ({ cell }) => {
-          // Safely get aggregated value
-          let value = 0;
-          try {
-            if (cell && typeof cell.getValue === 'function') {
-              const rawValue = cell.getValue();
-              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
-                value = rawValue;
+        AggregatedCell: ({ cell, table, row }) => {
+          // Get the grouped rows for this cell
+          const groupedRows = row?.subRows || [];
+          
+          // Extract values from grouped rows
+          const values = [];
+          for (const row of groupedRows) {
+            try {
+              const value = row.getValue('custo');
+              if (value !== null && value !== undefined && !isNaN(value)) {
+                values.push(value);
               }
+            } catch (e) {
+              console.error('Error extracting value in AggregatedCell:', e);
             }
-          } catch (e) {
-            console.error('Error in AggregatedCell formatter:', e);
           }
+          
+          // Calculate mean and sum
+          const mean = safeMean(values);
+          const sum = safeSum(values);
           
           return (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              Média: {formatCurrency(value)}
+              <div>Média: {formatCurrency(mean)}</div>
+              <div>Soma: {formatCurrency(sum)}</div>
             </Box>
           );
         },
@@ -343,11 +403,10 @@ function EstoquePageContent() {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
         size: 120,
-        // Use both aggregation functions
-        aggregationFn: 'auto',
-        muiTableBodyCellProps:  { align: 'right' },
-        muiTableHeadCellProps:  { align: 'right' },
-        muiTableFooterCellProps:{ align: 'right' },
+        aggregationFn: 'mean', // Default to mean for grouped cells
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' },
         Cell: ({ cell }) => {
           // Safely get value
           let value = 0;
@@ -363,33 +422,52 @@ function EstoquePageContent() {
           }
           return formatCurrency(value);
         },
-        AggregatedCell: ({ cell }) => {
-          // Safely get aggregated value
-          let value = 0;
-          try {
-            if (cell && typeof cell.getValue === 'function') {
-              const rawValue = cell.getValue();
-              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
-                value = rawValue;
+        AggregatedCell: ({ cell, table, row }) => {
+          // Get the grouped rows for this cell
+          const groupedRows = row?.subRows || [];
+          
+          // Extract values from grouped rows
+          const values = [];
+          for (const row of groupedRows) {
+            try {
+              const value = row.getValue('preco_venda');
+              if (value !== null && value !== undefined && !isNaN(value)) {
+                values.push(value);
               }
+            } catch (e) {
+              console.error('Error extracting value in AggregatedCell:', e);
             }
-          } catch (e) {
-            console.error('Error in AggregatedCell formatter:', e);
           }
+          
+          // Calculate mean and sum
+          const mean = safeMean(values);
+          const sum = safeSum(values);
           
           return (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              Média: {formatCurrency(value)}
+              <div>Média: {formatCurrency(mean)}</div>
+              <div>Soma: {formatCurrency(sum)}</div>
             </Box>
           );
         },
         Footer: footer('preco_venda'),
       },
-      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
+      { 
+        accessorKey: 'nome_fornecedor', 
+        header: 'Fornecedor', 
+        size: 140, 
+        enableGrouping: true,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
+      },
       {
         accessorKey: 'data_compra',
         header: 'Data Compra',
         size: 120,
+        muiTableHeadCellProps: {
+          align: 'left',
+        },
         Cell: ({ cell }) => {
           // Safely get value
           let value = null;
@@ -454,10 +532,12 @@ function EstoquePageContent() {
       showAlertBanner: !!error,
       grouping,
       pagination,
+      columnFilters,
     },
     muiToolbarAlertBannerProps: error ? { color: 'error', children: error } : undefined,
     onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
+    onColumnFiltersChange: setColumnFilters,
     muiTableContainerProps: { sx: { maxHeight: 650 } },
     renderTopToolbarCustomActions: () => (
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -493,11 +573,20 @@ function EstoquePageContent() {
       </Box>
     ),
     muiTableHeadCellProps: {
-      align: 'center', // Consistent alignment for all headers
+      align: 'left', // Consistent alignment for all headers
       sx: theme => ({
         backgroundColor: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,
         fontWeight: 'bold',
+        '& .MuiBox-root': {
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+        },
+        '& .MuiTableSortLabel-root': {
+          flexDirection: 'row',
+        },
       }),
     },
     muiTableBodyProps: {
@@ -561,12 +650,19 @@ function EstoquePageContent() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography 
+          variant="h4" 
+          gutterBottom
+          sx={{ 
+            color: theme.palette.primary.main,
+            fontWeight: 'bold'
+          }}
+        >
           Estoque de produtos
         </Typography>
 
         {/* Scorecards */}
-        <InventoryScorecard products={Array.isArray(rows) ? rows : []} loading={loading} />
+        <InventoryScorecard products={filteredRows} loading={loading} />
 
         {loading && <CircularProgress />}
         {error && !loading && <Alert severity="error">{error}</Alert>}
