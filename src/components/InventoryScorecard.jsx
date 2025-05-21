@@ -14,13 +14,18 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 /**
- * Formats currency values to Brazilian Real format
+ * Formats currency values to Brazilian Real format with thousands separator
  * @param {number} value - The value to format
  * @returns {string} Formatted currency string
  */
 const formatCurrency = value => {
   if (value == null || isNaN(value)) return 'R$ 0,00';
-  return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  
+  // Format with thousands separator (dot) and decimal separator (comma)
+  return `R$ ${value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
 };
 
 /**
