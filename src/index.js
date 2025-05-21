@@ -1,14 +1,21 @@
 // src/index.js
-
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from './theme';
 import './index.css';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const container = document.getElementById('root');
+const root = createRoot(container);
+
 root.render(
-  <AuthProvider>
-    <App />
-  </AuthProvider>
+  <ThemeProvider theme={theme}>
+    {/* CssBaseline kicks in global resets and ensures your theme colors apply */}
+    <CssBaseline />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </ThemeProvider>
 );
