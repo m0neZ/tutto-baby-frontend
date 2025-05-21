@@ -10,6 +10,7 @@ import {
   ListItemText,
   Box,
   Divider,
+  useTheme
 } from '@mui/material';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
@@ -27,12 +28,19 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  // Use theme directly to avoid relying on string references
+  const theme = useTheme();
+  
   return (
     <Drawer
       variant="permanent"
       sx={{
         width: 240,
-        '& .MuiDrawer-paper': { width: 240, boxSizing: 'border-box' },
+        '& .MuiDrawer-paper': { 
+          width: 240, 
+          boxSizing: 'border-box',
+          backgroundColor: '#ffffff', // Explicit background color
+        },
       }}
     >
       <Box sx={{ p: 2, textAlign: 'center' }}>
@@ -45,18 +53,28 @@ export default function Sidebar() {
             key={name}
             component={NavLink}
             to={path}
-            button
             sx={{
+              color: theme.palette.text.primary, // Explicit text color
               '&.active': {
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
+                backgroundColor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
                 '& .MuiListItemIcon-root': {
-                  color: 'primary.contrastText',
+                  color: theme.palette.primary.contrastText,
                 },
               },
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+              }
             }}
           >
-            <ListItemIcon sx={{ color: 'inherit' }}>{icon}</ListItemIcon>
+            <ListItemIcon 
+              sx={{ 
+                color: 'inherit',
+                minWidth: '40px' // Ensure consistent icon spacing
+              }}
+            >
+              {icon}
+            </ListItemIcon>
             <ListItemText primary={name} />
           </ListItem>
         ))}
