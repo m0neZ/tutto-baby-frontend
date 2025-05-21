@@ -1,263 +1,66 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
-import CircularProgress from '@mui/material/CircularProgress';
-import Alert from '@mui/material/Alert';
-import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
-import Stack from '@mui/material/Stack';
+// src/components/OptionManager.jsx
+import React, { useState, useEffect } from 'react';
+import authFetch from '../api';
+import {
+  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Button,
+  CircularProgress,
+} from '@mui/material';
 
-// MUI Icons
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import RestoreIcon from '@mui/icons-material/Restore';
-
-const API_BASE = `${(import.meta.env?.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
-
-const config = {
-  tamanho: {
-    label: 'Tamanhos',
-    // *** FIX: Remove trailing slash ***
-    endpoint: `${API_BASE}/opcoes_campo/tamanho`,
-    dataKey: 'opcoes',
-    valueKey: 'value',
-  },
-  cor_estampa: {
-    label: 'Cores / Estampas',
-    // *** FIX: Remove trailing slash ***
-    endpoint: `${API_BASE}/opcoes_campo/cor_estampa`,
-    dataKey: 'opcoes',
-    valueKey: 'value',
-  },
-  fornecedor: {
-    label: 'Fornecedores',
-    // Keep trailing slash for consistency with backend supplier routes
-    endpoint: `${API_BASE}/fornecedores/`,
-    dataKey: 'fornecedores',
-    valueKey: 'nome',
-  },
-};
-
-const OptionManager = ({ type }) => {
+export default function OptionManager({ fieldType }) {
   const [options, setOptions] = useState([]);
-  const [newValue, setNewValue] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const currentConfig = config[type];
-
-  const loadOptions = useCallback(async () => {
-    if (!currentConfig) {
-      setError('Tipo de opção inválido.');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      // Use endpoint directly from config
-      const res = await fetch(`${currentConfig.endpoint}?incluir_inativos=true`);
-      const data = await res.json();
-
-      // Check for specific 404 error
-      if (res.status === 404) {
-          throw new Error('Recurso não encontrado. Verifique a URL da API.');
-      }
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || `Falha ao carregar ${currentConfig.label.toLowerCase()}`);
-      }
-
-      const allOptions = data[currentConfig.dataKey] || [];
-      setOptions(allOptions.sort((a, b) => (a[currentConfig.valueKey] || '').localeCompare(b[currentConfig.valueKey] || '')));
-
-    } catch (err) {
-      console.error(`Erro ao carregar ${type}:`, err);
-      setError(err.message || `Erro ao carregar ${currentConfig.label.toLowerCase()} do servidor.`);
-    } finally {
-      setLoading(false);
-    }
-  }, [type, currentConfig]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadOptions();
-    setNewValue('');
-    setError('');
-  }, [type, loadOptions]);
-
-  const addOption = async () => {
-    if (!newValue.trim() || !currentConfig) return;
-    setError('');
-    setLoading(true);
-    try {
-      const payload = { [currentConfig.valueKey]: newValue };
-      // Use endpoint directly from config
-      const res = await fetch(currentConfig.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+    let isMounted = true;
+    authFetch(`/opcoes_campo/${fieldType}?incluir_inativos=true`, { method: 'GET' })
+      .then(data => {
+        if (!isMounted) return;
+        if (Array.isArray(data.opcoes)) {
+          setOptions(data.opcoes);
+        } else {
+          console.warn('OptionManager: expected array, got', data.opcoes);
+          setOptions([]);
+        }
+      })
+      .catch(err => {
+        if (!isMounted) return;
+        console.error(err);
+        setError(err.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
+    return () => { isMounted = false; };
+  }, [fieldType]);
 
-      const data = await res.json();
+  if (loading) return <CircularProgress size={24} />;
+  if (error) return <Box color="error.main">Erro: {error}</Box>;
 
-      if (res.ok && data.success) {
-        setNewValue('');
-        await loadOptions();
-      } else {
-        setError(data.error || `Erro ao adicionar ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
-      }
-    } catch (err) {
-      console.error('Erro no POST:', err);
-      setError(`Erro de comunicação ao adicionar ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = () => {
+    // Implement save logic here
   };
-
-  const toggleActive = async (id, isActive) => {
-    if (!currentConfig) return;
-    setError('');
-    setLoading(true);
-    try {
-      const action = isActive ? 'deactivate' : 'activate';
-      // Construct toggle URL carefully
-      const toggleUrl = `${currentConfig.endpoint}${currentConfig.endpoint.endsWith('/') ? '' : '/'}${id}/${action}`;
-      const res = await fetch(toggleUrl, {
-        method: 'PATCH',
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || `Erro ao atualizar status da ${currentConfig.label.slice(0, -1).toLowerCase()}`);
-      }
-      await loadOptions();
-    } catch (err) {
-      console.error('Erro ao atualizar:', err);
-      setError(err.message || `Erro ao atualizar status da ${currentConfig.label.slice(0, -1).toLowerCase()}.`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!currentConfig) {
-    return <Alert severity="error">Tipo de gerenciador de opções inválido: {type}</Alert>;
-  }
-
-  const activeOptions = options.filter(o => o.is_active);
-  const inactiveOptions = options.filter(o => !o.is_active);
 
   return (
     <Box>
-      <Typography variant="h5" component="h2" sx={{ color: 'primary.main', mb: 2, fontWeight: 600 }}>
-        {currentConfig.label}
-      </Typography>
-
-      {/* Add New Option Form */}
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2.5 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          size="small"
-          value={newValue}
-          onChange={e => setNewValue(e.target.value)}
-          placeholder={`Adicionar ${currentConfig.label.slice(0, -1)}...`}
-          disabled={loading}
-        />
-        <Button
-          variant="contained"
-          onClick={addOption}
-          startIcon={<AddIcon />}
-          disabled={loading || !newValue.trim()}
-          sx={{ textTransform: 'none', flexShrink: 0 }}
-        >
-          Adicionar
-        </Button>
-      </Stack>
-
-      {/* Error and Loading Messages */}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-          <CircularProgress size={24} />
-        </Box>
-      )}
-
-      {/* Active Options List */}
-      {!loading && activeOptions.length > 0 && (
-        <Paper variant="outlined" sx={{ mb: 3 }}>
-          <List dense disablePadding>
-            {activeOptions.map((opt, index) => (
-              <React.Fragment key={opt.id}>
-                {index > 0 && <Divider component="li" />}
-                <ListItem>
-                  <ListItemText primary={opt[currentConfig.valueKey]} sx={{ color: 'text.primary' }} />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      aria-label="delete"
-                      title="Desativar"
-                      onClick={() => toggleActive(opt.id, true)}
-                      disabled={loading}
-                      color="error"
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              </React.Fragment>
-            ))}
-          </List>
-        </Paper>
-      )}
-
-      {/* Inactive Options List */}
-      {!loading && inactiveOptions.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 1, fontWeight: 500 }}>
-            Inativos
-          </Typography>
-          <Paper variant="outlined" sx={{ bgcolor: 'action.hover' }}>
-            <List dense disablePadding>
-              {inactiveOptions.map((opt, index) => (
-                <React.Fragment key={opt.id}>
-                  {index > 0 && <Divider component="li" />}
-                  <ListItem sx={{ opacity: 0.7 }}>
-                    <ListItemText primary={opt[currentConfig.valueKey]} sx={{ fontStyle: 'italic', color: 'text.secondary' }} />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        aria-label="restore"
-                        title="Reativar"
-                        onClick={() => toggleActive(opt.id, false)}
-                        disabled={loading}
-                        color="success"
-                      >
-                        <RestoreIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                </React.Fragment>
-              ))}
-            </List>
-          </Paper>
-        </Box>
-      )}
-
-      {/* Show message if no options exist */}
-      {!loading && options.length === 0 && (
-        <Typography sx={{ color: 'text.secondary', textAlign: 'center', mt: 3, py: 3 }}>
-          Nenhuma opção cadastrada para {currentConfig.label.toLowerCase()}.
-        </Typography>
-      )}
+      <FormControl fullWidth>
+        <InputLabel>{fieldType}</InputLabel>
+        <Select label={fieldType} defaultValue="">
+          {options.map(opt => (
+            <MenuItem key={opt.id} value={opt.value}>
+              {opt.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <Button variant="contained" onClick={handleSave} sx={{ mt: 2 }}>
+        Salvar Alterações
+      </Button>
     </Box>
   );
-};
-
-export default OptionManager;
-
+}
