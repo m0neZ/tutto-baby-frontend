@@ -107,21 +107,22 @@ main {
   cursor: pointer;
 }
 
-/* === Table === */
-table {
+/* === Custom Tables Only (Not MUI Tables) === */
+.custom-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-th, td {
+.custom-table th, 
+.custom-table td {
   padding: 0.8rem;
   border: 1px solid #ddd;
   text-align: left;
 }
 
-th {
+.custom-table th {
   background-color: #f3f3f3;
   font-weight: 600;
 }
