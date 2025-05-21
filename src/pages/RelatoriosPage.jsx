@@ -1,6 +1,6 @@
 // src/pages/RelatoriosPage.jsx
 import React, { useState, useEffect } from 'react';
-import authFetch from '../api';
+import { authFetch } from '../api';
 import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 
 export default function RelatoriosPage() {
