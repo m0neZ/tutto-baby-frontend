@@ -32,6 +32,9 @@ async function authFetch(path, options = {}) {
   return txt ? JSON.parse(txt) : {};
 }
 
+// Named export so other modules can import { apiFetch }
+export const apiFetch = authFetch;
+
 // Products
 export const fetchProducts = () => authFetch('/produtos/', { method: 'GET' });
 export const createProduct = (product) =>
@@ -53,5 +56,5 @@ export const fetchLowStock = () => authFetch('/alerts/low-stock', { method: 'GET
 export const createTransaction = (tx) =>
   authFetch('/transactions/', { method: 'POST', body: JSON.stringify(tx) });
 
-// Default low-level fetch
+// Default export in case you import it without braces
 export default authFetch;
