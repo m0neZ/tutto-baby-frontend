@@ -1,5 +1,4 @@
 // src/pages/LoginPage.jsx
-
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import { Box, Paper, Typography, TextField, Button, useTheme } from '@mui/material';
@@ -15,41 +14,35 @@ export default function LoginPage() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    console.debug('[LoginPage] submit', email);
     try {
       await login(email, password);
       window.location.href = '/';
     } catch (err) {
-      console.error('[LoginPage] login error', err);
       setError(err.message);
     }
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', width: '100%' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        width: '100vw',
+        height: '100vh',
+        overflow: 'hidden',        // <— prevent that tiny vertical scroll
+      }}
+    >
       {/* LEFT: Form with Canvas pattern background */}
       <Box
         sx={{
           flex: 0.3,
           position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: theme.palette.primary.main,
+          bgcolor: theme.palette.primary.main,  // <— now truly your green
           p: 2,
         }}
       >
         <PatternCanvas />
-        <Paper
-          elevation={6}
-          sx={{
-            zIndex: 1,
-            width: '100%',
-            maxWidth: 360,
-            p: 4,
-          }}
-        >
-          <Typography variant="h5" align="center" color="primary" gutterBottom>
+        <Paper elevation={6} sx={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, p: 4 }}>
+          <Typography variant="h5" align="center" color="primary.contrastText" gutterBottom>
             Bem‐vindos à Tutto Baby
           </Typography>
 
@@ -59,13 +52,9 @@ export default function LoginPage() {
             </Typography>
           )}
 
-          <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
-          >
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="E‐mail"
+              label="E-mail"
               type="email"
               required
               fullWidth
@@ -87,7 +76,7 @@ export default function LoginPage() {
               sx={{
                 mt: 1,
                 backgroundColor: theme.palette.primary.dark,
-                '&:hover': { backgroundColor: theme.palette.primary.main }
+                '&:hover': { backgroundColor: theme.palette.primary.main },
               }}
             >
               Entrar
@@ -101,20 +90,11 @@ export default function LoginPage() {
         sx={{
           flex: 0.7,
           position: 'relative',
-          '& img': { width: '100%', height: '100%', objectFit: 'cover' }
+          '& img': { width: '100%', height: '100%', objectFit: 'cover' },
         }}
       >
         <img src={bgImage} alt="Tutto Baby Background" />
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            bgcolor: 'rgba(255,255,255,0.3)',
-          }}
-        />
+        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(255,255,255,0.3)' }} />
       </Box>
     </Box>
   );
