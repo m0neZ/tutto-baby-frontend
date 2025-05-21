@@ -45,9 +45,7 @@ const CurrencyInputAdapter = forwardRef(function (props, ref) {
   );
 });
 
-const ProductForm = ({ onProductAdded, initialData }) => {
-  const isEditMode = !!initialData;
-  
+const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   const {
     handleSubmit,
     control,
@@ -58,15 +56,15 @@ const ProductForm = ({ onProductAdded, initialData }) => {
   } = useForm({
     defaultValues: initialData
       ? {
-          name: initialData.nome,
-          gender: initialData.sexo,
-          size: initialData.tamanho,
-          colorPrint: initialData.cor_estampa,
-          supplierId: String(initialData.fornecedor_id),
-          cost: String(initialData.custo),
-          retailPrice: String(initialData.preco_venda),
-          quantity: String(initialData.quantidade_atual),
-          purchaseDate: initialData.data_compra || "",
+          name: initialData.nome || "",
+          gender: initialData.sexo || "",
+          size: initialData.tamanho || "",
+          colorPrint: initialData.cor_estampa || "",
+          supplierId: initialData.fornecedor_id ? String(initialData.fornecedor_id) : "",
+          cost: initialData.custo ? String(initialData.custo) : "",
+          retailPrice: initialData.preco_venda ? String(initialData.preco_venda) : "",
+          quantity: initialData.quantidade_atual ? String(initialData.quantidade_atual) : "1",
+          purchaseDate: initialData.data_compra || dayjs().format('YYYY-MM-DD'),
         }
       : {
           name: "",
@@ -119,7 +117,8 @@ const ProductForm = ({ onProductAdded, initialData }) => {
   }, []);
 
   const parseCurrency = (value) => {
-    const cleaned = value.replace(/\./g, "").replace(",", ".");
+    if (!value) return 0;
+    const cleaned = String(value).replace(/\./g, "").replace(",", ".");
     return parseFloat(cleaned);
   };
 
@@ -140,7 +139,7 @@ const ProductForm = ({ onProductAdded, initialData }) => {
       };
 
       // Get quantity as integer
-      const quantity = parseInt(data.quantity, 10);
+      const quantity = parseInt(data.quantity, 10) || 1;
       
       if (isEditMode) {
         // Update existing product - keep original quantity for now
@@ -221,22 +220,13 @@ const ProductForm = ({ onProductAdded, initialData }) => {
             rules={{ required: "Nome é obrigatório" }}
             render={({ field, fieldState }) => (
               <FormControl fullWidth variant="outlined" error={!!fieldState.error}>
-                <Autocomplete
+                <TextField
                   {...field}
-                  options={productNames}
-                  getOptionLabel={(o) => o.label || ""}
-                  onInputChange={(_, v) => field.onChange(v)}
+                  label="Nome do Produto"
+                  fullWidth
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || " "}
                   disabled={loadingOptions || isProcessing}
-                  freeSolo
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Nome do Produto"
-                      fullWidth
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message || " "}
-                    />
-                  )}
                 />
               </FormControl>
             )}
