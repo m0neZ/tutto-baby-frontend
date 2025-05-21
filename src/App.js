@@ -1,7 +1,14 @@
+// src/App.js
+
 import React, { useContext } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom';
 import { AuthContext } from './auth/AuthContext';
-import Layout from './components/Layout';
+import Layout from './components/Layout'; // new shared wrapper
 import EstoquePage from './pages/EstoquePage';
 import VendasPage from './pages/VendasPage';
 import ClientesPage from './pages/ClientesPage';
@@ -19,7 +26,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Redirect root → estoque */}
         <Route path="/" element={<Navigate to="/estoque" replace />} />
+
+        {/* Each protected route gets the Layout (sidebar + content) */}
         <Route
           path="/estoque"
           element={
@@ -70,6 +81,9 @@ export default function App() {
             </PrivateRoute>
           }
         />
+
+        {/* Catch-all to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
