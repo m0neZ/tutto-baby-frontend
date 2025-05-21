@@ -1,4 +1,5 @@
 // src/pages/LoginPage.jsx
+
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import { Box, Paper, Typography, TextField, Button, useTheme } from '@mui/material';
@@ -16,7 +17,7 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await login(email, password);
-      window.location.href = '/';
+      window.location.href = '/estoque';
     } catch (err) {
       setError(err.message);
     }
@@ -26,33 +27,47 @@ export default function LoginPage() {
     <Box
       sx={{
         display: 'flex',
-        width: '100vw',
         height: '100vh',
-        overflow: 'hidden',        // <— prevent that tiny vertical scroll
+        width: '100%',
+        overflow: 'hidden',           // <–– prevents the phantom 10px scroll
       }}
     >
-      {/* LEFT: Form with Canvas pattern background */}
+      {/* LEFT: Form */}
       <Box
         sx={{
           flex: 0.3,
           position: 'relative',
-          bgcolor: theme.palette.primary.main,  // <— now truly your green
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.palette.success.main,  // green →
           p: 2,
+          overflow: 'hidden',
         }}
       >
         <PatternCanvas />
-        <Paper elevation={6} sx={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, p: 4 }}>
-          <Typography variant="h5" align="center" color="primary.contrastText" gutterBottom>
-            Bem‐vindos à Tutto Baby
+        <Paper
+          elevation={6}
+          sx={{
+            zIndex: 1,
+            width: '100%',
+            maxWidth: 360,
+            p: 4,
+          }}
+        >
+          <Typography variant="h5" align="center" color="success.dark" gutterBottom>
+            Bem-vindos à Tutto Baby
           </Typography>
-
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
               {error}
             </Typography>
           )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
+          >
             <TextField
               label="E-mail"
               type="email"
@@ -75,8 +90,8 @@ export default function LoginPage() {
               fullWidth
               sx={{
                 mt: 1,
-                backgroundColor: theme.palette.primary.dark,
-                '&:hover': { backgroundColor: theme.palette.primary.main },
+                backgroundColor: theme.palette.success.dark,
+                '&:hover': { backgroundColor: theme.palette.success.main },
               }}
             >
               Entrar
@@ -94,7 +109,16 @@ export default function LoginPage() {
         }}
       >
         <img src={bgImage} alt="Tutto Baby Background" />
-        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(255,255,255,0.3)' }} />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            bgcolor: 'rgba(255,255,255,0.3)',
+          }}
+        />
       </Box>
     </Box>
   );
