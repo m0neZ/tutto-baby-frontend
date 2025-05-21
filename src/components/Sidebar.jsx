@@ -10,7 +10,6 @@ import {
   ListItemText,
   Box,
   Divider,
-  Typography
 } from '@mui/material';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
@@ -38,7 +37,6 @@ export default function Sidebar() {
     >
       <Box sx={{ p: 2, textAlign: 'center' }}>
         <img src={logo} alt="Logo" style={{ width: 100 }} />
-        <Typography variant="h6">Tutto Baby</Typography>
       </Box>
       <Divider />
       <List>
@@ -50,10 +48,10 @@ export default function Sidebar() {
             button
             sx={{
               '&.active': {
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
+                backgroundColor: 'secondary.main',
+                color: 'secondary.contrastText',
                 '& .MuiListItemIcon-root': {
-                  color: 'primary.contrastText',
+                  color: 'secondary.contrastText',
                 },
               },
             }}
