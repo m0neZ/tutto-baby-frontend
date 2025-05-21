@@ -1,8 +1,15 @@
-import React, { createContext, useState, useEffect } from 'react';
+// src/auth/AuthContext.jsx
 
-export const AuthContext = createContext({ token: null, login: () => {}, logout: () => {} });
+import React, { createContext, useState } from 'react';
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'https://tutto-baby-backend.onrender.com').replace(/\/$/, '');
+export const AuthContext = createContext({
+  token: null,
+  login: async () => {},
+  logout: () => {},
+});
+
+const API_BASE = (import.meta.env.VITE_API_URL || 'https://tutto-baby-backend.onrender.com')
+  .replace(/\/$/, '');
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('access_token'));
@@ -28,8 +35,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refresh_token');
     setToken(null);
   };
-
-  // Auto-refresh logic omitted for brevity
 
   return (
     <AuthContext.Provider value={{ token, login, logout }}>
