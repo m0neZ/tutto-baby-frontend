@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect } from 'react';
 import jwtDecode from 'jwt-decode';
-import { authFetch } from '../api';
+import { authFetch } from '../api';   // ← named import
 
 export const AuthContext = createContext({
   token: null,
@@ -15,7 +15,6 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('access_token'));
   const [user, setUser] = useState(token ? jwtDecode(token) : null);
 
-  // Persist token → localStorage & decode
   useEffect(() => {
     if (token) {
       localStorage.setItem('access_token', token);
@@ -26,7 +25,6 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
-  // Login function
   const login = async (email, password) => {
     const res = await authFetch('/auth/login', {
       method: 'POST',
@@ -39,7 +37,6 @@ export function AuthProvider({ children }) {
     setToken(res.access_token);
   };
 
-  // Logout function
   const logout = () => {
     setToken(null);
     localStorage.removeItem('refresh_token');
