@@ -1,4 +1,4 @@
-// File: src/pages/EstoquePage.jsx
+// src/pages/EstoquePage.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   MaterialReactTable,
@@ -34,7 +34,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
-import { authFetch } from '../api';           // <-- ✅  authenticated fetch
+import InventoryScorecard from '../components/InventoryScorecard';
+import { authFetch } from '../api';
 
 dayjs.extend(isBetween);
 
@@ -80,6 +81,7 @@ function EstoquePageContent() {
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,  setError]    = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const [openAdd,  setOpenAdd]  = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
@@ -90,12 +92,13 @@ function EstoquePageContent() {
   const [priceAggMode, setPriceAggMode] = useState('mean');     // 'mean' | 'sum'
   const [grouping,      setGrouping]    = useState([]);
   const [pagination,    setPagination]  = useState({ pageIndex: 0, pageSize: 50 });
+  const [showQuantity,  setShowQuantity] = useState(false);     // Hide quantity column by default
 
   /* ---------- fetch products (auth) ---------- */
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await authFetch('/produtos/');               // <-- ✅
+      const data = await authFetch('/produtos/');
       const list = data?.produtos ?? [];
       setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto })));
       setError(null);
@@ -131,26 +134,11 @@ function EstoquePageContent() {
       );
     };
 
-    return [
+    const baseColumns = [
       { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
       { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
       { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
       { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
-      {
-        accessorKey: 'quantidade_atual',
-        header: 'Qtd.',
-        size: 80,
-        aggregationFn: safeSum,
-        muiTableBodyCellProps:  { align: 'right' },
-        muiTableHeadCellProps:  { align: 'right' },
-        muiTableFooterCellProps:{ align: 'right' },
-        AggregatedCell: ({ cell }) => (
-          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            Total: {cell.getValue()}
-          </Box>
-        ),
-        Footer: footer('quantidade_atual'),
-      },
       {
         accessorKey: 'custo',
         header: 'Custo Unit.',
@@ -202,7 +190,28 @@ function EstoquePageContent() {
         },
       },
     ];
-  }, [priceAggMode]);
+    
+    // Conditionally add quantity column if showQuantity is true
+    if (showQuantity) {
+      baseColumns.splice(4, 0, {
+        accessorKey: 'quantidade_atual',
+        header: 'Qtd.',
+        size: 80,
+        aggregationFn: safeSum,
+        muiTableBodyCellProps:  { align: 'right' },
+        muiTableHeadCellProps:  { align: 'right' },
+        muiTableFooterCellProps:{ align: 'right' },
+        AggregatedCell: ({ cell }) => (
+          <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+            Total: {cell.getValue()}
+          </Box>
+        ),
+        Footer: footer('quantidade_atual'),
+      });
+    }
+    
+    return baseColumns;
+  }, [priceAggMode, showQuantity]);
 
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
@@ -255,6 +264,13 @@ function EstoquePageContent() {
             </ToggleButton>
           </ToggleButtonGroup>
         </Tooltip>
+        <Button 
+          variant="outlined" 
+          size="small"
+          onClick={() => setShowQuantity(!showQuantity)}
+        >
+          {showQuantity ? 'Ocultar Quantidade' : 'Mostrar Quantidade'}
+        </Button>
       </Box>
     ),
     renderRowActions: ({ row }) => (
@@ -271,7 +287,7 @@ function EstoquePageContent() {
           <IconButton
             size="small"
             color="error"
-            onClick={() => { setDelRow(row.original); setOpenDel(true); }}
+            onClick={() => { setDelRow(row.original); setOpenDel(true); setDeleteError(null); }}
           >
             <DeleteIcon fontSize="small" />
           </IconButton>
@@ -314,6 +330,9 @@ function EstoquePageContent() {
           Estoque de produtos
         </Typography>
 
+        {/* Scorecards */}
+        <InventoryScorecard products={rows} loading={loading} />
+
         {loading && <CircularProgress />}
         {error && !loading && <Alert severity="error">{error}</Alert>}
 
@@ -338,6 +357,11 @@ function EstoquePageContent() {
             <DialogContentText>
               Tem certeza que deseja excluir "{delRow?.nome}"?
             </DialogContentText>
+            {deleteError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {deleteError}
+              </Alert>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenDel(false)}>Cancelar</Button>
@@ -345,12 +369,15 @@ function EstoquePageContent() {
               color="error"
               onClick={async () => {
                 try {
-                  await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' }); // <-- ✅
+                  const response = await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' });
+                  if (!response.success) {
+                    setDeleteError(response.error || 'Erro ao excluir produto');
+                    return;
+                  }
                   fetchProdutos();
-                } catch (e) {
-                  setError(`Falha ao excluir: ${e.message}`);
-                } finally {
                   setOpenDel(false);
+                } catch (e) {
+                  setDeleteError(e.message || 'Falha ao excluir produto');
                 }
               }}
             >
