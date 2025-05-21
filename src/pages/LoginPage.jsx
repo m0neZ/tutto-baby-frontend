@@ -27,12 +27,12 @@ export default function LoginPage() {
       {/* LEFT: Form with Canvas pattern background */}
       <Box
         sx={{
-          flex: 0.4,
+          flex: 0.3,
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: theme.palette.success.main,
+          bgcolor: theme.palette.primary.main,
           p: 2,
         }}
       >
@@ -85,7 +85,7 @@ export default function LoginPage() {
               fullWidth
               sx={{
                 mt: 1,
-                backgroundColor: theme.palette.success.dark,
+                backgroundColor: theme.palette.primary.dark,
                 '&:hover': { backgroundColor: theme.palette.primary.main }
               }}
             >
@@ -98,7 +98,7 @@ export default function LoginPage() {
       {/* RIGHT: Background image */}
       <Box
         sx={{
-          flex: 0.6,
+          flex: 0.7,
           position: 'relative',
           '& img': { width: '100%', height: '100%', objectFit: 'cover' }
         }}
