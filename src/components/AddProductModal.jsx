@@ -1,34 +1,41 @@
-// src/components/AddProductModal.jsx
-
 import React from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import ProductForm from '../ProductForm'; // ← fixed import path
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
+import ProductForm from '../ProductForm'; // points at src/ProductForm.jsx
 
-export default function AddProductModal({ open, onClose, onSuccess, productData }) {
+// Props:
+//   open        (bool) — whether modal is visible
+//   onClose     (fn)   — callback to close it
+//   onSuccess   (fn)   — to refresh parent after add/edit
+//   initialData (obj)  — when editing, else undefined
+const AddProductModal = ({ open, onClose, onSuccess, initialData }) => {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {productData ? 'Editar Produto' : 'Adicionar Produto'}
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ m: 0, p: 2 }}>
+        {initialData ? 'Editar Produto' : 'Adicionar Produto'}
+        <IconButton
+          aria-label="close"
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <DialogContent dividers>
         <ProductForm
-          initialData={productData}
-          onProductAdded={() => {
-            onSuccess();
-            onClose();
-          }}
+          onProductAdded={onSuccess}
+          initialData={initialData}
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button form="product-form" type="submit" variant="contained">
-          Salvar
-        </Button>
-      </DialogActions>
     </Dialog>
   );
-}
+};
+
+export default AddProductModal;
