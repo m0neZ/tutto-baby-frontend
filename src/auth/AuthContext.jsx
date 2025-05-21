@@ -1,52 +1,49 @@
 // src/auth/AuthContext.jsx
 
-import React, { createContext, useState, useEffect } from "react";
-import { authFetch } from "../api";       // <-- named import now
-import jwt_decode from "jwt-decode";
+import React, { createContext, useState, useEffect } from 'react';
+import jwtDecode from 'jwt-decode';
+import { authFetch } from '../api';
 
 export const AuthContext = createContext({
   token: null,
   user: null,
   login: async () => {},
-  logout: () => {},
+  logout: () => {}
 });
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem("access_token"));
-  const [user, setUser] = useState(
-    token ? jwt_decode(localStorage.getItem("access_token")) : null
-  );
+  const [token, setToken] = useState(localStorage.getItem('access_token'));
+  const [user, setUser] = useState(token ? jwtDecode(token) : null);
 
-  const login = async (email, password) => {
-    const res = await fetch(
-      `${(import.meta.env?.VITE_API_URL ||
-        "https://tutto-baby-backend.onrender.com")}/api/auth/login`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      }
-    );
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Falha ao fazer login");
+  // Persist token → localStorage & decode
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('access_token', token);
+      setUser(jwtDecode(token));
+    } else {
+      localStorage.removeItem('access_token');
+      setUser(null);
     }
-    const data = await res.json();
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
-    setToken(data.access_token);
-    setUser(jwt_decode(data.access_token));
+  }, [token]);
+
+  // Login function
+  const login = async (email, password) => {
+    const res = await authFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.access_token) {
+      throw new Error(res.error || 'Falha no login');
+    }
+    localStorage.setItem('refresh_token', res.refresh_token || '');
+    setToken(res.access_token);
   };
 
+  // Logout function
   const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
     setToken(null);
-    setUser(null);
-    window.location.href = "/login";
+    localStorage.removeItem('refresh_token');
   };
-
-  // Optionally: refresh token logic could go here, using authFetch()
 
   return (
     <AuthContext.Provider value={{ token, user, login, logout }}>
