@@ -1,9 +1,7 @@
 // src/api.js
 
-const BASE_URL = `${
-  (import.meta.env?.VITE_API_URL || "https://tutto-baby-backend.onrender.com")
-    .replace(/\/$/, "")
-}/api`;
+const BASE_URL = `${(import.meta.env?.VITE_API_URL || "https://tutto-baby-backend.onrender.com")
+  .replace(/\/$/, "")}/api`;
 
 /**
  * Helper to perform authenticated fetches.
@@ -13,17 +11,16 @@ export async function authFetch(path, options = {}) {
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 
   const res = await fetch(`${BASE_URL}${path}`, {
-    credentials: "omit", // we’re sending auth header manually
+    credentials: "omit",
     ...options,
-    headers,
+    headers
   });
 
   if (res.status === 401) {
-    // Unauthorized: drop token and force login
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     window.location.href = "/login";
@@ -38,7 +35,6 @@ export async function authFetch(path, options = {}) {
     throw new Error(`Erro ${res.status}: ${errText || res.statusText}`);
   }
 
-  // OK — some endpoints return no JSON body
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -53,12 +49,12 @@ export const createProduct = async (product) => {
   console.debug("[API] createProduct payload:", product);
   const data = await authFetch("/produtos/", {
     method: "POST",
-    body: JSON.stringify(product),
+    body: JSON.stringify(product)
   });
   return data;
 };
 
-// --- Field Options (admin fields manager) ---
+// --- Field Options ---
 export const fetchFieldOptions = async (fieldType) => {
   const data = await authFetch(
     `/opcoes_campo/${fieldType}?incluir_inativos=false`,
@@ -87,11 +83,11 @@ export const fetchSuppliers = async () => {
   return [];
 };
 
-// --- Transactions (Sales & Stock movements) ---
+// --- Transactions ---
 export const createTransaction = async (transaction) => {
   const data = await authFetch("/transactions/", {
     method: "POST",
-    body: JSON.stringify(transaction),
+    body: JSON.stringify(transaction)
   });
   return data;
 };
