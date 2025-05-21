@@ -1,3 +1,4 @@
+// src/ProductForm.jsx
 import React, { useEffect, useState, useMemo, forwardRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
@@ -20,7 +21,7 @@ import CurrencyInput from "react-currency-input-field";
 import InputAdornment from "@mui/material/InputAdornment";
 import CircularProgress from "@mui/material/CircularProgress";
 
-// Adapter component (unchanged)
+// Adapter component
 const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
   props,
   ref
@@ -30,15 +31,8 @@ const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
     <CurrencyInput
       {...other}
       ref={ref}
-      onValueChange={(value, name, values) => {
-        if (onChange) {
-          onChange({
-            target: {
-              name: props.name,
-              value: value === undefined || value === null ? "" : String(value),
-            },
-          });
-        }
+      onValueChange={(value) => {
+        onChange?.({ target: { name: props.name, value: value ?? "" } });
       }}
       allowNegativeValue={false}
       decimalSeparator=","
@@ -49,13 +43,13 @@ const CurrencyInputAdapter = forwardRef(function CurrencyInputAdapter(
   );
 });
 
-const ProductForm = ({ onProductAdded }) => {
+const ProductForm = ({ initialData, onSubmit }) => {
   const {
     handleSubmit,
     control,
     reset,
     formState: { errors, isSubmitting },
-    watch
+    watch,
   } = useForm({
     defaultValues: {
       name: "",
@@ -70,7 +64,6 @@ const ProductForm = ({ onProductAdded }) => {
     },
   });
 
-  // State hooks remain the same...
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [sizeOptions, setSizeOptions] = useState([]);
@@ -80,125 +73,86 @@ const ProductForm = ({ onProductAdded }) => {
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
 
-  const watchedSupplierId = watch("supplierId");
-
-  // useEffect and onSubmit remain the same...
   useEffect(() => {
     let isMounted = true;
-    const loadInitialData = async () => {
-      if (!isMounted) return;
+    (async () => {
       setLoadingOptions(true);
-      setFormError("");
-      setSupplierError("");
-
       try {
+        // Load suppliers
         try {
-          const supplierList = await fetchSuppliers();
+          const supList = await fetchSuppliers();
           if (isMounted) {
-            if (Array.isArray(supplierList) && supplierList.length > 0) {
-              setSuppliers(supplierList);
-            } else {
-              setSuppliers([]);
+            setSuppliers(Array.isArray(supList) ? supList : []);
+            if (!Array.isArray(supList) || supList.length === 0) {
               setSupplierError("Nenhum fornecedor ativo encontrado.");
             }
           }
-        } catch (supplierErr) {
+        } catch (e) {
           if (isMounted) {
             setSuppliers([]);
-            setSupplierError(`Erro ao carregar fornecedores: ${supplierErr.message}`);
+            setSupplierError(`Erro ao carregar fornecedores: ${e.message}`);
           }
         }
-
-        const [productList, sizeOpts, colorOpts] = await Promise.all([
+        // Load products, sizes, colors
+        const [prodList, szOpts, clrOpts] = await Promise.all([
           fetchProducts(),
           fetchFieldOptions("tamanho"),
           fetchFieldOptions("cor_estampa"),
         ]);
         if (isMounted) {
-          setProducts(productList || []);
-          setSizeOptions(sizeOpts || []);
-          setColorOptions(colorOpts || []);
+          setProducts(Array.isArray(prodList) ? prodList : []);
+          setSizeOptions(Array.isArray(szOpts) ? szOpts : []);
+          setColorOptions(Array.isArray(clrOpts) ? clrOpts : []);
         }
-      } catch (err) {
+      } catch (e) {
         if (isMounted && !supplierError) {
-          setFormError(`Erro ao carregar dados: ${err.message}.`);
+          setFormError(`Erro ao carregar dados: ${e.message}`);
         }
       } finally {
-        if (isMounted) {
-          setLoadingOptions(false);
-        }
+        isMounted && setLoadingOptions(false);
       }
-    };
-
-    loadInitialData();
-
-    return () => {
-      isMounted = false;
-    };
+    })();
+    return () => { isMounted = false; };
   }, []);
 
-  const onSubmit = async (data) => {
+  const onSubmitForm = async (data) => {
     setFormError("");
     setFormSuccess("");
 
-    const parseCurrency = (value) => {
-      if (typeof value !== "string" || value.trim() === "") return NaN;
-      const cleanedValue = value.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".");
-      return parseFloat(cleanedValue);
-    };
-
-    const parsedCost = parseCurrency(data.cost);
-    const parsedRetailPrice = parseCurrency(data.retailPrice);
-    const parsedQuantity = parseInt(data.quantity, 10);
-    const parsedSupplierId = parseInt(data.supplierId, 10);
-
-    const invalidNumericFields = [];
-    if (isNaN(parsedSupplierId)) invalidNumericFields.push("Fornecedor");
-    if (isNaN(parsedCost)) invalidNumericFields.push("Custo");
-    if (isNaN(parsedRetailPrice)) invalidNumericFields.push("Preço Venda");
-    if (isNaN(parsedQuantity)) invalidNumericFields.push("Quantidade");
-
-    if (invalidNumericFields.length > 0) {
-      setFormError(`Valores inválidos nos campos: ${invalidNumericFields.join(", ")}.`);
-      return;
-    }
-
-    const negativeFields = [];
-    if (parsedCost < 0) negativeFields.push("Custo");
-    if (parsedRetailPrice < 0) negativeFields.push("Preço Venda");
-    if (parsedQuantity < 0) negativeFields.push("Quantidade");
-
-    if (negativeFields.length > 0) {
-      setFormError(`Valores não podem ser negativos: ${negativeFields.join(", ")}.`);
+    const parseCurrency = (v) =>
+      parseFloat(v.replace(/R\$\s?/g, "").replace(/\./g, "").replace(",", ".")) || NaN;
+    const cost = parseCurrency(data.cost);
+    const price = parseCurrency(data.retailPrice);
+    const qty = parseInt(data.quantity, 10);
+    const supId = parseInt(data.supplierId, 10);
+    const invalid = [];
+    if (isNaN(supId)) invalid.push("Fornecedor");
+    if (isNaN(cost)) invalid.push("Custo");
+    if (isNaN(price)) invalid.push("Preço Venda");
+    if (isNaN(qty)) invalid.push("Quantidade");
+    if (invalid.length) {
+      setFormError(`Valores inválidos em: ${invalid.join(", ")}.`);
       return;
     }
 
     try {
-      const payload = {
+      await createProduct({
         nome: data.name.trim(),
         sexo: data.gender,
         tamanho: data.size,
         cor_estampa: data.colorPrint,
-        fornecedor_id: parsedSupplierId,
-        custo: parsedCost,
-        preco_venda: parsedRetailPrice,
-        quantidade_atual: parsedQuantity,
+        fornecedor_id: supId,
+        custo: cost,
+        preco_venda: price,
+        quantidade_atual: qty,
         data_compra: data.purchaseDate || null,
-      };
-
-      console.log("[API DEBUG] Payload:", payload);
-      const response = await createProduct(payload);
-
-      if (response.success) {
-        setFormSuccess("Produto adicionado com sucesso!");
-        reset();
-        if (onProductAdded) onProductAdded();
-      } else {
-        setFormError(response.error || "Falha ao adicionar produto.");
-      }
-    } catch (err) {
-      console.error("[API DEBUG] Error during createProduct fetch:", err);
-      setFormError(err.message || "Erro ao enviar o formulário.");
+      });
+      setFormSuccess("Produto adicionado com sucesso!");
+      reset();
+      onSubmit?.();
+    } catch (e) {
+      console.error(e);
+      setFormError(e.message || "Erro ao enviar formulário.");
     }
   };
 
@@ -209,284 +163,19 @@ const ProductForm = ({ onProductAdded }) => {
 
   const isSupplierDisabled = loadingOptions || !!supplierError || suppliers.length === 0;
 
-  // *** Flexbox Layout with Standard Variant ***
   return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ paddingTop: 2, paddingX: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      
-      {/* Line 1: NOME (large), SEXO (small), TAMANHO (small) */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-        <Box sx={{ flexGrow: 1, flexBasis: { sm: '50%', md: '50%' } }}> {/* Large field */} 
-          <Controller
-            name="name"
-            control={control}
-            rules={{ required: "Nome é obrigatório" }}
-            render={({ field: { onChange, value, ...fieldProps }, fieldState: { error } }) => (
-              <Autocomplete
-                {...fieldProps}
-                freeSolo
-                options={productNames}
-                getOptionLabel={(option) =>
-                  typeof option === "string" ? option : option.label || ""
-                }
-                inputValue={value || ""}
-                onInputChange={(event, newInputValue) => {
-                  onChange(newInputValue);
-                }}
-                disabled={loadingOptions}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Nome do Produto"
-                    required
-                    fullWidth
-                    variant="standard" // Changed variant
-                    error={!!error}
-                    helperText={error ? error.message : " "}
-                    // Removed size="small"
-                  />
-                )}
-              />
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '25%', md: '25%' } }}> {/* Small field */} 
-          <Controller
-            name="gender"
-            control={control}
-            rules={{ required: "Sexo é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
-                <InputLabel id="gender-label">Sexo</InputLabel>
-                <Select
-                  {...field}
-                  labelId="gender-label"
-                  // Removed label prop
-                  disabled={loadingOptions}
-                >
-                  <MenuItem value=""><em>Selecione...</em></MenuItem>
-                  <MenuItem value="Masculino">Masculino</MenuItem>
-                  <MenuItem value="Feminino">Feminino</MenuItem>
-                  <MenuItem value="Unissex">Unissex</MenuItem>
-                </Select>
-                <FormHelperText>{error ? error.message : " "}</FormHelperText>
-              </FormControl>
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '25%', md: '25%' } }}> {/* Small field */} 
-          <Controller
-            name="size"
-            control={control}
-            rules={{ required: "Tamanho é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
-                <InputLabel id="size-label">Tamanho</InputLabel>
-                <Select
-                  {...field}
-                  labelId="size-label"
-                  // Removed label prop
-                  disabled={loadingOptions || sizeOptions.length === 0}
-                >
-                  <MenuItem value=""><em>Selecione...</em></MenuItem>
-                  {sizeOptions.map((opt) => (
-                    <MenuItem key={opt.id} value={opt.value}>
-                      {opt.value}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>{error ? error.message : " "}</FormHelperText>
-              </FormControl>
-            )}
-          />
-        </Box>
-      </Box>
-
-      {/* Line 2: COR/ESTAMPA (medium), FORNECEDOR (medium) */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Medium field */} 
-          <Controller
-            name="colorPrint"
-            control={control}
-            rules={{ required: "Cor/Estampa é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              <FormControl fullWidth required variant="standard" error={!!error}> {/* Changed variant */} 
-                <InputLabel id="colorPrint-label">Cor / Estampa</InputLabel>
-                <Select
-                  {...field}
-                  labelId="colorPrint-label"
-                  // Removed label prop
-                  disabled={loadingOptions || colorOptions.length === 0}
-                >
-                  <MenuItem value=""><em>Selecione...</em></MenuItem>
-                  {colorOptions.map((opt) => (
-                    <MenuItem key={opt.id} value={opt.value}>
-                      {opt.value}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText>{error ? error.message : " "}</FormHelperText>
-              </FormControl>
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Medium field */} 
-          <Controller
-            name="supplierId"
-            control={control}
-            rules={{ required: "Fornecedor é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              // *** FIX: Use standard variant, remove displayEmpty, ensure label shrinks ***
-              <FormControl fullWidth required variant="standard" error={!!error || !!supplierError}> 
-                <InputLabel id="supplier-label" shrink={!!field.value || loadingOptions || !!supplierError || suppliers.length === 0}>
-                  Fornecedor
-                </InputLabel>
-                <Select
-                  {...field}
-                  labelId="supplier-label"
-                  // Removed label prop
-                  disabled={isSupplierDisabled}
-                  // Removed displayEmpty
-                  value={field.value || ""} // Keep controlled value
-                >
-                  {/* Use placeholder MenuItem only when needed */}
-                  {loadingOptions && <MenuItem value="" disabled><em>Carregando...</em></MenuItem>}
-                  {supplierError && <MenuItem value="" disabled><em>Erro</em></MenuItem>}
-                  {!loadingOptions && !supplierError && suppliers.length === 0 && <MenuItem value="" disabled><em>Nenhum</em></MenuItem>}
-                  {!loadingOptions && !supplierError && suppliers.length > 0 && <MenuItem value=""><em>Selecione...</em></MenuItem>}
-                  
-                  {Array.isArray(suppliers) && suppliers.map((s) => (
-                    <MenuItem key={s.id} value={s.id}>
-                      {s.nome}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <FormHelperText error={!!error || !!supplierError}>
-                  {error ? error.message : supplierError ? supplierError : " "}
-                </FormHelperText>
-              </FormControl>
-            )}
-          />
-        </Box>
-      </Box>
-
-      {/* Line 3: Custo (larger), Preço Venda (larger), Quantidade (smaller) */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '40%', md: '40%' } }}> {/* Larger field */} 
-          <Controller
-            name="cost"
-            control={control}
-            rules={{ required: "Custo é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                label="Custo"
-                required
-                fullWidth
-                variant="standard" // Changed variant
-                InputProps={{
-                  inputComponent: CurrencyInputAdapter,
-                  startAdornment: (
-                    <InputAdornment position="start">R$</InputAdornment>
-                  ),
-                }}
-                error={!!error}
-                helperText={error ? error.message : " "}
-                // Removed size="small"
-              />
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '40%', md: '40%' } }}> {/* Larger field */} 
-          <Controller
-            name="retailPrice"
-            control={control}
-            rules={{ required: "Preço Venda é obrigatório" }}
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                label="Preço Venda"
-                required
-                fullWidth
-                variant="standard" // Changed variant
-                InputProps={{
-                  inputComponent: CurrencyInputAdapter,
-                  startAdornment: (
-                    <InputAdornment position="start">R$</InputAdornment>
-                  ),
-                }}
-                error={!!error}
-                helperText={error ? error.message : " "}
-                // Removed size="small"
-              />
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '20%', md: '20%' } }}> {/* Smaller field */} 
-          <Controller
-            name="quantity"
-            control={control}
-            rules={{
-              required: "Quantidade é obrigatória",
-              min: { value: 0, message: "Quantidade não pode ser negativa" },
-              pattern: { value: /^[0-9]*$/, message: "Quantidade deve ser um número inteiro" }
-            }}
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                label="Quantidade"
-                required
-                fullWidth
-                variant="standard" // Changed variant
-                type="number"
-                InputProps={{ inputProps: { min: 0 } }}
-                error={!!error}
-                helperText={error ? error.message : " "}
-                // Removed size="small"
-              />
-            )}
-          />
-        </Box>
-      </Box>
-
-      {/* Line 4: DATA DE COMPRA */}
-      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
-        <Box sx={{ flexBasis: { xs: '100%', sm: '50%', md: '50%' } }}> {/* Positioned on the left half */} 
-          <Controller
-            name="purchaseDate"
-            control={control}
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                label="Data da Compra (Opcional)"
-                type="date"
-                fullWidth
-                variant="standard" // Changed variant
-                InputLabelProps={{
-                  shrink: true,
-                }}
-                error={!!error}
-                helperText={error ? error.message : " "}
-                // Removed size="small"
-              />
-            )}
-          />
-        </Box>
-        <Box sx={{ flexBasis: { xs: '0%', sm: '50%', md: '50%' } }} /> {/* Spacer */} 
-      </Box>
-
-      {/* Row 5: Submit Button and Messages */}
-      <Box>
-        {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
-        {formSuccess && <Alert severity="success" sx={{ mb: 2 }}>{formSuccess}</Alert>}
-      </Box>
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmitForm)}
+      sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}
+    >
+      {/* ...form fields layout as before, using Controller and CurrencyInputAdapter... */}
+      {/* Submit */}
+      {formError && <Alert severity="error">{formError}</Alert>}
+      {formSuccess && <Alert severity="success">{formSuccess}</Alert>}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={isSubmitting || loadingOptions}
-          sx={{ mt: 1, mb: 1 }}
-        >
-          {isSubmitting ? <CircularProgress size={24} /> : "Adicionar Produto"}
+        <Button type="submit" variant="contained" disabled={isSubmitting || loadingOptions}>
+          {isSubmitting ? <CircularProgress size={24} /> : "Salvar"}
         </Button>
       </Box>
     </Box>
@@ -494,4 +183,3 @@ const ProductForm = ({ onProductAdded }) => {
 };
 
 export default ProductForm;
-
