@@ -46,11 +46,24 @@ const formatCurrency = v =>
 const formatDate = v =>
   v ? (dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-') : '-';
 
-const onlyNums = arr =>
-  (Array.isArray(arr) ? arr : []).filter(n => typeof n === 'number' && !Number.isNaN(n));
+// More robust implementation with null checks
+const onlyNums = arr => {
+  if (!arr || !Array.isArray(arr)) return [];
+  return arr.filter(n => typeof n === 'number' && !Number.isNaN(n));
+};
 
-const safeSum  = vals => MRT_AggregationFns.sum (onlyNums(vals));
-const safeMean = vals => MRT_AggregationFns.mean(onlyNums(vals));
+// Safe aggregation functions with null checks
+const safeSum = vals => {
+  if (!vals || !Array.isArray(vals)) return 0;
+  const filtered = onlyNums(vals);
+  return filtered.length > 0 ? MRT_AggregationFns.sum(filtered) : 0;
+};
+
+const safeMean = vals => {
+  if (!vals || !Array.isArray(vals)) return 0;
+  const filtered = onlyNums(vals);
+  return filtered.length > 0 ? MRT_AggregationFns.mean(filtered) : 0;
+};
 
 /* -------------- error boundary ----------- */
 class ErrorBoundary extends React.Component {
@@ -114,16 +127,32 @@ function EstoquePageContent() {
 
   /* --------------- columns ------------------- */
   const columns = useMemo(() => {
+    // More robust footer function with null checks
     const footer = accessor => ({ table }) => {
-      const vals =
-        (table.getFilteredRowModel()?.rows ?? []).map(r => r.getValue(accessor));
-      const fn  = accessor === 'quantidade_atual'
+      if (!table || !table.getFilteredRowModel || typeof table.getFilteredRowModel !== 'function') {
+        return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
+      }
+      
+      const rows = table.getFilteredRowModel()?.rows;
+      if (!rows || !Array.isArray(rows)) {
+        return <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>-</Box>;
+      }
+      
+      // Safely map values with null checks
+      const vals = rows.map(r => {
+        if (!r || typeof r.getValue !== 'function') return null;
+        return r.getValue(accessor);
+      }).filter(v => v !== null && v !== undefined);
+      
+      const fn = accessor === 'quantidade_atual'
         ? safeSum
         : priceAggMode === 'mean' ? safeMean : safeSum;
+      
       const label =
         accessor === 'quantidade_atual'
           ? 'Total: '
           : priceAggMode === 'mean' ? 'Média: ' : 'Soma: ';
+      
       return (
         <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
           {label}
@@ -147,11 +176,11 @@ function EstoquePageContent() {
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
+        Cell: ({ cell }) => formatCurrency(cell?.getValue?.() ?? 0),
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
             {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell.getValue())}
+            {formatCurrency(cell?.getValue?.() ?? 0)}
           </Box>
         ),
         Footer: footer('custo'),
@@ -164,11 +193,11 @@ function EstoquePageContent() {
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
+        Cell: ({ cell }) => formatCurrency(cell?.getValue?.() ?? 0),
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
             {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell.getValue())}
+            {formatCurrency(cell?.getValue?.() ?? 0)}
           </Box>
         ),
         Footer: footer('preco_venda'),
@@ -178,14 +207,19 @@ function EstoquePageContent() {
         accessorKey: 'data_compra',
         header: 'Data Compra',
         size: 120,
-        Cell: ({ cell }) => formatDate(cell.getValue()),
+        Cell: ({ cell }) => formatDate(cell?.getValue?.()),
         filterVariant: 'date-range',
         filterFn: (row, id, [start, end]) => {
-          const d = dayjs(row.getValue(id));
+          if (!row || typeof row.getValue !== 'function') return false;
+          const value = row.getValue(id);
+          if (!value) return false;
+          
+          const d = dayjs(value);
           if (!d.isValid()) return false;
+          
           if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
           if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
-          if (end)   return d.isSameOrBefore (dayjs(end).endOf('day'));
+          if (end)   return d.isSameOrBefore(dayjs(end).endOf('day'));
           return true;
         },
       },
@@ -203,7 +237,7 @@ function EstoquePageContent() {
         muiTableFooterCellProps:{ align: 'right' },
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-            Total: {cell.getValue()}
+            Total: {cell?.getValue?.() ?? 0}
           </Box>
         ),
         Footer: footer('quantidade_atual'),
@@ -216,7 +250,7 @@ function EstoquePageContent() {
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
     columns,
-    data: rows,
+    data: rows || [],
     localization: MRT_Localization_PT_BR,
     enableGrouping: true,
     enableStickyHeader: true,
@@ -369,15 +403,15 @@ function EstoquePageContent() {
               color="error"
               onClick={async () => {
                 try {
-                  const response = await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' });
-                  if (!response.success) {
-                    setDeleteError(response.error || 'Erro ao excluir produto');
+                  const response = await authFetch(`/produtos/${delRow?.id}`, { method: 'DELETE' });
+                  if (!response || !response.success) {
+                    setDeleteError(response?.error || 'Erro ao excluir produto');
                     return;
                   }
                   fetchProdutos();
                   setOpenDel(false);
                 } catch (e) {
-                  setDeleteError(e.message || 'Falha ao excluir produto');
+                  setDeleteError(e?.message || 'Falha ao excluir produto');
                 }
               }}
             >
