@@ -1,6 +1,6 @@
 // src/components/OptionManager.jsx
 import React, { useState, useEffect } from 'react';
-import authFetch from '../api';
+import { authFetch } from '../api';
 import {
   Box,
   Select,
