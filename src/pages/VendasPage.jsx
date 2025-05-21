@@ -1,17 +1,58 @@
-import React from 'react';
+// src/pages/VendasPage.jsx
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import authFetch from '../api';
+import { MaterialReactTable } from 'material-react-table';
+import { Box, CircularProgress, Alert } from '@mui/material';
+import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 
-const VendasPage = () => {
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-3xl font-semibold text-[--color-primary] mb-6">Registro de Vendas</h1>
-      {/* Placeholder content - Sales functionality to be implemented */}
-      <div className="bg-[--color-background-alt] p-6 rounded-lg shadow-md border border-[--color-accent]">
-        <p className="text-[--color-text-secondary]">Funcionalidade de registro e listagem de vendas será implementada aqui.</p>
-        {/* TODO: Add sales form and sales list components */}
-      </div>
-    </div>
+export default function VendasPage() {
+  const [vendas, setVendas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchVendas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch('/vendas/', { method: 'GET' });
+      const list = Array.isArray(res) ? res : (res.vendas || []);
+      setVendas(list);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+      setVendas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVendas();
+  }, [fetchVendas]);
+
+  const columns = useMemo(
+    () => [
+      { accessorKey: 'cliente_nome', header: 'Cliente' },
+      { accessorKey: 'produto', header: 'Produto' },
+      { accessorKey: 'preco_venda', header: 'Preço (R$)' },
+      { accessorKey: 'desconto_pct', header: 'Desconto (%)' },
+      { accessorKey: 'data_venda', header: 'Data Venda' },
+      { accessorKey: 'data_pagto', header: 'Data Pgto' },
+      { accessorKey: 'status', header: 'Status' },
+      // add other sales fields here
+    ],
+    []
   );
-};
 
-export default VendasPage;
+  if (loading) return <CircularProgress />;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
+  return (
+    <Box>
+      <MaterialReactTable
+        columns={columns}
+        data={vendas}
+        localization={MRT_Localization_PT_BR}
+      />
+    </Box>
+  );
+}
