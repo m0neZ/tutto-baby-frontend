@@ -39,11 +39,19 @@ export default function Sidebar() {
         '& .MuiDrawer-paper': { 
           width: 240, 
           boxSizing: 'border-box',
-          backgroundColor: '#ffffff', // Explicit background color
+          backgroundColor: '#ffffff', // White background for the menu items area
         },
       }}
     >
-      <Box sx={{ p: 2, textAlign: 'center' }}>
+      {/* Logo area with primary theme color background */}
+      <Box 
+        sx={{ 
+          p: 2, 
+          textAlign: 'center',
+          backgroundColor: theme.palette.primary.main, // Primary theme color for logo background
+          color: theme.palette.primary.contrastText
+        }}
+      >
         <img src={logo} alt="Logo" style={{ width: 100 }} />
       </Box>
       <Divider />
