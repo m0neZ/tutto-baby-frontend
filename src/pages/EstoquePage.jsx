@@ -16,8 +16,6 @@ import {
   Alert,
   Tooltip,
   IconButton,
-  ToggleButtonGroup,
-  ToggleButton,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,8 +23,6 @@ import {
   DialogTitle,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import FunctionsIcon from '@mui/icons-material/Functions';
-import MovingIcon from '@mui/icons-material/Moving';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -40,8 +36,15 @@ import { authFetch } from '../api';
 dayjs.extend(isBetween);
 
 /* ---------------- helpers ---------------- */
-const formatCurrency = v =>
-  v == null || isNaN(+v) ? 'R$ -' : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+const formatCurrency = v => {
+  if (v == null || isNaN(+v)) return 'R$ -';
+  
+  // Format with thousands separator (dot) and decimal separator (comma)
+  return `R$ ${Number(v).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+};
 
 const formatDate = v =>
   v ? (dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-') : '-';
@@ -130,11 +133,10 @@ function EstoquePageContent() {
   const [editRow,  setEditRow]  = useState(null);
   const [openDel,  setOpenDel]  = useState(false);
   const [delRow,   setDelRow]   = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const [priceAggMode, setPriceAggMode] = useState('mean');     // 'mean' | 'sum'
   const [grouping,      setGrouping]    = useState([]);
   const [pagination,    setPagination]  = useState({ pageIndex: 0, pageSize: 50 });
-  const [showQuantity,  setShowQuantity] = useState(false);     // Hide quantity column by default
 
   /* ---------- fetch products (auth) ---------- */
   const fetchProdutos = useCallback(async () => {
@@ -200,16 +202,36 @@ function EstoquePageContent() {
           }
         }
         
-        // Choose aggregation function
-        const fn = accessor === 'quantidade_atual'
-          ? safeSum
-          : priceAggMode === 'mean' ? safeMean : safeSum;
+        // Choose aggregation function based on accessor
+        let fn, label;
         
-        // Calculate label
-        const label =
-          accessor === 'quantidade_atual'
-            ? 'Total: '
-            : priceAggMode === 'mean' ? 'Média: ' : 'Soma: ';
+        if (accessor === 'quantidade_atual') {
+          fn = safeSum;
+          label = 'Total: ';
+        } else if (accessor === 'custo') {
+          // Always show both mean and sum for cost
+          const mean = safeMean(vals);
+          const sum = safeSum(vals);
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              <div>Média: {formatCurrency(mean)}</div>
+              <div>Soma: {formatCurrency(sum)}</div>
+            </Box>
+          );
+        } else if (accessor === 'preco_venda') {
+          // Always show both mean and sum for selling price
+          const mean = safeMean(vals);
+          const sum = safeSum(vals);
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              <div>Média: {formatCurrency(mean)}</div>
+              <div>Soma: {formatCurrency(sum)}</div>
+            </Box>
+          );
+        } else {
+          fn = safeSum;
+          label = 'Total: ';
+        }
         
         // Calculate result safely
         let result;
@@ -235,20 +257,48 @@ function EstoquePageContent() {
       }
     };
 
-    // Define custom aggregation functions that never fail
-    const customAggregationFn = (priceAggMode === 'mean' ? safeMean : safeSum);
-
     const baseColumns = [
       { accessorKey: 'nome', header: 'Nome', size: 180, enableGrouping: true },
       { accessorKey: 'sexo', header: 'Sexo', size: 90, enableGrouping: true },
       { accessorKey: 'cor_estampa', header: 'Cor/Estampa', size: 130, enableGrouping: true },
       { accessorKey: 'tamanho', header: 'Tamanho', size: 100, enableGrouping: true },
       {
+        accessorKey: 'quantidade_atual',
+        header: 'Qtd.',
+        size: 80,
+        // Use safeSum directly
+        aggregationFn: safeSum,
+        muiTableBodyCellProps:  { align: 'right' },
+        muiTableHeadCellProps:  { align: 'right' },
+        muiTableFooterCellProps:{ align: 'right' },
+        AggregatedCell: ({ cell }) => {
+          // Safely get aggregated value
+          let value = 0;
+          try {
+            if (cell && typeof cell.getValue === 'function') {
+              const rawValue = cell.getValue();
+              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
+                value = rawValue;
+              }
+            }
+          } catch (e) {
+            console.error('Error in quantity AggregatedCell formatter:', e);
+          }
+          
+          return (
+            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              Total: {value}
+            </Box>
+          );
+        },
+        Footer: footer('quantidade_atual'),
+      },
+      {
         accessorKey: 'custo',
         header: 'Custo Unit.',
         size: 110,
-        // Use custom safe aggregation function
-        aggregationFn: customAggregationFn,
+        // Use both aggregation functions
+        aggregationFn: 'auto',
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
@@ -283,8 +333,7 @@ function EstoquePageContent() {
           
           return (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(value)}
+              Média: {formatCurrency(value)}
             </Box>
           );
         },
@@ -294,8 +343,8 @@ function EstoquePageContent() {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
         size: 120,
-        // Use custom safe aggregation function
-        aggregationFn: customAggregationFn,
+        // Use both aggregation functions
+        aggregationFn: 'auto',
         muiTableBodyCellProps:  { align: 'right' },
         muiTableHeadCellProps:  { align: 'right' },
         muiTableFooterCellProps:{ align: 'right' },
@@ -330,8 +379,7 @@ function EstoquePageContent() {
           
           return (
             <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              {priceAggMode === 'mean' ? 'Média: ' : 'Soma: '}
-              {formatCurrency(value)}
+              Média: {formatCurrency(value)}
             </Box>
           );
         },
@@ -376,43 +424,8 @@ function EstoquePageContent() {
       },
     ];
     
-    // Conditionally add quantity column if showQuantity is true
-    if (showQuantity) {
-      baseColumns.splice(4, 0, {
-        accessorKey: 'quantidade_atual',
-        header: 'Qtd.',
-        size: 80,
-        // Use safeSum directly
-        aggregationFn: safeSum,
-        muiTableBodyCellProps:  { align: 'right' },
-        muiTableHeadCellProps:  { align: 'right' },
-        muiTableFooterCellProps:{ align: 'right' },
-        AggregatedCell: ({ cell }) => {
-          // Safely get aggregated value
-          let value = 0;
-          try {
-            if (cell && typeof cell.getValue === 'function') {
-              const rawValue = cell.getValue();
-              if (rawValue !== null && rawValue !== undefined && !isNaN(rawValue)) {
-                value = rawValue;
-              }
-            }
-          } catch (e) {
-            console.error('Error in quantity AggregatedCell formatter:', e);
-          }
-          
-          return (
-            <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
-              Total: {value}
-            </Box>
-          );
-        },
-        Footer: footer('quantidade_atual'),
-      });
-    }
-    
     return baseColumns;
-  }, [priceAggMode, showQuantity]);
+  }, []);
 
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
@@ -426,10 +439,15 @@ function EstoquePageContent() {
     enableRowActions: true,
     positionActionsColumn: 'last',
     enableTableFooter: true,
+    enableColumnFilters: true,
+    enableColumnVisibility: true, // Enable native column visibility toggle
     initialState: {
       density: 'compact',
       sorting: [{ id: 'nome', desc: false }],
       pagination,
+      columnVisibility: {
+        quantidade_atual: false, // Hide quantity column by default
+      },
     },
     state: {
       isLoading: loading,
@@ -438,8 +456,8 @@ function EstoquePageContent() {
       pagination,
     },
     muiToolbarAlertBannerProps: error ? { color: 'error', children: error } : undefined,
-    onGroupingChange:    setGrouping,
-    onPaginationChange:  setPagination,
+    onGroupingChange: setGrouping,
+    onPaginationChange: setPagination,
     muiTableContainerProps: { sx: { maxHeight: 650 } },
     renderTopToolbarCustomActions: () => (
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -450,28 +468,6 @@ function EstoquePageContent() {
           onClick={() => { setEditRow(null); setOpenAdd(true); }}
         >
           Adicionar Produto
-        </Button>
-        <Tooltip title="Alternar Agregação (Média/Soma)">
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={priceAggMode}
-            onChange={(_, v) => v && setPriceAggMode(v)}
-          >
-            <ToggleButton value="mean">
-              <MovingIcon fontSize="small" /> Média
-            </ToggleButton>
-            <ToggleButton value="sum">
-              <FunctionsIcon fontSize="small" /> Soma
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Tooltip>
-        <Button 
-          variant="outlined" 
-          size="small"
-          onClick={() => setShowQuantity(!showQuantity)}
-        >
-          {showQuantity ? 'Ocultar Quantidade' : 'Mostrar Quantidade'}
         </Button>
       </Box>
     ),
@@ -497,9 +493,10 @@ function EstoquePageContent() {
       </Box>
     ),
     muiTableHeadCellProps: {
+      align: 'center', // Consistent alignment for all headers
       sx: theme => ({
-        backgroundColor: theme.palette.secondary.main,
-        color: theme.palette.secondary.contrastText,
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
         fontWeight: 'bold',
       }),
     },
@@ -522,6 +519,42 @@ function EstoquePageContent() {
     fetchProdutos();
     setOpenAdd(false);
     setOpenEdit(false);
+  };
+
+  /* ---------- delete product ---------- */
+  const handleDeleteProduct = async () => {
+    if (!delRow?.id) {
+      setDeleteError('ID do produto não encontrado');
+      return;
+    }
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' });
+      
+      if (!response || !response.success) {
+        // Handle specific error for products with transaction history
+        if (response?.error && response.error.includes('histórico de transações')) {
+          setDeleteError(
+            'Não é possível excluir este produto pois ele possui histórico de transações. ' +
+            'Considere zerar a quantidade em vez de excluir.'
+          );
+        } else {
+          setDeleteError(response?.error || 'Erro ao excluir produto');
+        }
+        return;
+      }
+      
+      fetchProdutos();
+      setOpenDel(false);
+    } catch (e) {
+      console.error('Delete error:', e);
+      setDeleteError(e?.message || 'Falha ao excluir produto');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   /* --------------- render ---------------- */
@@ -553,7 +586,16 @@ function EstoquePageContent() {
         />
 
         {/* confirm delete */}
-        <Dialog open={openDel} onClose={() => setOpenDel(false)}>
+        <Dialog 
+          open={openDel} 
+          onClose={() => !isDeleting && setOpenDel(false)}
+          PaperProps={{
+            sx: {
+              width: '100%',
+              maxWidth: '500px'
+            }
+          }}
+        >
           <DialogTitle>Confirmar Exclusão</DialogTitle>
           <DialogContent>
             <DialogContentText>
@@ -566,24 +608,18 @@ function EstoquePageContent() {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDel(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => setOpenDel(false)} 
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
             <Button
               color="error"
-              onClick={async () => {
-                try {
-                  const response = await authFetch(`/produtos/${delRow?.id}`, { method: 'DELETE' });
-                  if (!response || !response.success) {
-                    setDeleteError(response?.error || 'Erro ao excluir produto');
-                    return;
-                  }
-                  fetchProdutos();
-                  setOpenDel(false);
-                } catch (e) {
-                  setDeleteError(e?.message || 'Falha ao excluir produto');
-                }
-              }}
+              onClick={handleDeleteProduct}
+              disabled={isDeleting}
             >
-              Excluir
+              {isDeleting ? <CircularProgress size={24} /> : 'Excluir'}
             </Button>
           </DialogActions>
         </Dialog>
