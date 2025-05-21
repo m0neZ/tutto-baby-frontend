@@ -1,3 +1,4 @@
+// File: src/pages/LoginPage.jsx
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../auth/AuthContext';
 import { Box, Paper, Typography, TextField, Button, useTheme } from '@mui/material';
