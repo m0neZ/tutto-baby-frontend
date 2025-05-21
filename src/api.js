@@ -32,9 +32,26 @@ async function authFetch(path, options = {}) {
   return txt ? JSON.parse(txt) : {};
 }
 
+// Products
 export const fetchProducts = () => authFetch('/produtos/', { method: 'GET' });
-export const createProduct = (p) =>
-  authFetch('/produtos/', { method: 'POST', body: JSON.stringify(p) });
+export const createProduct = (product) =>
+  authFetch('/produtos/', { method: 'POST', body: JSON.stringify(product) });
+
+// Field options (admin)
 export const fetchFieldOptions = (type) =>
   authFetch(`/opcoes_campo/${type}?incluir_inativos=false`, { method: 'GET' });
+
+// Suppliers (needed by ProductForm)
+export const fetchSuppliers = () =>
+  authFetch('/fornecedores/', { method: 'GET' });
+
+// Summary & Alerts
+export const fetchSummary = () => authFetch('/summary', { method: 'GET' });
+export const fetchLowStock = () => authFetch('/alerts/low-stock', { method: 'GET' });
+
+// Transactions (sales & stock movements)
+export const createTransaction = (tx) =>
+  authFetch('/transactions/', { method: 'POST', body: JSON.stringify(tx) });
+
+// Default low-level fetch
 export default authFetch;
