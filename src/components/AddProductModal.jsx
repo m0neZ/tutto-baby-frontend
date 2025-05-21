@@ -4,18 +4,23 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
-import ProductForm from '../ProductForm'; // points at src/ProductForm.jsx
+import ProductForm from '../ProductForm';
 
-// Props:
-//   open        (bool) — whether modal is visible
-//   onClose     (fn)   — callback to close it
-//   onSuccess   (fn)   — to refresh parent after add/edit
-//   initialData (obj)  — when editing, else undefined
-const AddProductModal = ({ open, onClose, onSuccess, initialData }) => {
+/**
+ * Modal component for adding or editing products
+ * 
+ * @param {Object} props Component props
+ * @param {boolean} props.open Whether modal is visible
+ * @param {Function} props.onClose Callback to close the modal
+ * @param {Function} props.onSuccess Callback after successful add/edit to refresh parent
+ * @param {Object} props.productData Product data when editing, undefined when adding new
+ * @param {boolean} props.isEditMode Whether we're in edit mode
+ */
+const AddProductModal = ({ open, onClose, onSuccess, productData, isEditMode }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ m: 0, p: 2 }}>
-        {initialData ? 'Editar Produto' : 'Adicionar Produto'}
+        {isEditMode ? 'Editar Produto' : 'Adicionar Produto'}
         <IconButton
           aria-label="close"
           onClick={onClose}
@@ -31,7 +36,7 @@ const AddProductModal = ({ open, onClose, onSuccess, initialData }) => {
       <DialogContent dividers>
         <ProductForm
           onProductAdded={onSuccess}
-          initialData={initialData}
+          initialData={productData}
         />
       </DialogContent>
     </Dialog>
