@@ -1,30 +1,14 @@
 import React from 'react';
 import Box from '@mui/material/Box';
-import Sidebar from './Sidebar'; // Will be refactored to use MUI Drawer
+import Sidebar from './Sidebar';
 
-const Layout = ({ children }) => {
+export default function Layout({ children }) {
   return (
-    <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default' }}>
-      <Sidebar /> {/* Sidebar will contain the MUI Drawer */}
-      
-      {/* Main content area */}
-      <Box 
-        component="main" 
-        sx={{
-          flexGrow: 1, 
-          p: 3, // Padding around the main content
-          overflowY: 'auto', // Allow scrolling within the main content area
-          position: 'relative' // Keep relative positioning if needed for other elements
-        }}
-      >
-        {/* Profile Icon Button REMOVED */}
-        
-        {/* Render the page content passed as children */}
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
+      <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default' }}>
         {children}
       </Box>
     </Box>
   );
-};
-
-export default Layout;
-
+}
