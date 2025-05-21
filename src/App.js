@@ -8,7 +8,7 @@ import {
   Navigate
 } from 'react-router-dom';
 import { AuthContext } from './auth/AuthContext';
-import Layout from './components/Layout'; // new shared wrapper
+import Layout from './components/Layout';
 import EstoquePage from './pages/EstoquePage';
 import VendasPage from './pages/VendasPage';
 import ClientesPage from './pages/ClientesPage';
@@ -22,15 +22,21 @@ function PrivateRoute({ children }) {
 }
 
 export default function App() {
+  const { token } = useContext(AuthContext);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
+        {/* If already logged in, /login immediately bounces to /estoque */}
+        <Route
+          path="/login"
+          element={token ? <Navigate to="/estoque" replace /> : <LoginPage />}
+        />
 
-        {/* Redirect root → estoque */}
+        {/* Root always → /estoque */}
         <Route path="/" element={<Navigate to="/estoque" replace />} />
 
-        {/* Each protected route gets the Layout (sidebar + content) */}
+        {/* Protected routes under Layout */}
         <Route
           path="/estoque"
           element={
@@ -82,8 +88,15 @@ export default function App() {
           }
         />
 
-        {/* Catch-all to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* Anything else → if logged in go back to /estoque, otherwise /login */}
+        <Route
+          path="*"
+          element={
+            token
+              ? <Navigate to="/estoque" replace />
+              : <Navigate to="/login" replace />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
