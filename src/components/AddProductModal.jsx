@@ -18,7 +18,18 @@ import ProductForm from '../ProductForm';
  */
 const AddProductModal = ({ open, onClose, onSuccess, productData, isEditMode }) => {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }
+      }}
+    >
       <DialogTitle sx={{ m: 0, p: 2 }}>
         {isEditMode ? 'Editar Produto' : 'Adicionar Produto'}
         <IconButton
@@ -37,6 +48,7 @@ const AddProductModal = ({ open, onClose, onSuccess, productData, isEditMode }) 
         <ProductForm
           onProductAdded={onSuccess}
           initialData={productData}
+          isEditMode={isEditMode}
         />
       </DialogContent>
     </Dialog>
