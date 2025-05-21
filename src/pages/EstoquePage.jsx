@@ -1,10 +1,15 @@
 // src/pages/EstoquePage.jsx
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo
+} from 'react';
 import {
   MaterialReactTable,
   useMaterialReactTable,
-  MRT_AggregationFns,
+  MRT_AggregationFns
 } from 'material-react-table';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import {
@@ -22,7 +27,7 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle,
+  DialogTitle
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import FunctionsIcon from '@mui/icons-material/Functions';
@@ -34,16 +39,22 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
-import { authFetch } from '../api';
+
+// ---- Named imports from your API module ----
+import {
+  fetchProducts,
+  createProduct,
+  authFetch
+} from '../api';
 
 dayjs.extend(isBetween);
 
 // Formatting helpers
 const formatCurrency = (value) => {
   if (value == null) return 'R$ 0,00';
-  const num = Number(value);
-  if (isNaN(num)) return 'R$ -';
-  return `R$ ${num.toFixed(2).replace('.', ',')}`;
+  const n = Number(value);
+  if (isNaN(n)) return 'R$ -';
+  return `R$ ${n.toFixed(2).replace('.', ',')}`;
 };
 
 const formatDate = (value) => {
@@ -52,11 +63,17 @@ const formatDate = (value) => {
   return d.isValid() ? d.format('DD/MM/YYYY') : '-';
 };
 
-// Aggregation wrappers
-const safeSum = (vals) =>
-  MRT_AggregationFns.sum(vals.filter((n) => typeof n === 'number' && !isNaN(n)));
-const safeMean = (vals) =>
-  MRT_AggregationFns.mean(vals.filter((n) => typeof n === 'number' && !isNaN(n)));
+// Safe aggregation wrappers
+const safeSum = (vals) => {
+  if (!Array.isArray(vals)) return 0;
+  const nums = vals.filter(v => typeof v === 'number' && !isNaN(v));
+  return nums.length ? MRT_AggregationFns.sum(nums) : 0;
+};
+const safeMean = (vals) => {
+  if (!Array.isArray(vals)) return 0;
+  const nums = vals.filter(v => typeof v === 'number' && !isNaN(v));
+  return nums.length ? MRT_AggregationFns.mean(nums) : 0;
+};
 
 // Error Boundary
 class ErrorBoundary extends React.Component {
@@ -87,11 +104,10 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Main content
 const EstoquePageContent = () => {
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -101,15 +117,17 @@ const EstoquePageContent = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [priceAggregationMode, setPriceAggregationMode] = useState('mean');
 
-  // Fetch products
-  const fetchProdutos = useCallback(async () => {
+  // Load products
+  const loadProdutos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/produtos/');
-      const list = res.produtos || [];
-      setProdutos(list.map((p) => ({ id: p.id ?? p.id_produto, ...p })));
-      setError(null);
+      const lista = await fetchProducts();
+      const arr = Array.isArray(lista) ? lista : [];
+      // normalize id
+      setProdutos(arr.map(p => ({ id: p.id ?? p.id_produto, ...p })));
+      setError('');
     } catch (e) {
+      console.error(e);
       setError(`Falha ao carregar produtos: ${e.message}`);
       setProdutos([]);
     } finally {
@@ -118,78 +136,109 @@ const EstoquePageContent = () => {
   }, []);
 
   useEffect(() => {
-    fetchProdutos();
-  }, [fetchProdutos]);
+    loadProdutos();
+  }, [loadProdutos]);
 
-  // Columns definition
-  const columns = useMemo(
-    () => [
-      { accessorKey: 'nome', header: 'Nome', enableGrouping: true },
-      { accessorKey: 'sexo', header: 'Sexo', enableGrouping: true },
-      { accessorKey: 'cor_estampa', header: 'Cor/Estampa', enableGrouping: true },
-      { accessorKey: 'tamanho', header: 'Tamanho', enableGrouping: true },
-      {
-        accessorKey: 'quantidade_atual', header: 'Qtd.', aggregationFn: safeSum,
-        Cell: ({ cell }) => cell.getValue(),
-        AggregatedCell: ({ cell }) => <strong>Total: {cell.getValue()}</strong>,
-        Footer: ({ table }) => {
-          const total = table.getFilteredRowModel().rows.reduce(
-            (sum, row) => sum + (row.getValue('quantidade_atual') || 0),
-            0
+  // Columns
+  const columns = useMemo(() => [
+    { accessorKey: 'nome', header: 'Nome', enableGrouping: true },
+    { accessorKey: 'sexo', header: 'Sexo', enableGrouping: true },
+    { accessorKey: 'cor_estampa', header: 'Cor/Estampa', enableGrouping: true },
+    { accessorKey: 'tamanho', header: 'Tamanho', enableGrouping: true },
+    {
+      accessorKey: 'quantidade_atual',
+      header: 'Qtd.',
+      aggregationFn: safeSum,
+      Cell: ({ cell }) => cell.getValue(),
+      AggregatedCell: ({ cell }) => <strong>Total: {cell.getValue()}</strong>,
+      Footer: ({ table }) => {
+        const vals = table
+          .getFilteredRowModel()
+          .rows.map(r => r.getValue('quantidade_atual') || 0);
+        return <strong>Total: {safeSum(vals)}</strong>;
+      },
+    },
+    {
+      accessorKey: 'custo',
+      header: 'Custo Unit.',
+      aggregationFn:
+        priceAggregationMode === 'mean' ? safeMean : safeSum,
+      Cell: ({ cell }) => formatCurrency(cell.getValue()),
+      AggregatedCell: ({ cell }) => (
+        <strong>
+          {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+          {formatCurrency(cell.getValue())}
+        </strong>
+      ),
+      Footer: ({ table }) => {
+        const vals = table
+          .getFilteredRowModel()
+          .rows.map(r => r.getValue('custo') || 0);
+        const val =
+          priceAggregationMode === 'mean'
+            ? safeMean(vals)
+            : safeSum(vals);
+        return (
+          <strong>
+            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+            {formatCurrency(val)}
+          </strong>
+        );
+      },
+    },
+    {
+      accessorKey: 'preco_venda',
+      header: 'Preço Venda Unit.',
+      aggregationFn:
+        priceAggregationMode === 'mean' ? safeMean : safeSum,
+      Cell: ({ cell }) => formatCurrency(cell.getValue()),
+      AggregatedCell: ({ cell }) => (
+        <strong>
+          {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+          {formatCurrency(cell.getValue())}
+        </strong>
+      ),
+      Footer: ({ table }) => {
+        const vals = table
+          .getFilteredRowModel()
+          .rows.map(r => r.getValue('preco_venda') || 0);
+        const val =
+          priceAggregationMode === 'mean'
+            ? safeMean(vals)
+            : safeSum(vals);
+        return (
+          <strong>
+            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
+            {formatCurrency(val)}
+          </strong>
+        );
+      },
+    },
+    { accessorKey: 'nome_fornecedor', header: 'Fornecedor', enableGrouping: true },
+    {
+      accessorKey: 'data_compra',
+      header: 'Data Compra',
+      Cell: ({ cell }) => formatDate(cell.getValue()),
+      filterVariant: 'date-range',
+      filterFn: (row, id, filter) => {
+        const date = dayjs(row.getValue(id));
+        const [start, end] = filter;
+        if (start && end) {
+          return date.isBetween(
+            dayjs(start).startOf('day'),
+            dayjs(end).endOf('day'),
+            'day',
+            '[]'
           );
-          return <strong>Total: {total}</strong>;
-        },
+        } else if (start) {
+          return date.isSameOrAfter(dayjs(start).startOf('day'));
+        } else if (end) {
+          return date.isSameOrBefore(dayjs(end).endOf('day'));
+        }
+        return true;
       },
-      {
-        accessorKey: 'custo', header: 'Custo Unit.', aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
-        AggregatedCell: ({ cell }) => (
-          <strong>
-            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell.getValue())}
-          </strong>
-        ),
-        Footer: ({ table }) => {
-          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('custo') || 0);
-          const val = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
-          return <strong>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(val)}</strong>;
-        },
-      },
-      {
-        accessorKey: 'preco_venda', header: 'Preço Venda Unit.', aggregationFn: priceAggregationMode === 'mean' ? safeMean : safeSum,
-        Cell: ({ cell }) => formatCurrency(cell.getValue()),
-        AggregatedCell: ({ cell }) => (
-          <strong>
-            {priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}
-            {formatCurrency(cell.getValue())}
-          </strong>
-        ),
-        Footer: ({ table }) => {
-          const vals = table.getFilteredRowModel().rows.map((r) => r.getValue('preco_venda') || 0);
-          const val = priceAggregationMode === 'mean' ? safeMean(vals) : safeSum(vals);
-          return <strong>{priceAggregationMode === 'mean' ? 'Média: ' : 'Soma: '}{formatCurrency(val)}</strong>;
-        },
-      },
-      { accessorKey: 'nome_fornecedor', header: 'Fornecedor', enableGrouping: true },
-      {
-        accessorKey: 'data_compra', header: 'Data Compra',
-        Cell: ({ cell }) => formatDate(cell.getValue()),
-        filterVariant: 'date-range',
-        filterFn: (row, id, filter) => {
-          const date = dayjs(row.getValue(id));
-          const [start, end] = filter;
-          if (start && end) {
-            return date.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
-          } else if (start) {
-            return date.isSameOrAfter(dayjs(start).startOf('day')); }
-          else if (end) {
-            return date.isSameOrBefore(dayjs(end).endOf('day')); }
-          return true;
-        },
-      },
-    ],
-    [priceAggregationMode]
-  );
+    },
+  ], [priceAggregationMode]);
 
   // Table instance
   const table = useMaterialReactTable({
@@ -203,7 +252,12 @@ const EstoquePageContent = () => {
     positionActionsColumn: 'last',
     enableTableFooter: true,
     initialState: { grouping, pagination },
-    state: { isLoading: loading, showAlertBanner: !!error, grouping, pagination },
+    state: {
+      isLoading: loading,
+      showAlertBanner: !!error,
+      grouping,
+      pagination
+    },
     onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
     renderTopToolbarCustomActions: () => (
@@ -211,7 +265,10 @@ const EstoquePageContent = () => {
         <Button
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
-          onClick={() => { setEditingProduct(null); setOpenAddModal(true); }}
+          onClick={() => {
+            setEditingProduct(null);
+            setOpenAddModal(true);
+          }}
         >
           Adicionar Produto
         </Button>
@@ -220,20 +277,29 @@ const EstoquePageContent = () => {
           exclusive
           onChange={(_, v) => v && setPriceAggregationMode(v)}
         >
-          <ToggleButton value="mean">Média</ToggleButton>
-          <ToggleButton value="sum">Soma</ToggleButton>
+          <ToggleButton value="mean"><MovingIcon /> Média</ToggleButton>
+          <ToggleButton value="sum"><FunctionsIcon /> Soma</ToggleButton>
         </ToggleButtonGroup>
       </Box>
     ),
     renderRowActions: ({ row }) => (
       <Box sx={{ display: 'flex', gap: 1 }}>
         <Tooltip title="Editar">
-          <IconButton onClick={() => { setEditingProduct(row.original); setOpenEditModal(true); }}>
+          <IconButton onClick={() => {
+            setEditingProduct(row.original);
+            setOpenEditModal(true);
+          }}>
             <EditIcon />
           </IconButton>
         </Tooltip>
         <Tooltip title="Excluir">
-          <IconButton color="error" onClick={() => setOpenConfirmDelete(true)}>
+          <IconButton
+            color="error"
+            onClick={() => {
+              setDeletingProduct(row.original);
+              setOpenConfirmDelete(true);
+            }}
+          >
             <DeleteIcon />
           </IconButton>
         </Tooltip>
@@ -257,26 +323,40 @@ const EstoquePageContent = () => {
 
       <AddProductModal
         open={openAddModal || openEditModal}
-        onClose={() => { openEditModal ? setOpenEditModal(false) : setOpenAddModal(false); }}
-        onSuccess={() => { fetchProdutos(); setOpenAddModal(false); setOpenEditModal(false); }}
+        onClose={() => {
+          if (openEditModal) setOpenEditModal(false);
+          else setOpenAddModal(false);
+        }}
+        onSuccess={() => {
+          loadProdutos();
+          setOpenAddModal(false);
+          setOpenEditModal(false);
+        }}
         productData={editingProduct}
         isEditMode={!!editingProduct}
       />
 
-      <Dialog open={openConfirmDelete} onClose={() => setOpenConfirmDelete(false)}>
+      <Dialog
+        open={openConfirmDelete}
+        onClose={() => setOpenConfirmDelete(false)}
+      >
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Tem certeza que deseja excluir "{deletingProduct?.nome}"?
+            Tem certeza que deseja excluir “{deletingProduct?.nome}”?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenConfirmDelete(false)}>Cancelar</Button>
+          <Button onClick={() => setOpenConfirmDelete(false)}>
+            Cancelar
+          </Button>
           <Button
             color="error"
             onClick={async () => {
-              await apiFetch(`/produtos/${deletingProduct.id}`, { method: 'DELETE' });
-              fetchProdutos();
+              await authFetch(`/produtos/${deletingProduct.id}`, {
+                method: 'DELETE'
+              });
+              loadProdutos();
               setOpenConfirmDelete(false);
             }}
           >
