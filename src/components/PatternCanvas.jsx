@@ -23,7 +23,7 @@ export default function PatternCanvas() {
       const scale = 0.2; // 20% size for llama
       const imgW = image.width * scale;
       const imgH = image.height * scale;
-      const spacing = imgW * 1.5; // spacing between tiles
+      const spacing = imgW * 2; // spacing between tiles
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let x = 0; x < canvas.width + imgW; x += spacing) {
         for (let y = 0; y < canvas.height + imgH; y += spacing) {
@@ -31,7 +31,7 @@ export default function PatternCanvas() {
           // Random transparency
           ctx.globalAlpha = 0.6;
           // Random position jitter
-          const jitter = spacing * 0.2;
+          const jitter = spacing * 0.15;
           const dx = (Math.random() - 0.5) * jitter;
           const dy = (Math.random() - 0.5) * jitter;
           // Random rotation
