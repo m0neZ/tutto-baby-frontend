@@ -1,19 +1,14 @@
-// src/index.js
 import React from 'react';
-import { createRoot } from 'react-dom/client';        // <-- new import
-import App from './App';
-import { AuthProvider } from './auth/AuthContext';
+import ReactDOM from 'react-dom/client';
 import { ThemeProvider } from '@mui/material/styles';
+import App from './App';
 import theme from './theme';
-import './index.css';
+import './styles/theme.css';
 
-const container = document.getElementById('root');
-const root = createRoot(container);                    // <-- create a root
-
-root.render(
-  <AuthProvider>
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <ThemeProvider theme={theme}>
       <App />
     </ThemeProvider>
-  </AuthProvider>
+  </React.StrictMode>
 );
