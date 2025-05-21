@@ -1,6 +1,17 @@
+// src/components/Sidebar.jsx
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box, Divider, Typography } from '@mui/material';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Box,
+  Divider,
+  Typography
+} from '@mui/material';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
@@ -18,7 +29,13 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <Drawer variant="permanent" sx={{ width: 240, '& .MuiDrawer-paper': { width: 240 } }}>
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: 240,
+        '& .MuiDrawer-paper': { width: 240, boxSizing: 'border-box' },
+      }}
+    >
       <Box sx={{ p: 2, textAlign: 'center' }}>
         <img src={logo} alt="Logo" style={{ width: 100 }} />
         <Typography variant="h6">Tutto Baby</Typography>
@@ -26,7 +43,21 @@ export default function Sidebar() {
       <Divider />
       <List>
         {navItems.map(({ name, path, icon }) => (
-          <ListItem key={name} component={NavLink} to={path} button sx={{ '&.active': { backgroundColor: 'primary.main', color: 'primary.contrastText' } }}>
+          <ListItem
+            key={name}
+            component={NavLink}
+            to={path}
+            button
+            sx={{
+              '&.active': {
+                backgroundColor: 'primary.main',
+                color: 'primary.contrastText',
+                '& .MuiListItemIcon-root': {
+                  color: 'primary.contrastText',
+                },
+              },
+            }}
+          >
             <ListItemIcon sx={{ color: 'inherit' }}>{icon}</ListItemIcon>
             <ListItemText primary={name} />
           </ListItem>
