@@ -5,7 +5,7 @@ import {
   useMaterialReactTable,
   MRT_AggregationFns,
 } from 'material-react-table';
-import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR'; // ✅ correct locale import
+import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 
 import {
   Box,
@@ -34,26 +34,24 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
+import { authFetch } from '../api';           // <-- ✅  authenticated fetch
 
 dayjs.extend(isBetween);
 
-const API_BASE = `${(import.meta.env?.VITE_API_URL ||
-  'https://tutto-baby-backend.onrender.com').replace(/\/$/, '')}/api`;
-
-/* --------------------- helpers --------------------- */
+/* ---------------- helpers ---------------- */
 const formatCurrency = v =>
   v == null || isNaN(+v) ? 'R$ -' : `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 
 const formatDate = v =>
   v ? (dayjs(v).isValid() ? dayjs(v).format('DD/MM/YYYY') : '-') : '-';
 
-const safeFilterNums = arr =>
+const onlyNums = arr =>
   (Array.isArray(arr) ? arr : []).filter(n => typeof n === 'number' && !Number.isNaN(n));
 
-const safeSum = vals => MRT_AggregationFns.sum(safeFilterNums(vals));
-const safeMean = vals => MRT_AggregationFns.mean(safeFilterNums(vals));
+const safeSum  = vals => MRT_AggregationFns.sum (onlyNums(vals));
+const safeMean = vals => MRT_AggregationFns.mean(onlyNums(vals));
 
-/* ---------------- Error Boundary ------------------- */
+/* -------------- error boundary ----------- */
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
   static getDerivedStateFromError(error) {
@@ -65,7 +63,7 @@ class ErrorBoundary extends React.Component {
   }
   render() {
     return this.state.hasError ? (
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
         <Alert severity="error">
           Ocorreu um erro ao renderizar a tabela de estoque.
           <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error?.toString()}</pre>
@@ -77,37 +75,29 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-/* ---------------- Main content -------------------- */
+/* -------------- main content ------------- */
 function EstoquePageContent() {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error,  setError]    = useState(null);
 
-  /* ----- modal state ----- */
-  const [openAdd, setOpenAdd] = useState(false);
+  const [openAdd,  setOpenAdd]  = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
-  const [editRow, setEditRow] = useState(null);
-  const [openDel, setOpenDel] = useState(false);
-  const [delRow, setDelRow] = useState(null);
+  const [editRow,  setEditRow]  = useState(null);
+  const [openDel,  setOpenDel]  = useState(false);
+  const [delRow,   setDelRow]   = useState(null);
 
-  const [priceAggMode, setPriceAggMode] = useState('mean'); // 'mean' | 'sum'
-  const [grouping, setGrouping] = useState([]);
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
+  const [priceAggMode, setPriceAggMode] = useState('mean');     // 'mean' | 'sum'
+  const [grouping,      setGrouping]    = useState([]);
+  const [pagination,    setPagination]  = useState({ pageIndex: 0, pageSize: 50 });
 
-  /* -------- data fetch -------- */
+  /* ---------- fetch products (auth) ---------- */
   const fetchProdutos = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_BASE}/produtos/`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
+      const data = await authFetch('/produtos/');               // <-- ✅
       const list = data?.produtos ?? [];
-      setRows(
-        list.map(p => ({
-          ...p,
-          id: p.id ?? p.id_produto, // backend sometimes sends id_produto
-        }))
-      );
+      setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto })));
       setError(null);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
@@ -117,31 +107,26 @@ function EstoquePageContent() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchProdutos();
-  }, [fetchProdutos]);
+  useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
 
-  /* ------------- columns --------------- */
+  /* --------------- columns ------------------- */
   const columns = useMemo(() => {
-    const footerTotal = accessor => ({ table }) => {
+    const footer = accessor => ({ table }) => {
       const vals =
-        (table.getFilteredRowModel?.().rows ?? []).map(r => r.getValue(accessor));
-      const fn =
-        accessor === 'quantidade_atual'
-          ? safeSum
-          : priceAggMode === 'mean'
-          ? safeMean
-          : safeSum;
+        (table.getFilteredRowModel()?.rows ?? []).map(r => r.getValue(accessor));
+      const fn  = accessor === 'quantidade_atual'
+        ? safeSum
+        : priceAggMode === 'mean' ? safeMean : safeSum;
       const label =
         accessor === 'quantidade_atual'
           ? 'Total: '
-          : priceAggMode === 'mean'
-          ? 'Média: '
-          : 'Soma: ';
+          : priceAggMode === 'mean' ? 'Média: ' : 'Soma: ';
       return (
         <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
           {label}
-          {accessor === 'quantidade_atual' ? fn(vals) : formatCurrency(fn(vals))}
+          {accessor === 'quantidade_atual'
+            ? fn(vals)
+            : formatCurrency(fn(vals))}
         </Box>
       );
     };
@@ -156,24 +141,24 @@ function EstoquePageContent() {
         header: 'Qtd.',
         size: 80,
         aggregationFn: safeSum,
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
+        muiTableBodyCellProps:  { align: 'right' },
+        muiTableHeadCellProps:  { align: 'right' },
+        muiTableFooterCellProps:{ align: 'right' },
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
             Total: {cell.getValue()}
           </Box>
         ),
-        Footer: footerTotal('quantidade_atual'),
+        Footer: footer('quantidade_atual'),
       },
       {
         accessorKey: 'custo',
         header: 'Custo Unit.',
         size: 110,
         aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
+        muiTableBodyCellProps:  { align: 'right' },
+        muiTableHeadCellProps:  { align: 'right' },
+        muiTableFooterCellProps:{ align: 'right' },
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
@@ -181,16 +166,16 @@ function EstoquePageContent() {
             {formatCurrency(cell.getValue())}
           </Box>
         ),
-        Footer: footerTotal('custo'),
+        Footer: footer('custo'),
       },
       {
         accessorKey: 'preco_venda',
         header: 'Preço Venda Unit.',
         size: 120,
         aggregationFn: priceAggMode === 'mean' ? safeMean : safeSum,
-        muiTableBodyCellProps: { align: 'right' },
-        muiTableHeadCellProps: { align: 'right' },
-        muiTableFooterCellProps: { align: 'right' },
+        muiTableBodyCellProps:  { align: 'right' },
+        muiTableHeadCellProps:  { align: 'right' },
+        muiTableFooterCellProps:{ align: 'right' },
         Cell: ({ cell }) => formatCurrency(cell.getValue()),
         AggregatedCell: ({ cell }) => (
           <Box sx={{ textAlign: 'right', fontWeight: 'bold' }}>
@@ -198,7 +183,7 @@ function EstoquePageContent() {
             {formatCurrency(cell.getValue())}
           </Box>
         ),
-        Footer: footerTotal('preco_venda'),
+        Footer: footer('preco_venda'),
       },
       { accessorKey: 'nome_fornecedor', header: 'Fornecedor', size: 140, enableGrouping: true },
       {
@@ -210,17 +195,16 @@ function EstoquePageContent() {
         filterFn: (row, id, [start, end]) => {
           const d = dayjs(row.getValue(id));
           if (!d.isValid()) return false;
-          if (start && end)
-            return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
+          if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
           if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
-          if (end) return d.isSameOrBefore(dayjs(end).endOf('day'));
+          if (end)   return d.isSameOrBefore (dayjs(end).endOf('day'));
           return true;
         },
       },
     ];
   }, [priceAggMode]);
 
-  /* ------------- table instance -------------- */
+  /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
     columns,
     data: rows,
@@ -243,8 +227,8 @@ function EstoquePageContent() {
       pagination,
     },
     muiToolbarAlertBannerProps: error ? { color: 'error', children: error } : undefined,
-    onGroupingChange: setGrouping,
-    onPaginationChange: setPagination,
+    onGroupingChange:    setGrouping,
+    onPaginationChange:  setPagination,
     muiTableContainerProps: { sx: { maxHeight: 650 } },
     renderTopToolbarCustomActions: () => (
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -252,10 +236,7 @@ function EstoquePageContent() {
           variant="contained"
           startIcon={<AddCircleOutlineIcon />}
           sx={{ textTransform: 'none' }}
-          onClick={() => {
-            setEditRow(null);
-            setOpenAdd(true);
-          }}
+          onClick={() => { setEditRow(null); setOpenAdd(true); }}
         >
           Adicionar Produto
         </Button>
@@ -281,10 +262,7 @@ function EstoquePageContent() {
         <Tooltip title="Editar">
           <IconButton
             size="small"
-            onClick={() => {
-              setEditRow(row.original);
-              setOpenEdit(true);
-            }}
+            onClick={() => { setEditRow(row.original); setOpenEdit(true); }}
           >
             <EditIcon fontSize="small" />
           </IconButton>
@@ -293,10 +271,7 @@ function EstoquePageContent() {
           <IconButton
             size="small"
             color="error"
-            onClick={() => {
-              setDelRow(row.original);
-              setOpenDel(true);
-            }}
+            onClick={() => { setDelRow(row.original); setOpenDel(true); }}
           >
             <DeleteIcon fontSize="small" />
           </IconButton>
@@ -324,14 +299,14 @@ function EstoquePageContent() {
     },
   });
 
-  /* ------------ modal helpers ------------ */
+  /* ---------- modal helpers ---------- */
   const refreshThenClose = () => {
     fetchProdutos();
     setOpenAdd(false);
     setOpenEdit(false);
   };
 
-  /* ------------ render ------------ */
+  /* --------------- render ---------------- */
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -350,10 +325,7 @@ function EstoquePageContent() {
 
         <AddProductModal
           open={openAdd || openEdit}
-          onClose={() => {
-            setOpenAdd(false);
-            setOpenEdit(false);
-          }}
+          onClose={() => { setOpenAdd(false); setOpenEdit(false); }}
           onSuccess={refreshThenClose}
           productData={editRow}
           isEditMode={!!editRow}
@@ -373,7 +345,7 @@ function EstoquePageContent() {
               color="error"
               onClick={async () => {
                 try {
-                  await fetch(`${API_BASE}/produtos/${delRow.id}`, { method: 'DELETE' });
+                  await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' }); // <-- ✅
                   fetchProdutos();
                 } catch (e) {
                   setError(`Falha ao excluir: ${e.message}`);
@@ -391,7 +363,7 @@ function EstoquePageContent() {
   );
 }
 
-/* ----------- export wrapped in Error Boundary ---------- */
+/* ----------- wrapped in boundary ---------- */
 export default function EstoquePage() {
   return (
     <ErrorBoundary>
