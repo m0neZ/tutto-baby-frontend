@@ -1,4 +1,4 @@
-// src/components/AddProductModal.jsx
+// src/AddProductModal.jsx
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
 import ProductForm from './ProductForm';
