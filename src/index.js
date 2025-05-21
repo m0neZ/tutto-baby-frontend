@@ -1,14 +1,22 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { ThemeProvider } from '@mui/material/styles';
-import App from './App';
-import theme from './theme';
-import './styles/theme.css';
+// src/index.js
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import { AuthProvider } from './auth/AuthContext';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';
+import './index.css'; // your original global styles
+
+const container = document.getElementById('root');
+const root = createRoot(container);
+
+root.render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <App />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <App />
+      </ThemeProvider>
+    </AuthProvider>
   </React.StrictMode>
 );
