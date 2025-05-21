@@ -34,7 +34,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
-import { apiFetch } from '../api';
+import { authFetch } from '../api';
 
 dayjs.extend(isBetween);
 
