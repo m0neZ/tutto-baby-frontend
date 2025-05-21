@@ -1,21 +1,8 @@
-/* index.css */
-
-/* Global box-sizing to avoid unexpected overflow */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-/* Reset margins/paddings and lock down overflow */
 html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow-x: hidden;      /* never allow horizontal overflow */
-  overflow-y: auto;        /* enable normal vertical scroll only when content truly exceeds */
-  overscroll-behavior-y: none; /* disable bounce/elastic scroll on mobile */
+  overflow: hidden;  /* prevent that tiny phantom scroll */
 }
 
-/* Base font & background are still handled by MUI CssBaseline & ThemeProvider */
-body {
-  /* you can add additional globals here if needed */
-}
+/* leave the rest for MUI */
