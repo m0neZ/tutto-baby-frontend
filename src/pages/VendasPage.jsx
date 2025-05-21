@@ -1,6 +1,6 @@
 // src/pages/VendasPage.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import authFetch from '../api';
+import { authFetch } from '../api';
 import { MaterialReactTable } from 'material-react-table';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
