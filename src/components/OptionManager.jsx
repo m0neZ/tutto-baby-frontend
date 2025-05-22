@@ -24,7 +24,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 
@@ -153,13 +152,6 @@ const OptionManager = ({ type }) => {
     }
   };
 
-  // Open delete confirmation dialog
-  const handleOpenDeleteDialog = (option) => {
-    setDialogAction('delete');
-    setDialogItem(option);
-    setOpenDialog(true);
-  };
-
   // Toggle option active status
   const handleToggleActive = async (option) => {
     setLoading(true);
@@ -185,83 +177,34 @@ const OptionManager = ({ type }) => {
     }
   };
 
-  // Delete option
-  const handleDeleteOption = async () => {
-    if (!dialogItem) return;
-    
-    setLoading(true);
-    try {
-      const response = await authFetch(`/opcoes_campo/${type}/${dialogItem.id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.success) {
-        loadOptions();
-        showSnackbar('Opção excluída com sucesso');
-      } else {
-        throw new Error(response.error || 'Erro ao excluir opção');
-      }
-    } catch (err) {
-      console.error(err);
-      setError(err.message);
-      showSnackbar(err.message, 'error');
-    } finally {
-      setLoading(false);
-      setOpenDialog(false);
-      setDialogItem(null);
-    }
-  };
-
   // Close dialog
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setDialogItem(null);
   };
 
-  // Handle dialog confirmation
-  const handleDialogConfirm = () => {
-    if (dialogAction === 'delete') {
-      handleDeleteOption();
-    }
-  };
-
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Gerenciar {getFieldLabel()}
-      </Typography>
-      
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      
-      <Paper elevation={0} sx={{ p: 2, mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Adicionar Nova Opção
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <TextField
-            fullWidth
-            label={`Novo ${type === 'fornecedor' ? 'Fornecedor' : 'Valor'}`}
-            value={newOption}
-            onChange={(e) => setNewOption(e.target.value)}
-            disabled={loading}
-            size="small"
-            sx={{ mr: 2 }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleAddOption}
-            disabled={loading || !newOption.trim()}
-          >
-            Adicionar
-          </Button>
-        </Box>
-      </Paper>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <TextField
+          fullWidth
+          placeholder="Adicionar Nova Opção"
+          value={newOption}
+          onChange={(e) => setNewOption(e.target.value)}
+          disabled={loading}
+          size="small"
+          sx={{ mr: 2 }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleAddOption}
+          disabled={loading || !newOption.trim()}
+        >
+          Adicionar
+        </Button>
+      </Box>
       
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="subtitle1">
@@ -346,13 +289,6 @@ const OptionManager = ({ type }) => {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </IconButton>
-                      <IconButton
-                        edge="end"
-                        color="error"
-                        onClick={() => handleOpenDeleteDialog(option)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
                     </ListItemSecondaryAction>
                   </>
                 )}
@@ -361,33 +297,6 @@ const OptionManager = ({ type }) => {
           ))}
         </List>
       )}
-      
-      {/* Confirmation Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>
-          {dialogAction === 'delete' ? 'Confirmar Exclusão' : 'Confirmar Ação'}
-        </DialogTitle>
-        <DialogContent>
-          {dialogAction === 'delete' && dialogItem && (
-            <Typography>
-              Tem certeza que deseja excluir a opção "{dialogItem.value}"?
-              {type === 'fornecedor' && (
-                <Typography color="error" sx={{ mt: 1 }}>
-                  Atenção: Excluir um fornecedor pode afetar produtos associados a ele.
-                </Typography>
-              )}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Cancelar
-          </Button>
-          <Button onClick={handleDialogConfirm} color="error" autoFocus>
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
       
       {/* Snackbar for notifications */}
       <Snackbar
