@@ -26,11 +26,15 @@ import {
   DialogTitle,
   useTheme,
   Paper,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
@@ -152,6 +156,9 @@ function EstoquePageContent() {
   const [stockQuantities, setStockQuantities] = useState({});
   const [isLoadingStock, setIsLoadingStock] = useState(true);
 
+  // Toggle for showing/hiding sold items (quantity = 0)
+  const [showSoldItems, setShowSoldItems] = useState(false);
+
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
   const [columnFilters, setColumnFilters] = useState([]);
@@ -167,7 +174,7 @@ function EstoquePageContent() {
       setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto ?? Math.random().toString(36) })));
       setError(null);
       
-      // Calculate stock quantities by unique item (tamanho, sexo, cor_estampa)
+      // Calculate stock quantities by unique item (nome, tamanho, sexo, cor_estampa)
       calculateStockQuantities(list);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
@@ -183,9 +190,9 @@ function EstoquePageContent() {
     try {
       const quantities = {};
       
-      // Group products by unique combination (tamanho, sexo, cor_estampa)
+      // Group products by unique combination (nome, tamanho, sexo, cor_estampa)
       products.forEach(product => {
-        const key = `${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
+        const key = `${product.nome}|${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
         if (!quantities[key]) {
           quantities[key] = 0;
         }
@@ -195,7 +202,7 @@ function EstoquePageContent() {
       // Assign quantities to each product
       const productQuantities = {};
       products.forEach(product => {
-        const key = `${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
+        const key = `${product.nome}|${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
         productQuantities[product.id] = quantities[key];
       });
       
@@ -213,11 +220,22 @@ function EstoquePageContent() {
 
   // Filter rows based on column filters for scorecards
   const filteredRows = useMemo(() => {
-    if (!Array.isArray(rows) || rows.length === 0 || columnFilters.length === 0) {
+    if (!Array.isArray(rows) || rows.length === 0) {
       return rows;
     }
 
-    return rows.filter(row => {
+    // First filter by quantity if showSoldItems is false
+    let filtered = rows;
+    if (!showSoldItems) {
+      filtered = filtered.filter(row => (row.quantidade_atual || 0) > 0);
+    }
+
+    // Then apply column filters if any
+    if (columnFilters.length === 0) {
+      return filtered;
+    }
+
+    return filtered.filter(row => {
       return columnFilters.every(filter => {
         const { id, value } = filter;
         
@@ -250,7 +268,7 @@ function EstoquePageContent() {
         return true;
       });
     });
-  }, [rows, columnFilters]);
+  }, [rows, columnFilters, showSoldItems]);
 
   /* --------------- columns ------------------- */
   const columns = useMemo(() => {
@@ -562,11 +580,22 @@ function EstoquePageContent() {
     return baseColumns;
   }, [stockQuantities, isLoadingStock]);
 
+  // Apply the showSoldItems filter to the data
+  const displayData = useMemo(() => {
+    if (!Array.isArray(rows)) return [];
+    
+    if (!showSoldItems) {
+      return rows.filter(row => (row.quantidade_atual || 0) > 0);
+    }
+    
+    return rows;
+  }, [rows, showSoldItems]);
+
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
     columns,
-    // Ensure data is always an array
-    data: Array.isArray(rows) ? rows : [],
+    // Ensure data is always an array and filtered by showSoldItems
+    data: Array.isArray(displayData) ? displayData : [],
     localization: MRT_Localization_PT_BR,
     enableGrouping: true,
     enableStickyHeader: true,
@@ -622,6 +651,26 @@ function EstoquePageContent() {
             <CloudUploadIcon />
           </IconButton>
         </Tooltip>
+        
+        {/* Toggle for showing/hiding sold items */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showSoldItems}
+              onChange={(e) => setShowSoldItems(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {showSoldItems ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+              <Typography variant="body2">
+                {showSoldItems ? "Mostrar Itens Vendidos" : "Apenas Estoque Disponível"}
+              </Typography>
+            </Box>
+          }
+          sx={{ ml: 2 }}
+        />
       </Box>
     ),
     renderToolbarInternalActions: ({ table }) => (
