@@ -423,7 +423,7 @@ function EstoquePageContent() {
       },
       {
         accessorKey: 'custo',
-        header: 'Custo Unit.',
+        header: 'Custo',
         size: 110,
         aggregationFn: 'mean', // Default to mean for grouped cells
         muiTableBodyCellProps: { align: 'right' },
@@ -476,7 +476,7 @@ function EstoquePageContent() {
       },
       {
         accessorKey: 'preco_venda',
-        header: 'Preço Venda Unit.',
+        header: 'Preço Venda',
         size: 120,
         aggregationFn: 'mean', // Default to mean for grouped cells
         muiTableBodyCellProps: { align: 'right' },
