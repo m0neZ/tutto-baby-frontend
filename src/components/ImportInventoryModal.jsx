@@ -192,16 +192,25 @@ const ImportInventoryModal = ({ open, onClose }) => {
         body: JSON.stringify({ products: parsedData }),
       });
 
-      const result = await response.json();
-      
-      if (response.ok) {
-        setImportResult(result);
-        setActiveStep(2);
-      } else {
-        setErrors([`Erro ao importar: ${result.error || 'Erro desconhecido'}`]);
+      // Check if response is ok before trying to parse JSON
+      if (!response.ok) {
+        throw new Error(`Erro do servidor: ${response.status} ${response.statusText}`);
       }
+      
+      // Safely parse JSON with error handling
+      let result;
+      try {
+        const text = await response.text();
+        result = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        throw new Error(`Erro ao processar resposta do servidor: ${parseError.message}`);
+      }
+      
+      setImportResult(result);
+      setActiveStep(2);
     } catch (error) {
-      setErrors([`Erro ao conectar com o servidor: ${error.message}`]);
+      console.error('Import error:', error);
+      setErrors([`Erro ao importar: ${error.message}`]);
     } finally {
       setIsLoading(false);
     }
