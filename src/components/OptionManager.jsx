@@ -133,7 +133,10 @@ const OptionManager = ({ type }) => {
     try {
       const response = await authFetch(`/opcoes_campo/${type}/${editOption.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ value: editOption.value.trim() })
+        body: JSON.stringify({ 
+          value: editOption.value.trim(),
+          update_products: true // Request to update all related products
+        })
       });
       
       if (response.success) {
@@ -157,6 +160,8 @@ const OptionManager = ({ type }) => {
     setLoading(true);
     try {
       const newStatus = !option.is_active;
+      console.log(`Toggling option ${option.id} to ${newStatus ? 'active' : 'inactive'}`);
+      
       const response = await authFetch(`/opcoes_campo/${type}/${option.id}/status`, {
         method: 'PUT',
         body: JSON.stringify({ is_active: newStatus })
@@ -277,18 +282,12 @@ const OptionManager = ({ type }) => {
                       >
                         <EditIcon />
                       </IconButton>
-                      <IconButton
-                        edge="end"
-                        color={option.is_active ? 'default' : 'primary'}
-                        onClick={() => handleToggleActive(option)}
-                      >
-                        <Switch
-                          size="small"
-                          checked={option.is_active}
-                          onChange={() => {}}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </IconButton>
+                      <Switch
+                        checked={option.is_active}
+                        onChange={() => handleToggleActive(option)}
+                        color="primary"
+                        size="small"
+                      />
                     </ListItemSecondaryAction>
                   </>
                 )}
