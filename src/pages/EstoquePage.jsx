@@ -38,7 +38,7 @@ import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
 import ImportInventoryModal from '../components/ImportInventoryModal';
 import InventoryScorecard from '../components/InventoryScorecard';
-import FifoIndicator from '../components/FifoIndicator';
+import StockLevelIndicator from '../components/StockLevelIndicator';
 import { authFetch } from '../api';
 
 dayjs.extend(isBetween);
@@ -148,9 +148,9 @@ function EstoquePageContent() {
   // Import modal state
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  // FIFO state
-  const [fifoInfo, setFifoInfo] = useState({});
-  const [isLoadingFifo, setIsLoadingFifo] = useState(true);
+  // Stock quantities by unique item
+  const [stockQuantities, setStockQuantities] = useState({});
+  const [isLoadingStock, setIsLoadingStock] = useState(true);
 
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
@@ -166,6 +166,9 @@ function EstoquePageContent() {
       // Ensure each item has an id
       setRows(list.map(p => ({ ...p, id: p.id ?? p.id_produto ?? Math.random().toString(36) })));
       setError(null);
+      
+      // Calculate stock quantities by unique item (tamanho, sexo, cor_estampa)
+      calculateStockQuantities(list);
     } catch (e) {
       setError(`Falha ao carregar produtos: ${e.message}`);
       setRows([]);
@@ -174,25 +177,39 @@ function EstoquePageContent() {
     }
   }, []);
 
-  // Fetch FIFO information
-  const fetchFifoInfo = useCallback(async () => {
-    setIsLoadingFifo(true);
+  // Calculate stock quantities for each unique item
+  const calculateStockQuantities = useCallback((products) => {
+    setIsLoadingStock(true);
     try {
-      const data = await authFetch('/vendas/fifo_info');
-      if (data?.success) {
-        setFifoInfo(data.fifo_info || {});
-      }
+      const quantities = {};
+      
+      // Group products by unique combination (tamanho, sexo, cor_estampa)
+      products.forEach(product => {
+        const key = `${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
+        if (!quantities[key]) {
+          quantities[key] = 0;
+        }
+        quantities[key] += product.quantidade_atual || 0;
+      });
+      
+      // Assign quantities to each product
+      const productQuantities = {};
+      products.forEach(product => {
+        const key = `${product.tamanho}|${product.sexo}|${product.cor_estampa}`;
+        productQuantities[product.id] = quantities[key];
+      });
+      
+      setStockQuantities(productQuantities);
     } catch (e) {
-      console.error('Error fetching FIFO info:', e);
+      console.error('Error calculating stock quantities:', e);
     } finally {
-      setIsLoadingFifo(false);
+      setIsLoadingStock(false);
     }
   }, []);
 
   useEffect(() => { 
     fetchProdutos();
-    fetchFifoInfo();
-  }, [fetchProdutos, fetchFifoInfo]);
+  }, [fetchProdutos]);
 
   // Filter rows based on column filters for scorecards
   const filteredRows = useMemo(() => {
@@ -350,11 +367,8 @@ function EstoquePageContent() {
         Cell: ({ cell, row }) => (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{cell.getValue()}</span>
-            {fifoInfo[row.original.id] && !isLoadingFifo && (
-              <FifoIndicator 
-                dataCompra={row.original.data_compra} 
-                fifoRank={fifoInfo[row.original.id].fifo_rank} 
-              />
+            {!isLoadingStock && stockQuantities[row.original.id] !== undefined && (
+              <StockLevelIndicator quantidade={stockQuantities[row.original.id]} />
             )}
           </Box>
         ),
@@ -546,7 +560,7 @@ function EstoquePageContent() {
     ];
     
     return baseColumns;
-  }, [fifoInfo, isLoadingFifo]);
+  }, [stockQuantities, isLoadingStock]);
 
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
@@ -592,15 +606,22 @@ function EstoquePageContent() {
         >
           Adicionar Produto
         </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<CloudUploadIcon />}
-          sx={{ textTransform: 'none' }}
-          onClick={() => setIsImportModalOpen(true)}
-        >
-          Importar Produtos
-        </Button>
+        {/* Changed to IconButton with Tooltip */}
+        <Tooltip title="Importar Produtos">
+          <IconButton
+            color="secondary" // Use theme's secondary color (pink)
+            onClick={() => setIsImportModalOpen(true)}
+            sx={{ 
+              backgroundColor: theme.palette.secondary.main, // Ensure background is filled
+              color: theme.palette.secondary.contrastText, // Ensure icon contrast
+              '&:hover': {
+                backgroundColor: theme.palette.secondary.dark, // Darken on hover
+              }
+            }}
+          >
+            <CloudUploadIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
     ),
     renderToolbarInternalActions: ({ table }) => (
@@ -665,7 +686,6 @@ function EstoquePageContent() {
   /* ---------- modal helpers ---------- */
   const refreshThenClose = () => {
     fetchProdutos();
-    fetchFifoInfo();
     setOpenAdd(false);
     setOpenEdit(false);
   };
@@ -674,7 +694,6 @@ function EstoquePageContent() {
     setIsImportModalOpen(false);
     if (shouldRefresh) {
       fetchProdutos();
-      fetchFifoInfo();
     }
   };
 
@@ -711,7 +730,6 @@ function EstoquePageContent() {
       }
       
       fetchProdutos();
-      fetchFifoInfo();
       setOpenDel(false);
     } catch (e) {
       console.error('Delete error:', e);
@@ -739,27 +757,27 @@ function EstoquePageContent() {
         {/* Scorecards */}
         <InventoryScorecard products={filteredRows} loading={loading} />
 
-        {/* FIFO Legend */}
+        {/* Stock Level Legend */}
         <Paper sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Indicador FIFO:
+            Indicador de Estoque:
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', color: 'error.main' }}>
-              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={1} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Próximo a ser vendido</Typography>
+              <StockLevelIndicator quantidade={1} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Estoque crítico (1 unidade)</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', color: 'warning.main' }}>
-              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={2} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Venda próxima</Typography>
+              <StockLevelIndicator quantidade={2} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Estoque baixo (2 unidades)</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', color: 'info.main' }}>
-              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={5} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Venda intermediária</Typography>
+              <StockLevelIndicator quantidade={5} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Estoque moderado (3-5 unidades)</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
-              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={15} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Venda futura</Typography>
+              <StockLevelIndicator quantidade={10} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Estoque adequado (6+ unidades)</Typography>
             </Box>
           </Box>
         </Paper>
