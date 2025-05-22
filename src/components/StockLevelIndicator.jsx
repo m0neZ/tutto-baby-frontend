@@ -1,4 +1,4 @@
-// src/components/StockLevelIndicator.jsx
+// src/components/FifoIndicator.jsx
 import React from 'react';
 import { Box, Tooltip, Typography } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
