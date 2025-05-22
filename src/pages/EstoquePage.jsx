@@ -4,6 +4,9 @@ import {
   MaterialReactTable,
   useMaterialReactTable,
   MRT_AggregationFns,
+  MRT_ToggleFiltersButton,
+  MRT_ShowHideColumnsButton,
+  MRT_ToggleDensePaddingButton,
 } from 'material-react-table';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 
@@ -22,16 +25,20 @@ import {
   DialogContentText,
   DialogTitle,
   useTheme,
+  Paper,
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import AddProductModal from '../components/AddProductModal';
+import ImportInventoryModal from '../components/ImportInventoryModal';
 import InventoryScorecard from '../components/InventoryScorecard';
+import FifoIndicator from '../components/FifoIndicator';
 import { authFetch } from '../api';
 
 dayjs.extend(isBetween);
@@ -137,6 +144,13 @@ function EstoquePageContent() {
   const [openDel, setOpenDel] = useState(false);
   const [delRow, setDelRow] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Import modal state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // FIFO state
+  const [fifoInfo, setFifoInfo] = useState({});
+  const [isLoadingFifo, setIsLoadingFifo] = useState(true);
 
   const [grouping, setGrouping] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 50 });
@@ -160,7 +174,25 @@ function EstoquePageContent() {
     }
   }, []);
 
-  useEffect(() => { fetchProdutos(); }, [fetchProdutos]);
+  // Fetch FIFO information
+  const fetchFifoInfo = useCallback(async () => {
+    setIsLoadingFifo(true);
+    try {
+      const data = await authFetch('/vendas/fifo_info');
+      if (data?.success) {
+        setFifoInfo(data.fifo_info || {});
+      }
+    } catch (e) {
+      console.error('Error fetching FIFO info:', e);
+    } finally {
+      setIsLoadingFifo(false);
+    }
+  }, []);
+
+  useEffect(() => { 
+    fetchProdutos();
+    fetchFifoInfo();
+  }, [fetchProdutos, fetchFifoInfo]);
 
   // Filter rows based on column filters for scorecards
   const filteredRows = useMemo(() => {
@@ -315,6 +347,17 @@ function EstoquePageContent() {
         muiTableHeadCellProps: {
           align: 'left',
         },
+        Cell: ({ cell, row }) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{cell.getValue()}</span>
+            {fifoInfo[row.original.id] && !isLoadingFifo && (
+              <FifoIndicator 
+                dataCompra={row.original.data_compra} 
+                fifoRank={fifoInfo[row.original.id].fifo_rank} 
+              />
+            )}
+          </Box>
+        ),
       },
       {
         accessorKey: 'quantidade_atual',
@@ -503,7 +546,7 @@ function EstoquePageContent() {
     ];
     
     return baseColumns;
-  }, []);
+  }, [fifoInfo, isLoadingFifo]);
 
   /* --------------- table instance ------------ */
   const table = useMaterialReactTable({
@@ -549,6 +592,22 @@ function EstoquePageContent() {
         >
           Adicionar Produto
         </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<CloudUploadIcon />}
+          sx={{ textTransform: 'none' }}
+          onClick={() => setIsImportModalOpen(true)}
+        >
+          Importar Produtos
+        </Button>
+      </Box>
+    ),
+    renderToolbarInternalActions: ({ table }) => (
+      <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <MRT_ToggleFiltersButton table={table} />
+        <MRT_ShowHideColumnsButton table={table} />
+        <MRT_ToggleDensePaddingButton table={table} />
       </Box>
     ),
     renderRowActions: ({ row }) => (
@@ -606,14 +665,29 @@ function EstoquePageContent() {
   /* ---------- modal helpers ---------- */
   const refreshThenClose = () => {
     fetchProdutos();
+    fetchFifoInfo();
     setOpenAdd(false);
     setOpenEdit(false);
+  };
+
+  const handleCloseImportModal = (shouldRefresh) => {
+    setIsImportModalOpen(false);
+    if (shouldRefresh) {
+      fetchProdutos();
+      fetchFifoInfo();
+    }
   };
 
   /* ---------- delete product ---------- */
   const handleDeleteProduct = async () => {
     if (!delRow?.id) {
       setDeleteError('ID do produto não encontrado');
+      return;
+    }
+    
+    // Check if product quantity is 1 (can only delete products with quantity = 1)
+    if (delRow.quantidade_atual !== 1) {
+      setDeleteError('Só é possível excluir produtos com quantidade = 1.');
       return;
     }
     
@@ -637,6 +711,7 @@ function EstoquePageContent() {
       }
       
       fetchProdutos();
+      fetchFifoInfo();
       setOpenDel(false);
     } catch (e) {
       console.error('Delete error:', e);
@@ -664,6 +739,31 @@ function EstoquePageContent() {
         {/* Scorecards */}
         <InventoryScorecard products={filteredRows} loading={loading} />
 
+        {/* FIFO Legend */}
+        <Paper sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="subtitle1" fontWeight="bold">
+            Indicador FIFO:
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'error.main' }}>
+              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={1} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Próximo a ser vendido</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'warning.main' }}>
+              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={2} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Venda próxima</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'info.main' }}>
+              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={5} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Venda intermediária</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
+              <FifoIndicator dataCompra={new Date().toISOString()} fifoRank={15} />
+              <Typography variant="body2" sx={{ ml: 1 }}>Venda futura</Typography>
+            </Box>
+          </Box>
+        </Paper>
+
         {loading && <CircularProgress />}
         {error && !loading && <Alert severity="error">{error}</Alert>}
 
@@ -679,6 +779,12 @@ function EstoquePageContent() {
           onSuccess={refreshThenClose}
           productData={editRow}
           isEditMode={!!editRow}
+        />
+
+        {/* Import Products Modal */}
+        <ImportInventoryModal
+          open={isImportModalOpen}
+          onClose={handleCloseImportModal}
         />
 
         {/* confirm delete */}
