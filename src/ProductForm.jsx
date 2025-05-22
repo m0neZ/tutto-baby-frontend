@@ -63,7 +63,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
           supplierId: initialData.fornecedor_id ? String(initialData.fornecedor_id) : "",
           cost: initialData.custo ? String(initialData.custo) : "",
           retailPrice: initialData.preco_venda ? String(initialData.preco_venda) : "",
-          quantity: initialData.quantidade_atual ? String(initialData.quantidade_atual) : "1",
+          quantity: "1", // Always set to 1 for edit mode
           purchaseDate: initialData.data_compra || dayjs().format('YYYY-MM-DD'),
         }
       : {
@@ -138,15 +138,11 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
         data_compra: data.purchaseDate || null,
       };
 
-      // Get quantity as integer
-      const quantity = parseInt(data.quantity, 10) || 1;
-      
       if (isEditMode) {
-        // Update existing product - keep original quantity for now
-        // (Backend will handle the single-unit paradigm)
+        // Update existing product - always keep quantity=1 for single-unit paradigm
         const updatePayload = {
           ...basePayload,
-          quantidade_atual: quantity
+          quantidade_atual: 1 // Force quantity=1 for edit mode
         };
         
         const res = await authFetch(`/produtos/${initialData.id}`, {
@@ -163,6 +159,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
       } else {
         // Create new product(s) - implement single-unit paradigm
         // For each quantity, create a separate product with quantity=1
+        const quantity = parseInt(data.quantity, 10) || 1;
         const createPromises = [];
         
         // Single-unit paradigm: Create multiple rows with quantity=1
@@ -355,28 +352,30 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
               </FormControl>
             )}
           />
-          {/* Quantity */}
-          <Controller
-            name="quantity"
-            control={control}
-            rules={{ 
-              required: "Quantidade é obrigatória",
-              min: { value: 1, message: "Quantidade mínima é 1" }
-            }}
-            render={({ field, fieldState }) => (
-              <FormControl fullWidth error={!!fieldState.error}>
-                <TextField
-                  {...field}
-                  label="Quantidade"
-                  type="number"
-                  InputProps={{ inputProps: { min: 1 } }}
-                  disabled={loadingOptions || isProcessing}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message || (isEditMode ? " " : "Cada unidade será adicionada como um item separado")}
-                />
-              </FormControl>
-            )}
-          />
+          {/* Quantity - Only show in Add mode, not in Edit mode */}
+          {!isEditMode && (
+            <Controller
+              name="quantity"
+              control={control}
+              rules={{ 
+                required: "Quantidade é obrigatória",
+                min: { value: 1, message: "Quantidade mínima é 1" }
+              }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <TextField
+                    {...field}
+                    label="Quantidade"
+                    type="number"
+                    InputProps={{ inputProps: { min: 1 } }}
+                    disabled={loadingOptions || isProcessing}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message || "Cada unidade será adicionada como um item separado"}
+                  />
+                </FormControl>
+              )}
+            />
+          )}
         </Box>
 
         {/* PURCHASE DATE row */}
@@ -407,6 +406,12 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
           <Alert severity="info">
             Novo paradigma: Cada produto terá quantidade = 1. Se você adicionar um produto com quantidade maior que 1, 
             serão criadas múltiplas linhas idênticas com quantidade = 1 cada.
+          </Alert>
+        )}
+
+        {isEditMode && (
+          <Alert severity="info">
+            No modo de edição, a quantidade é sempre 1 por item, seguindo o novo paradigma de estoque.
           </Alert>
         )}
 
