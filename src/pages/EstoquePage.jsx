@@ -757,31 +757,6 @@ function EstoquePageContent() {
         {/* Scorecards */}
         <InventoryScorecard products={filteredRows} loading={loading} />
 
-        {/* Stock Level Legend */}
-        <Paper sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            Indicador de Estoque:
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', color: 'error.main' }}>
-              <StockLevelIndicator quantidade={1} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Estoque crítico (1 unidade)</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', color: 'warning.main' }}>
-              <StockLevelIndicator quantidade={2} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Estoque baixo (2 unidades)</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', color: 'info.main' }}>
-              <StockLevelIndicator quantidade={5} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Estoque moderado (3-5 unidades)</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
-              <StockLevelIndicator quantidade={10} />
-              <Typography variant="body2" sx={{ ml: 1 }}>Estoque adequado (6+ unidades)</Typography>
-            </Box>
-          </Box>
-        </Paper>
-
         {loading && <CircularProgress />}
         {error && !loading && <Alert severity="error">{error}</Alert>}
 
