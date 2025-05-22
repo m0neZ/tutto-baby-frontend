@@ -2,7 +2,11 @@ html, body, #root {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;  /* prevent that tiny phantom scroll */
+}
+
+/* Only apply overflow: hidden to the login page */
+.login-page {
+  overflow: hidden;  /* prevent that tiny phantom scroll on login page only */
 }
 
 /* leave the rest for MUI */
