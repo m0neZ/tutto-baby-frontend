@@ -28,6 +28,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { authFetch } from '../api'; // Import authFetch for authenticated API calls
 
 const ImportInventoryModal = ({ open, onClose }) => {
   const [activeStep, setActiveStep] = useState(0);
@@ -184,29 +185,18 @@ const ImportInventoryModal = ({ open, onClose }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/produtos/import', {
+      // Use authFetch instead of fetch to include JWT token
+      const response = await authFetch('/produtos/import', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ products: parsedData }),
       });
-
-      // Check if response is ok before trying to parse JSON
-      if (!response.ok) {
-        throw new Error(`Erro do servidor: ${response.status} ${response.statusText}`);
+      
+      // Check if response is successful
+      if (!response || response.success === false) {
+        throw new Error(response?.error || 'Erro desconhecido na importação');
       }
       
-      // Safely parse JSON with error handling
-      let result;
-      try {
-        const text = await response.text();
-        result = text ? JSON.parse(text) : {};
-      } catch (parseError) {
-        throw new Error(`Erro ao processar resposta do servidor: ${parseError.message}`);
-      }
-      
-      setImportResult(result);
+      setImportResult(response);
       setActiveStep(2);
     } catch (error) {
       console.error('Import error:', error);
