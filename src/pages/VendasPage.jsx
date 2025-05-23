@@ -179,6 +179,13 @@ export default function VendasPage() {
         },
       },
       {
+        accessorKey: 'cliente_id',
+        header: 'ID Cliente',
+        size: 100,
+        enableHiding: true,
+        hidden: true,
+      },
+      {
         accessorKey: 'produto_nome',
         header: 'Produto',
         size: 200,
@@ -360,7 +367,7 @@ export default function VendasPage() {
         </Typography>
         
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="contained"
               color="primary"
@@ -369,13 +376,12 @@ export default function VendasPage() {
                 setEditData(null);
                 setIsSaleFormOpen(true);
               }}
-              sx={{ mr: 2 }}
             >
-              Nova Venda
+              + Venda
             </Button>
             
             <Button
-              variant="outlined"
+              variant="contained"
               color="secondary"
               startIcon={<SwapHorizIcon />}
               onClick={() => setIsExchangeFormOpen(true)}
