@@ -9,9 +9,8 @@ import {
   authFetch
 } from "./api";
 import {
-  Box,
-  Grid,
   Paper,
+  Grid,
   Typography,
   TextField,
   Select,
@@ -21,10 +20,10 @@ import {
   FormHelperText,
   Button,
   Alert,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
-import InputAdornment from "@mui/material/InputAdornment";
 import CurrencyInput from "react-currency-input-field";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -50,13 +49,12 @@ const CurrencyInputAdapter = forwardRef(function (props, ref) {
   );
 });
 
-const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
+export default function ProductForm({ onProductAdded, initialData, isEditMode }) {
   const {
     handleSubmit,
     control,
     reset,
-    setValue,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
     watch,
   } = useForm({
     defaultValues: initialData
@@ -97,7 +95,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   // Load suppliers & field options
   useEffect(() => {
     let isMounted = true;
-    const load = async () => {
+    (async () => {
       setLoadingOptions(true);
       try {
         const [supList, prodList, sizes, colors] = await Promise.all([
@@ -117,11 +115,8 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
       } finally {
         setLoadingOptions(false);
       }
-    };
-    load();
-    return () => {
-      isMounted = false;
-    };
+    })();
+    return () => { isMounted = false; };
   }, []);
 
   const parseCurrency = (value) => {
@@ -133,7 +128,6 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   const onSubmit = async (data) => {
     setFormError("");
     setIsProcessing(true);
-
     try {
       const basePayload = {
         nome: data.name.trim(),
@@ -147,10 +141,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
       };
 
       if (isEditMode) {
-        const updatePayload = {
-          ...basePayload,
-          quantidade_atual: 1,
-        };
+        const updatePayload = { ...basePayload, quantidade_atual: 1 };
         const res = await authFetch(`/produtos/${initialData.id}`, {
           method: "PUT",
           body: JSON.stringify(updatePayload),
@@ -163,15 +154,13 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
         }
       } else {
         const quantity = parseInt(data.quantity, 10) || 1;
-        const createPromises = [];
-        for (let i = 0; i < quantity; i++) {
-          createPromises.push(
+        const results = await Promise.all(
+          Array.from({ length: quantity }).map(() =>
             createProduct({ ...basePayload, quantidade_atual: 1 })
-          );
-        }
-        const results = await Promise.all(createPromises);
+          )
+        );
         const failures = results.filter((r) => !r.success);
-        if (failures.length > 0) {
+        if (failures.length) {
           setFormError(`Falha ao adicionar ${failures.length} de ${quantity} produtos.`);
         } else {
           reset();
@@ -186,15 +175,16 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
     }
   };
 
+  // Prepare autocomplete options
   const productNames = useMemo(() => {
     try {
       return Array.isArray(products)
         ? [...new Set(products.map((p) => p.nome))]
             .filter(Boolean)
-            .map((name) => ({ label: name }))
+            .map((label) => ({ label }))
         : [];
     } catch (err) {
-      console.error("Error preparing product names:", err);
+      console.error(err);
       setAutocompleteError(true);
       return [];
     }
@@ -203,328 +193,316 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Paper
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
         elevation={3}
         sx={{
           maxWidth: 800,
           mx: "auto",
-          mt: 4,
+          mt: 2,
           p: 4,
           borderRadius: 2,
         }}
+        noValidate
       >
-        <Typography variant="h5" component="h2" gutterBottom>
-          {isEditMode ? "Editar Produto" : "Novo Produto"}
-        </Typography>
-
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-          <Grid container spacing={3}>
-            {/* Row 1: Nome, Sexo, Tamanho */}
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="name"
-                control={control}
-                rules={{ required: "Nome é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    {autocompleteError ? (
-                      <TextField
-                        {...field}
-                        label="Nome do Produto"
-                        required
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message || "Autocomplete indisponível"}
-                        disabled={loadingOptions || isProcessing}
-                      />
-                    ) : (
-                      <Autocomplete
-                        freeSolo
-                        options={productNames}
-                        loading={loadingOptions}
-                        disabled={loadingOptions || isProcessing}
-                        value={field.value}
-                        onChange={(_, v) => field.onChange(typeof v === "string" ? v : v?.label || "")}
-                        onInputChange={(_, v) => field.onChange(v)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Nome do Produto"
-                            required
-                            error={!!fieldState.error}
-                            helperText={fieldState.error?.message || " "}
-                            InputProps={{
-                              ...params.InputProps,
-                              endAdornment: (
-                                <>
-                                  {loadingOptions && <CircularProgress size={20} />}
-                                  {params.InputProps.endAdornment}
-                                </>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    )}
-                  </FormControl>
-                )}
-              />
+        <Grid container spacing={3}>
+          {/* Only show “Editar Produto” when in edit mode */}
+          {isEditMode && (
+            <Grid item xs={12}>
+              <Typography variant="h6">Editar Produto</Typography>
             </Grid>
+          )}
 
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="gender"
-                control={control}
-                rules={{ required: "Sexo é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <InputLabel required id="gender-label">
-                      Sexo
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="gender-label"
-                      label="Sexo"
-                      disabled={loadingOptions || isProcessing}
-                    >
-                      <MenuItem value="">
-                        <em>Selecione...</em>
-                      </MenuItem>
-                      <MenuItem value="Masculino">Masculino</MenuItem>
-                      <MenuItem value="Feminino">Feminino</MenuItem>
-                      <MenuItem value="Unissex">Unissex</MenuItem>
-                    </Select>
-                    <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="size"
-                control={control}
-                rules={{ required: "Tamanho é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <InputLabel required id="size-label">
-                      Tamanho
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="size-label"
-                      label="Tamanho"
-                      disabled={loadingOptions || isProcessing}
-                    >
-                      <MenuItem value="">
-                        <em>Selecione...</em>
-                      </MenuItem>
-                      {sizeOptions.map((o) => (
-                        <MenuItem key={o.id} value={o.value}>
-                          {o.value}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-
-            {/* Row 2: Cor/Estampa, Fornecedor */}
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="colorPrint"
-                control={control}
-                rules={{ required: "Cor/Estampa é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <InputLabel required id="color-label">
-                      Cor/Estampa
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="color-label"
-                      label="Cor/Estampa"
-                      disabled={loadingOptions || isProcessing}
-                    >
-                      <MenuItem value="">
-                        <em>Selecione...</em>
-                      </MenuItem>
-                      {colorOptions.map((o) => (
-                        <MenuItem key={o.id} value={o.value}>
-                          {o.value}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name="supplierId"
-                control={control}
-                rules={{ required: "Fornecedor é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <FormControl fullWidth error={!!fieldState.error || !!supplierError}>
-                    <InputLabel required id="supplier-label">
-                      Fornecedor
-                    </InputLabel>
-                    <Select
-                      {...field}
-                      labelId="supplier-label"
-                      label="Fornecedor"
-                      disabled={loadingOptions || isProcessing}
-                    >
-                      <MenuItem value="">
-                        <em>Selecione...</em>
-                      </MenuItem>
-                      {suppliers.map((s) => (
-                        <MenuItem key={s.id} value={String(s.id)}>
-                          {s.nome}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <FormHelperText>
-                      {fieldState.error?.message || supplierError || " "}
-                    </FormHelperText>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-
-            {/* Row 3: Custo, Preço de Venda, Quantidade */}
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="cost"
-                control={control}
-                rules={{ required: "Custo é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    required
-                    label="Custo"
-                    InputProps={{
-                      inputComponent: CurrencyInputAdapter,
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
-                    disabled={loadingOptions || isProcessing}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="retailPrice"
-                control={control}
-                rules={{ required: "Preço de venda é obrigatório" }}
-                render={({ field, fieldState }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    required
-                    label="Preço de Venda"
-                    InputProps={{
-                      inputComponent: CurrencyInputAdapter,
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
-                    disabled={loadingOptions || isProcessing}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message || " "}
-                  />
-                )}
-              />
-            </Grid>
-
-            {!isEditMode && (
-              <Grid item xs={12} sm={4}>
-                <Controller
-                  name="quantity"
-                  control={control}
-                  rules={{
-                    required: "Quantidade é obrigatória",
-                    min: { value: 1, message: "Quantidade mínima é 1" },
-                  }}
-                  render={({ field, fieldState }) => (
+          {/* Row 1 */}
+          <Grid item xs={12} md={6}>
+            <Controller
+              name="name"
+              control={control}
+              rules={{ required: "Nome é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error}>
+                  {autocompleteError ? (
                     <TextField
                       {...field}
-                      fullWidth
+                      label="Nome do Produto"
                       required
-                      type="number"
-                      label="Quantidade"
-                      InputProps={{ inputProps: { min: 1 } }}
-                      disabled={loadingOptions || isProcessing}
                       error={!!fieldState.error}
-                      helperText={
-                        fieldState.error?.message ||
-                        "Cada unidade será adicionada como um item separado"
+                      helperText={fieldState.error?.message || "Autocomplete indisponível"}
+                      disabled={loadingOptions || isProcessing}
+                    />
+                  ) : (
+                    <Autocomplete
+                      freeSolo
+                      options={productNames}
+                      loading={loadingOptions}
+                      disabled={loadingOptions || isProcessing}
+                      value={field.value}
+                      onChange={(_, v) =>
+                        field.onChange(typeof v === "string" ? v : v?.label || "")
                       }
+                      onInputChange={(_, v) => field.onChange(v)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Nome do Produto"
+                          required
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message || " "}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {loadingOptions && <CircularProgress size={20} />}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
                     />
                   )}
-                />
-              </Grid>
-            )}
+                </FormControl>
+              )}
+            />
+          </Grid>
 
-            {/* Row 4: Data de Compra */}
-            <Grid item xs={12} sm={4}>
-              <Controller
-                name="purchaseDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    label="Data de Compra"
-                    value={field.value ? dayjs(field.value) : null}
-                    onChange={(date) =>
-                      field.onChange(date ? date.format("YYYY-MM-DD") : null)
-                    }
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+              name="gender"
+              control={control}
+              rules={{ required: "Sexo é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <InputLabel required id="gender-label">
+                    Sexo
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="gender-label"
+                    label="Sexo"
                     disabled={loadingOptions || isProcessing}
-                    slotProps={{
-                      textField: { fullWidth: true, helperText: " " },
-                    }}
+                  >
+                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    <MenuItem value="Masculino">Masculino</MenuItem>
+                    <MenuItem value="Feminino">Feminino</MenuItem>
+                    <MenuItem value="Unissex">Unissex</MenuItem>
+                  </Select>
+                  <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
+                </FormControl>
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Controller
+              name="size"
+              control={control}
+              rules={{ required: "Tamanho é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <InputLabel required id="size-label">
+                    Tamanho
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="size-label"
+                    label="Tamanho"
+                    disabled={loadingOptions || isProcessing}
+                  >
+                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    {sizeOptions.map((o) => (
+                      <MenuItem key={o.id} value={o.value}>
+                        {o.value}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
+                </FormControl>
+              )}
+            />
+          </Grid>
+
+          {/* Row 2 */}
+          <Grid item xs={12} sm={6} md={6}>
+            <Controller
+              name="colorPrint"
+              control={control}
+              rules={{ required: "Cor/Estampa é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <InputLabel required id="color-label">
+                    Cor/Estampa
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="color-label"
+                    label="Cor/Estampa"
+                    disabled={loadingOptions || isProcessing}
+                  >
+                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    {colorOptions.map((o) => (
+                      <MenuItem key={o.id} value={o.value}>
+                        {o.value}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>{fieldState.error?.message || " "}</FormHelperText>
+                </FormControl>
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={6}>
+            <Controller
+              name="supplierId"
+              control={control}
+              rules={{ required: "Fornecedor é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <FormControl fullWidth error={!!fieldState.error || !!supplierError}>
+                  <InputLabel required id="supplier-label">
+                    Fornecedor
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    labelId="supplier-label"
+                    label="Fornecedor"
+                    disabled={loadingOptions || isProcessing}
+                  >
+                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    {suppliers.map((s) => (
+                      <MenuItem key={s.id} value={String(s.id)}>
+                        {s.nome}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    {fieldState.error?.message || supplierError || " "}
+                  </FormHelperText>
+                </FormControl>
+              )}
+            />
+          </Grid>
+
+          {/* Row 3 */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Controller
+              name="cost"
+              control={control}
+              rules={{ required: "Custo é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  required
+                  label="Custo"
+                  InputProps={{
+                    inputComponent: CurrencyInputAdapter,
+                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                  }}
+                  disabled={loadingOptions || isProcessing}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || " "}
+                />
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Controller
+              name="retailPrice"
+              control={control}
+              rules={{ required: "Preço de venda é obrigatório" }}
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  required
+                  label="Preço de Venda"
+                  InputProps={{
+                    inputComponent: CurrencyInputAdapter,
+                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                  }}
+                  disabled={loadingOptions || isProcessing}
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message || " "}
+                />
+              )}
+            />
+          </Grid>
+
+          {!isEditMode && (
+            <Grid item xs={12} sm={6} md={4}>
+              <Controller
+                name="quantity"
+                control={control}
+                rules={{
+                  required: "Quantidade é obrigatória",
+                  min: { value: 1, message: "Quantidade mínima é 1" },
+                }}
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    required
+                    type="number"
+                    label="Quantidade"
+                    InputProps={{ inputProps: { min: 1 } }}
+                    disabled={loadingOptions || isProcessing}
+                    error={!!fieldState.error}
+                    helperText={
+                      fieldState.error?.message ||
+                      "Cada unidade será adicionada como um item separado"
+                    }
                   />
                 )}
               />
             </Grid>
+          )}
+
+          {/* Row 4 */}
+          <Grid item xs={12} sm={6} md={4}>
+            <Controller
+              name="purchaseDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker
+                  label="Data de Compra"
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(date) =>
+                    field.onChange(date ? date.format("YYYY-MM-DD") : null)
+                  }
+                  disabled={loadingOptions || isProcessing}
+                  slotProps={{
+                    textField: { fullWidth: true, helperText: " " },
+                  }}
+                />
+              )}
+            />
           </Grid>
 
+          {/* Error & Info Alerts */}
           {formError && (
-            <Box mt={2}>
+            <Grid item xs={12}>
               <Alert severity="error">{formError}</Alert>
-            </Box>
+            </Grid>
           )}
-
           {autocompleteError && (
-            <Box mt={2}>
+            <Grid item xs={12}>
               <Alert severity="warning">
-                Houve um problema com o autocompletar de nomes. Usando campo de texto
-                simples.
+                Problemas no autocomplete. Usando texto simples.
               </Alert>
-            </Box>
+            </Grid>
           )}
+          <Grid item xs={12}>
+            <Alert severity="info">
+              {isEditMode
+                ? "Modo edição: quantidade sempre = 1."
+                : "Cada unidade é adicionada como item separado (quantidade = 1)."}
+            </Alert>
+          </Grid>
 
-          {!isEditMode ? (
-            <Box mt={2}>
-              <Alert severity="info">
-                Novo paradigma: Cada produto terá quantidade = 1. Se você adicionar um
-                produto com quantidade maior que 1, serão criadas múltiplas linhas
-                idênticas com quantidade = 1 cada.
-              </Alert>
-            </Box>
-          ) : (
-            <Box mt={2}>
-              <Alert severity="info">
-                No modo de edição, a quantidade é sempre 1 por item, seguindo o novo
-                paradigma de estoque.
-              </Alert>
-            </Box>
-          )}
-
-          <Box display="flex" justifyContent="flex-end" mt={3} gap={2}>
+          {/* Submit Button */}
+          <Grid item xs={12} sx={{ textAlign: "right" }}>
             <Button
               type="submit"
               variant="contained"
@@ -537,11 +515,9 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
             >
               {isEditMode ? "Salvar" : "Adicionar Produto"}
             </Button>
-          </Box>
-        </Box>
+          </Grid>
+        </Grid>
       </Paper>
     </LocalizationProvider>
   );
-};
-
-export default ProductForm;
+}
