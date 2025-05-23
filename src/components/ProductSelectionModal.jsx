@@ -103,11 +103,22 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
   };
 
   const handleConfirm = () => {
-    const selectedProducts = selectedRows.map(rowId => {
-      return products.find(product => product.id === rowId);
-    }).filter(Boolean);
-    
-    onProductsSelected(selectedProducts);
+    // Ensure selectedRows is an object with keys for row IDs
+    if (typeof selectedRows === 'object' && !Array.isArray(selectedRows)) {
+      const selectedProducts = Object.keys(selectedRows)
+        .filter(id => selectedRows[id])
+        .map(id => products.find(product => product.id === parseInt(id, 10)))
+        .filter(Boolean);
+      
+      onProductsSelected(selectedProducts);
+    } else {
+      // Fallback for when selectedRows is an array (shouldn't happen with MaterialReactTable)
+      const selectedProducts = (Array.isArray(selectedRows) ? selectedRows : [])
+        .map(rowId => products.find(product => product.id === rowId))
+        .filter(Boolean);
+      
+      onProductsSelected(selectedProducts);
+    }
   };
 
   return (
