@@ -50,11 +50,28 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
     const fetchFormasPagamento = async () => {
       try {
         const response = await authFetch('/opcoes_campo/forma_pagamento');
-        if (response && Array.isArray(response)) {
-          setFormasPagamento(response);
+        if (response && response.success && Array.isArray(response.opcoes)) {
+          setFormasPagamento(response.opcoes);
+        } else {
+          // Fallback default payment methods if API fails
+          setFormasPagamento([
+            { id: 1, value: 'Dinheiro' },
+            { id: 2, value: 'Cartão de Crédito' },
+            { id: 3, value: 'Cartão de Débito' },
+            { id: 4, value: 'PIX' },
+            { id: 5, value: 'Transferência Bancária' }
+          ]);
         }
       } catch (error) {
         console.error('Erro ao buscar formas de pagamento:', error);
+        // Fallback default payment methods if API fails
+        setFormasPagamento([
+          { id: 1, value: 'Dinheiro' },
+          { id: 2, value: 'Cartão de Crédito' },
+          { id: 3, value: 'Cartão de Débito' },
+          { id: 4, value: 'PIX' },
+          { id: 5, value: 'Transferência Bancária' }
+        ]);
       }
     };
 
@@ -209,8 +226,8 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
       <DialogContent dividers>
         <Grid container spacing={3}>
           {/* Cliente Information */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" gutterBottom>
+          <Grid item xs={12} sx={{ borderBottom: '1px solid #eee', pb: 2, mb: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
               Informações do Cliente
             </Typography>
           </Grid>
@@ -283,12 +300,14 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
           </Grid>
           
           {/* Products Section */}
+          <Grid item xs={12} sx={{ borderBottom: '1px solid #eee', pt: 2, pb: 2, mt: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Produtos
+            </Typography>
+          </Grid>
+          
           <Grid item xs={12}>
-            <Divider sx={{ my: 2 }} />
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1">
-                Produtos
-              </Typography>
+            <Box display="flex" justifyContent="flex-end" mb={2}>
               <Button
                 variant="outlined"
                 startIcon={<AddIcon />}
