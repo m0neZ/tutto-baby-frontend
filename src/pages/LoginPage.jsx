@@ -16,14 +16,14 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await login(email, password);
-      window.location.href = '/';
+      window.location.href = '/relatorios'; // Updated to redirect to reports page
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', width: '100%' }}>
+    <Box sx={{ display: 'flex', height: '100vh', width: '100%' }} className="login-page">
       {/* LEFT: Form with Canvas pattern background */}
       <Box
         sx={{
