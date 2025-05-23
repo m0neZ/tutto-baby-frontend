@@ -87,6 +87,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   const [formError, setFormError] = useState("");
   const [supplierError, setSupplierError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [autocompleteError, setAutocompleteError] = useState(false);
 
   // Load suppliers & field options
   useEffect(() => {
@@ -195,9 +196,19 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
 
   // Prepare product names for auto-complete
   const productNames = useMemo(
-    () => Array.isArray(products)
-      ? products.map((p) => ({ label: p.nome, id: p.id_produto }))
-      : [],
+    () => {
+      try {
+        return Array.isArray(products)
+          ? [...new Set(products.map(p => p.nome))]
+              .filter(Boolean)
+              .map(name => ({ label: name }))
+          : [];
+      } catch (err) {
+        console.error("Error preparing product names:", err);
+        setAutocompleteError(true);
+        return [];
+      }
+    },
     [products]
   );
 
@@ -217,14 +228,59 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
             rules={{ required: "Nome é obrigatório" }}
             render={({ field, fieldState }) => (
               <FormControl fullWidth variant="outlined" error={!!fieldState.error}>
-                <TextField
-                  {...field}
-                  label="Nome do Produto"
-                  fullWidth
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message || " "}
-                  disabled={loadingOptions || isProcessing}
-                />
+                {autocompleteError ? (
+                  // Fallback to regular TextField if autocomplete has errors
+                  <TextField
+                    {...field}
+                    label="Nome do Produto"
+                    fullWidth
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message || "Autocomplete indisponível"}
+                    disabled={loadingOptions || isProcessing}
+                  />
+                ) : (
+                  <Autocomplete
+                    options={productNames}
+                    loading={loadingOptions}
+                    disabled={loadingOptions || isProcessing}
+                    freeSolo
+                    value={field.value}
+                    onChange={(event, newValue) => {
+                      try {
+                        field.onChange(typeof newValue === 'string' ? newValue : newValue?.label || '');
+                      } catch (err) {
+                        console.error("Error in autocomplete onChange:", err);
+                        field.onChange(field.value); // Keep current value on error
+                        setAutocompleteError(true);
+                      }
+                    }}
+                    onInputChange={(event, newInputValue) => {
+                      try {
+                        field.onChange(newInputValue);
+                      } catch (err) {
+                        console.error("Error in autocomplete onInputChange:", err);
+                        setAutocompleteError(true);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Nome do Produto"
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message || " "}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingOptions ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                )}
               </FormControl>
             )}
           />
@@ -401,6 +457,7 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
         </Box>
 
         {formError && <Alert severity="error">{formError}</Alert>}
+        {autocompleteError && <Alert severity="warning">Houve um problema com o autocompletar de nomes. Usando campo de texto simples.</Alert>}
 
         {!isEditMode && (
           <Alert severity="info">
