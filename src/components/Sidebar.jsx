@@ -20,10 +20,10 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import logo from '../assets/logo.png';
 
 const navItems = [
-  { name: 'Estoque', path: '/estoque', icon: <Inventory2OutlinedIcon /> },
+  { name: 'Relatórios', path: '/relatorios', icon: <BarChartOutlinedIcon /> },
   { name: 'Vendas', path: '/vendas', icon: <ShoppingCartOutlinedIcon /> },
   { name: 'Clientes', path: '/clientes', icon: <PeopleOutlineIcon /> },
-  { name: 'Relatórios', path: '/relatorios', icon: <BarChartOutlinedIcon /> },
+  { name: 'Estoque', path: '/estoque', icon: <Inventory2OutlinedIcon /> },
   { name: 'Admin', path: '/admin', icon: <SettingsOutlinedIcon /> },
 ];
 
