@@ -367,75 +367,72 @@ export default function VendasPage() {
           Vendas
         </Typography>
         
-        {/* Move buttons to inside the table like in EstoquePage */}
-          
-          <FormControlLabel
-            control={
-              <Switch
-                checked={showAllSales}
-                onChange={(e) => setShowAllSales(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Mostrar vendas canceladas"
-          />
-        </Box>
-        
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
-        
-        <Paper elevation={2}>
-          <MaterialReactTable
-            columns={columns}
-            data={filteredVendas}
-            localization={MRT_Localization_PT_BR}
-            enableGrouping
-            enableColumnDragging={false}
-            enableRowVirtualization
-            muiTableContainerProps={{ sx: { maxHeight: '600px' } }}
-            initialState={{
-              density: 'compact',
-              pagination: { pageSize: 50 },
-              sorting: [{ id: 'data_venda', desc: true }],
-              columnVisibility: {
-                desconto_valor: false,
-                data_venda: false,
-                cliente_id: false,
-              },
-            }}
-            enableRowSelection={false}
-            enableColumnResizing
-            enablePinning
-            enableColumnFilters
-            enableGlobalFilter
-            enableColumnActions
-            enableRowActions={false}
-            renderTopToolbarCustomActions={() => (
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  sx={{ textTransform: 'none' }}
-                  onClick={() => {
-                    setEditData(null);
-                    setIsSaleFormOpen(true);
-                  }}
-                >
-                  + Venda
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<SwapHorizIcon />}
-                  onClick={() => setIsExchangeFormOpen(true)}
-                >
-                  Troca
-                </Button>
-              </Box>
-            )}
-          />
-        </Paper>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showAllSales}
+              onChange={(e) => setShowAllSales(e.target.checked)}
+              color="primary"
+            />
+          }
+          label="Mostrar vendas canceladas"
+        />
       </Box>
+      
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+        
+      <Paper elevation={2}>
+        <MaterialReactTable
+          columns={columns}
+          data={filteredVendas}
+          localization={MRT_Localization_PT_BR}
+          enableGrouping
+          enableColumnDragging={false}
+          enableRowVirtualization
+          muiTableContainerProps={{ sx: { maxHeight: '600px' } }}
+          initialState={{
+            density: 'compact',
+            pagination: { pageSize: 50 },
+            sorting: [{ id: 'data_venda', desc: true }],
+            columnVisibility: {
+              desconto_valor: false,
+              data_venda: false,
+              cliente_id: false,
+            },
+          }}
+          enableRowSelection={false}
+          enableColumnResizing
+          enablePinning
+          enableColumnFilters
+          enableGlobalFilter
+          enableColumnActions
+          enableRowActions={false}
+          renderTopToolbarCustomActions={() => (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                sx={{ textTransform: 'none' }}
+                onClick={() => {
+                  setEditData(null);
+                  setIsSaleFormOpen(true);
+                }}
+              >
+                + Venda
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<SwapHorizIcon />}
+                onClick={() => setIsExchangeFormOpen(true)}
+              >
+                Troca
+              </Button>
+            </Box>
+          )}
+        />
+      </Paper>
       
       {/* Sale Form Modal */}
       <SaleForm
