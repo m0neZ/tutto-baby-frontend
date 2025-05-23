@@ -19,7 +19,6 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Paper,
-  Divider,
   Box
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -217,56 +216,82 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
-      PaperProps={{ sx: { maxHeight: '90vh' } }}
+      PaperProps={{ sx: { maxHeight: '90vh', borderRadius: '12px' } }}
     >
-      <DialogTitle>
+      <DialogTitle sx={{ 
+        fontSize: '1.5rem', 
+        fontWeight: 600, 
+        pb: 2, 
+        borderBottom: '1px solid #eee'
+      }}>
         {editData ? 'Editar Venda' : 'Nova Venda'}
       </DialogTitle>
       
-      <DialogContent dividers>
+      <DialogContent sx={{ p: 4 }}>
         <Grid container spacing={3}>
-          {/* Cliente Information */}
-          <Grid item xs={12} sx={{ borderBottom: '1px solid #eee', pb: 2, mb: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              Informações do Cliente
-            </Typography>
-          </Grid>
-          
+          {/* Client Information */}
           <Grid item xs={12} sm={6}>
+            <Typography variant="body1" fontWeight={500} mb={1}>
+              Nome <span style={{ color: '#d32f2f' }}>*</span>
+            </Typography>
             <TextField
               name="nome"
-              label="Nome"
               value={formData.nome}
               onChange={handleChange}
               fullWidth
               error={!!errors.nome}
               helperText={errors.nome}
               required
+              variant="outlined"
+              placeholder="Nome do cliente"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
             />
           </Grid>
           
           <Grid item xs={12} sm={6}>
+            <Typography variant="body1" fontWeight={500} mb={1}>
+              Sobrenome <span style={{ color: '#d32f2f' }}>*</span>
+            </Typography>
             <TextField
               name="sobrenome"
-              label="Sobrenome"
               value={formData.sobrenome}
               onChange={handleChange}
               fullWidth
               error={!!errors.sobrenome}
               helperText={errors.sobrenome}
               required
+              variant="outlined"
+              placeholder="Sobrenome do cliente"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px'
+                }
+              }}
             />
           </Grid>
           
           <Grid item xs={12} sm={6}>
+            <Typography variant="body1" fontWeight={500} mb={1}>
+              Forma de Pagamento <span style={{ color: '#d32f2f' }}>*</span>
+            </Typography>
             <FormControl fullWidth error={!!errors.forma_pagamento} required>
-              <InputLabel>Forma de Pagamento</InputLabel>
               <Select
                 name="forma_pagamento"
                 value={formData.forma_pagamento}
                 onChange={handleChange}
-                label="Forma de Pagamento"
+                displayEmpty
+                sx={{ 
+                  borderRadius: '8px',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: errors.forma_pagamento ? '#d32f2f' : undefined
+                  }
+                }}
               >
+                <MenuItem value="" disabled>Selecione uma forma de pagamento</MenuItem>
                 {formasPagamento.map((option) => (
                   <MenuItem key={option.id} value={option.value}>
                     {option.value}
@@ -274,7 +299,7 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
                 ))}
               </Select>
               {errors.forma_pagamento && (
-                <Typography variant="caption" color="error">
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
                   {errors.forma_pagamento}
                 </Typography>
               )}
@@ -282,9 +307,11 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
           </Grid>
           
           <Grid item xs={12} sm={6}>
+            <Typography variant="body1" fontWeight={500} mb={1}>
+              Data da Venda <span style={{ color: '#d32f2f' }}>*</span>
+            </Typography>
             <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
               <DatePicker
-                label="Data da Venda"
                 value={formData.data_venda}
                 onChange={handleDateChange}
                 slotProps={{
@@ -292,7 +319,12 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
                     fullWidth: true,
                     required: true,
                     error: !!errors.data_venda,
-                    helperText: errors.data_venda
+                    helperText: errors.data_venda,
+                    sx: { 
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px'
+                      }
+                    }
                   }
                 }}
               />
@@ -300,19 +332,29 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
           </Grid>
           
           {/* Products Section */}
-          <Grid item xs={12} sx={{ borderBottom: '1px solid #eee', pt: 2, pb: 2, mt: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Produtos
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="flex-end" mb={2}>
+          <Grid item xs={12} sx={{ mt: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="body1" fontWeight={500}>
+                Produtos
+              </Typography>
               <Button
                 variant="outlined"
                 startIcon={<AddIcon />}
                 onClick={handleAddProduct}
                 color="primary"
+                sx={{ 
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  px: 2,
+                  py: 1,
+                  backgroundColor: '#f0f9f0',
+                  color: '#2e7d32',
+                  borderColor: '#2e7d32',
+                  '&:hover': {
+                    backgroundColor: '#e0f2e0',
+                    borderColor: '#2e7d32'
+                  }
+                }}
               >
                 Adicionar Produto
               </Button>
@@ -325,24 +367,38 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
             )}
             
             {formData.produtos.length > 0 ? (
-              <Paper variant="outlined" sx={{ maxHeight: '300px', overflow: 'auto' }}>
-                <List dense>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  maxHeight: '300px', 
+                  overflow: 'auto',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0'
+                }}
+              >
+                <List>
                   {formData.produtos.map((product, index) => (
                     <ListItem key={index} divider={index < formData.produtos.length - 1}>
                       <ListItemText
-                        primary={product.nome}
+                        primary={
+                          <Typography variant="body1" fontWeight={500}>
+                            {product.nome}
+                          </Typography>
+                        }
                         secondary={
                           <>
                             <Typography component="span" variant="body2" color="text.primary">
                               {`${product.tamanho} | ${product.cor_estampa}`}
                             </Typography>
                             <br />
-                            {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
+                            <Typography component="span" variant="body2" color="primary" fontWeight={500}>
+                              {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
+                            </Typography>
                           </>
                         }
                       />
                       <ListItemSecondaryAction>
-                        <IconButton edge="end" onClick={() => handleRemoveProduct(index)}>
+                        <IconButton edge="end" onClick={() => handleRemoveProduct(index)} color="error">
                           <DeleteIcon />
                         </IconButton>
                       </ListItemSecondaryAction>
@@ -351,14 +407,26 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
                 </List>
               </Paper>
             ) : (
-              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                Nenhum produto adicionado
-              </Typography>
+              <Box 
+                sx={{ 
+                  p: 4, 
+                  border: '1px dashed #e0e0e0', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#fafafa'
+                }}
+              >
+                <Typography variant="body1" color="text.secondary" align="center">
+                  Nenhum produto adicionado
+                </Typography>
+              </Box>
             )}
             
             {formData.produtos.length > 0 && (
-              <Box mt={2} display="flex" justifyContent="flex-end">
-                <Typography variant="subtitle1">
+              <Box mt={3} display="flex" justifyContent="flex-end">
+                <Typography variant="h6" fontWeight={600} color="primary">
                   Total: R$ {calculateTotal().toFixed(2).replace('.', ',')}
                 </Typography>
               </Box>
@@ -367,8 +435,17 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
         </Grid>
       </DialogContent>
       
-      <DialogActions>
-        <Button onClick={onClose} color="inherit">
+      <DialogActions sx={{ p: 3, borderTop: '1px solid #eee', justifyContent: 'flex-end' }}>
+        <Button 
+          onClick={onClose} 
+          sx={{ 
+            px: 3, 
+            py: 1, 
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 500
+          }}
+        >
           Cancelar
         </Button>
         <Button 
@@ -376,6 +453,13 @@ const SaleForm = ({ open, onClose, onSave, editData = null }) => {
           color="primary" 
           variant="contained"
           disabled={isLoading}
+          sx={{ 
+            px: 3, 
+            py: 1, 
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 500
+          }}
         >
           {isLoading ? 'Salvando...' : (editData ? 'Salvar' : 'Adicionar Venda')}
         </Button>
