@@ -12,7 +12,12 @@ import {
   Tooltip,
   FormControlLabel,
   Switch,
-  Paper
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { MaterialReactTable } from 'material-react-table';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
@@ -485,12 +490,3 @@ export default function VendasPage() {
     </Container>
   );
 }
-
-// Import Dialog components at the top
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-} from '@mui/material';
