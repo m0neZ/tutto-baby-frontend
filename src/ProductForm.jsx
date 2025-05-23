@@ -9,7 +9,7 @@ import {
   authFetch
 } from "./api";
 import {
-  Paper,
+  Box,
   Grid,
   Typography,
   TextField,
@@ -41,7 +41,7 @@ const CurrencyInputAdapter = forwardRef(function (props, ref) {
         onChange?.({ target: { name: props.name, value: value ?? "" } });
       }}
       allowNegativeValue={false}
-      decimalSeparator=","
+      decimalSeparator=","  
       groupSeparator="."
       decimalsLimit={2}
       prefix=""
@@ -54,8 +54,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
     handleSubmit,
     control,
     reset,
-    formState: { isSubmitting },
-    watch,
+    formState: { isSubmitting }
   } = useForm({
     defaultValues: initialData
       ? {
@@ -79,7 +78,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
           retailPrice: "",
           quantity: "1",
           purchaseDate: dayjs().format("YYYY-MM-DD"),
-        },
+        }
   });
 
   const [products, setProducts] = useState([]);
@@ -93,6 +92,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
   const [autocompleteError, setAutocompleteError] = useState(false);
 
   // Load suppliers & field options
+daniel
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -175,7 +175,6 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
     }
   };
 
-  // Prepare autocomplete options
   const productNames = useMemo(() => {
     try {
       return Array.isArray(products)
@@ -192,21 +191,17 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Paper
+      <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
-        elevation={3}
         sx={{
-          maxWidth: 800,
-          mx: "auto",
-          mt: 2,
-          p: 4,
-          borderRadius: 2,
+          width: "100%",
+          display: "grid",
+          rowGap: 24,
         }}
         noValidate
       >
         <Grid container spacing={3}>
-          {/* Only show “Editar Produto” when in edit mode */}
           {isEditMode && (
             <Grid item xs={12}>
               <Typography variant="h6">Editar Produto</Typography>
@@ -266,7 +261,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} md={3}>
             <Controller
               name="gender"
               control={control}
@@ -282,7 +277,9 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
                     label="Sexo"
                     disabled={loadingOptions || isProcessing}
                   >
-                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    <MenuItem value="">
+                      <em>Selecione...</em>
+                    </MenuItem>
                     <MenuItem value="Masculino">Masculino</MenuItem>
                     <MenuItem value="Feminino">Feminino</MenuItem>
                     <MenuItem value="Unissex">Unissex</MenuItem>
@@ -293,7 +290,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} md={3}>
             <Controller
               name="size"
               control={control}
@@ -309,7 +306,9 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
                     label="Tamanho"
                     disabled={loadingOptions || isProcessing}
                   >
-                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    <MenuItem value="">
+                      <em>Selecione...</em>
+                    </MenuItem>
                     {sizeOptions.map((o) => (
                       <MenuItem key={o.id} value={o.value}>
                         {o.value}
@@ -323,7 +322,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
           </Grid>
 
           {/* Row 2 */}
-          <Grid item xs={12} sm={6} md={6}>
+          <Grid item xs={12} sm={6}>
             <Controller
               name="colorPrint"
               control={control}
@@ -339,7 +338,9 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
                     label="Cor/Estampa"
                     disabled={loadingOptions || isProcessing}
                   >
-                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    <MenuItem value="">
+                      <em>Selecione...</em>
+                    </MenuItem>
                     {colorOptions.map((o) => (
                       <MenuItem key={o.id} value={o.value}>
                         {o.value}
@@ -352,7 +353,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={6}>
+          <Grid item xs={12} sm={6}>
             <Controller
               name="supplierId"
               control={control}
@@ -368,7 +369,9 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
                     label="Fornecedor"
                     disabled={loadingOptions || isProcessing}
                   >
-                    <MenuItem value=""><em>Selecione...</em></MenuItem>
+                    <MenuItem value="">
+                      <em>Selecione...</em>
+                    </MenuItem>
                     {suppliers.map((s) => (
                       <MenuItem key={s.id} value={String(s.id)}>
                         {s.nome}
@@ -384,7 +387,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
           </Grid>
 
           {/* Row 3 */}
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Controller
               name="cost"
               control={control}
@@ -407,7 +410,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Controller
               name="retailPrice"
               control={control}
@@ -431,7 +434,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
           </Grid>
 
           {!isEditMode && (
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid item xs={12} sm={4}>
               <Controller
                 name="quantity"
                 control={control}
@@ -460,7 +463,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
           )}
 
           {/* Row 4 */}
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Controller
               name="purchaseDate"
               control={control}
@@ -472,9 +475,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
                     field.onChange(date ? date.format("YYYY-MM-DD") : null)
                   }
                   disabled={loadingOptions || isProcessing}
-                  slotProps={{
-                    textField: { fullWidth: true, helperText: " " },
-                  }}
+                  slotProps={{ textField: { fullWidth: true, helperText: " " } }}
                 />
               )}
             />
@@ -517,7 +518,7 @@ export default function ProductForm({ onProductAdded, initialData, isEditMode })
             </Button>
           </Grid>
         </Grid>
-      </Paper>
+      </Box>
     </LocalizationProvider>
   );
 }
