@@ -8,8 +8,6 @@ import {
   Button,
   TextField,
   Box,
-  Checkbox,
-  FormControlLabel,
   CircularProgress,
   Alert,
   Typography
@@ -22,12 +20,14 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [rowSelection, setRowSelection] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (open) {
       fetchProducts();
+      // Reset selection when modal opens
+      setRowSelection({});
     }
   }, [open]);
 
@@ -94,32 +94,27 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
     );
   }, [products, searchTerm]);
 
-  const handleRowSelectionChange = (updaterOrValue) => {
-    if (typeof updaterOrValue === 'function') {
-      setSelectedRows(updaterOrValue(selectedRows));
+  const handleConfirm = () => {
+    // Get selected products from rowSelection object
+    const selectedProducts = Object.keys(rowSelection)
+      .filter(key => rowSelection[key])
+      .map(key => {
+        // Find the product by its ID in the products array
+        const id = parseInt(key, 10);
+        return products.find(product => product.id === id);
+      })
+      .filter(Boolean); // Remove any undefined values
+    
+    if (selectedProducts.length > 0) {
+      onProductsSelected(selectedProducts);
     } else {
-      setSelectedRows(updaterOrValue);
+      // If no products selected, just close without action
+      onClose();
     }
   };
 
-  const handleConfirm = () => {
-    // Ensure selectedRows is an object with keys for row IDs
-    if (typeof selectedRows === 'object' && !Array.isArray(selectedRows)) {
-      const selectedProducts = Object.keys(selectedRows)
-        .filter(id => selectedRows[id])
-        .map(id => products.find(product => product.id === parseInt(id, 10)))
-        .filter(Boolean);
-      
-      onProductsSelected(selectedProducts);
-    } else {
-      // Fallback for when selectedRows is an array (shouldn't happen with MaterialReactTable)
-      const selectedProducts = (Array.isArray(selectedRows) ? selectedRows : [])
-        .map(rowId => products.find(product => product.id === rowId))
-        .filter(Boolean);
-      
-      onProductsSelected(selectedProducts);
-    }
-  };
+  // Count selected products
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length;
 
   return (
     <Dialog 
@@ -127,21 +122,35 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
-      PaperProps={{ sx: { maxHeight: '90vh' } }}
+      PaperProps={{ sx: { maxHeight: '90vh', borderRadius: '12px' } }}
     >
-      <DialogTitle>Selecionar Produtos</DialogTitle>
+      <DialogTitle sx={{ 
+        fontSize: '1.5rem', 
+        fontWeight: 600, 
+        pb: 2, 
+        borderBottom: '1px solid #eee'
+      }}>
+        Selecionar Produtos
+      </DialogTitle>
       
-      <DialogContent dividers>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <DialogContent sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{error}</Alert>}
         
-        <Box mb={2}>
+        <Box mb={3}>
+          <Typography variant="body1" fontWeight={500} mb={1}>
+            Buscar produtos
+          </Typography>
           <TextField
-            label="Buscar produtos"
             variant="outlined"
             fullWidth
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Nome, tamanho ou cor/estampa"
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px'
+              }
+            }}
           />
         </Box>
         
@@ -152,49 +161,89 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
         ) : (
           <>
             {filteredProducts.length === 0 ? (
-              <Typography align="center" color="text.secondary" py={4}>
-                Nenhum produto disponível em estoque
-              </Typography>
+              <Box 
+                sx={{ 
+                  p: 4, 
+                  border: '1px dashed #e0e0e0', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#fafafa'
+                }}
+              >
+                <Typography variant="body1" color="text.secondary" align="center">
+                  Nenhum produto disponível em estoque
+                </Typography>
+              </Box>
             ) : (
               <MaterialReactTable
                 columns={columns}
                 data={filteredProducts}
                 localization={MRT_Localization_PT_BR}
                 enableRowSelection
-                onRowSelectionChange={handleRowSelectionChange}
-                state={{ rowSelection: selectedRows }}
+                state={{ rowSelection }}
+                onRowSelectionChange={setRowSelection}
                 initialState={{
                   density: 'compact',
-                  pagination: { pageSize: 10 },
+                  pagination: { pageSize: 10, pageIndex: 0 },
                 }}
                 muiTableBodyRowProps={{ hover: true }}
                 enableColumnFilters={false}
                 enableGlobalFilter={false}
                 enableTopToolbar={false}
+                muiTablePaperProps={{
+                  sx: {
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0',
+                  },
+                }}
+                muiTableHeadProps={{
+                  sx: {
+                    '& .MuiTableCell-root': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                  },
+                }}
               />
             )}
           </>
         )}
       </DialogContent>
       
-      <DialogActions>
-        <Box display="flex" justifyContent="space-between" width="100%" px={2} alignItems="center">
-          <Typography variant="body2">
-            {selectedRows.length} produto(s) selecionado(s)
-          </Typography>
-          <Box>
-            <Button onClick={onClose} color="inherit">
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleConfirm} 
-              color="primary" 
-              variant="contained"
-              disabled={selectedRows.length === 0 || loading}
-            >
-              Confirmar
-            </Button>
-          </Box>
+      <DialogActions sx={{ p: 3, borderTop: '1px solid #eee', justifyContent: 'space-between' }}>
+        <Typography variant="body2" color="text.secondary">
+          {selectedCount} produto(s) selecionado(s)
+        </Typography>
+        <Box>
+          <Button 
+            onClick={onClose} 
+            sx={{ 
+              px: 3, 
+              py: 1, 
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              mr: 1
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirm} 
+            color="primary" 
+            variant="contained"
+            disabled={selectedCount === 0 || loading}
+            sx={{ 
+              px: 3, 
+              py: 1, 
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500
+            }}
+          >
+            Confirmar
+          </Button>
         </Box>
       </DialogActions>
     </Dialog>
