@@ -184,6 +184,7 @@ export default function VendasPage() {
         size: 100,
         enableHiding: true,
         hidden: true,
+        visibleInShowHideMenu: false,
       },
       {
         accessorKey: 'produto_nome',
@@ -366,29 +367,7 @@ export default function VendasPage() {
           Vendas
         </Typography>
         
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setEditData(null);
-                setIsSaleFormOpen(true);
-              }}
-            >
-              + Venda
-            </Button>
-            
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<SwapHorizIcon />}
-              onClick={() => setIsExchangeFormOpen(true)}
-            >
-              Troca
-            </Button>
-          </Box>
+        {/* Move buttons to inside the table like in EstoquePage */}
           
           <FormControlLabel
             control={
@@ -421,6 +400,7 @@ export default function VendasPage() {
               columnVisibility: {
                 desconto_valor: false,
                 data_venda: false,
+                cliente_id: false,
               },
             }}
             enableRowSelection={false}
@@ -430,6 +410,29 @@ export default function VendasPage() {
             enableGlobalFilter
             enableColumnActions
             enableRowActions={false}
+            renderTopToolbarCustomActions={() => (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  sx={{ textTransform: 'none' }}
+                  onClick={() => {
+                    setEditData(null);
+                    setIsSaleFormOpen(true);
+                  }}
+                >
+                  + Venda
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<SwapHorizIcon />}
+                  onClick={() => setIsExchangeFormOpen(true)}
+                >
+                  Troca
+                </Button>
+              </Box>
+            )}
           />
         </Paper>
       </Box>
