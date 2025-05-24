@@ -1,10 +1,6 @@
 // src/components/ExchangeForm.jsx
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   TextField,
   Grid,
@@ -16,15 +12,20 @@ import {
   ListItemSecondaryAction,
   Paper,
   Box,
-  Alert
+  Alert,
+  Dialog,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { authFetch } from '../api';
 import ProductSelectionModal from './ProductSelectionModal';
 import SaleSelectionModal from './SaleSelectionModal';
+import { useTheme } from '@mui/material/styles';
 
 const ExchangeForm = ({ open, onClose, onSave }) => {
+  const theme = useTheme();
   const [formData, setFormData] = useState({
     nome: '',
     sobrenome: '',
@@ -186,354 +187,396 @@ const ExchangeForm = ({ open, onClose, onSave }) => {
       fullWidth
       PaperProps={{ sx: { maxHeight: '90vh', borderRadius: '12px' } }}
     >
-      <DialogTitle sx={{ 
-        fontSize: '1.5rem', 
-        fontWeight: 600, 
-        pb: 2, 
-        borderBottom: '1px solid #eee'
-      }}>
-        Registrar Troca
-      </DialogTitle>
-      
       <DialogContent sx={{ p: 4 }}>
-        <Grid container spacing={3}>
-          {/* Original Sale Selection */}
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="body1" fontWeight={500}>
-                Venda Original <span style={{ color: '#d32f2f' }}>*</span>
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={() => setIsSaleModalOpen(true)}
-                color="primary"
-                sx={{ 
-                  borderRadius: '8px',
-                  textTransform: 'none',
-                  px: 2,
-                  py: 1
-                }}
-              >
-                {formData.venda_original ? 'Trocar Venda' : 'Selecionar Venda'}
-              </Button>
+        <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
+          <Box sx={{ mb: 4 }}>
+            <h2 style={{ 
+              fontSize: '1.5rem', 
+              fontWeight: '600', 
+              margin: 0, 
+              color: '#111827' 
+            }}>
+              Registrar Troca
+            </h2>
+          </Box>
+
+          <Box
+            component="form"
+            sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+          >
+            {/* Original Sale Selection */}
+            <Box>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151'
+                }}>
+                  Venda Original <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsSaleModalOpen(true)}
+                  sx={{ 
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 1,
+                    borderColor: theme.palette.accent.main,
+                    color: theme.palette.accent.main,
+                    '&:hover': {
+                      borderColor: theme.palette.accent.dark,
+                      backgroundColor: 'rgba(189, 224, 254, 0.08)'
+                    }
+                  }}
+                >
+                  {formData.venda_original ? 'Trocar Venda' : 'Selecionar Venda'}
+                </Button>
+              </Box>
+              
+              {errors.venda_original && (
+                <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>
+                  {errors.venda_original}
+                </Alert>
+              )}
+              
+              {formData.venda_original ? (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    mb: 3, 
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0'
+                  }}
+                >
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Venda #{formData.venda_original.id}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Cliente: {formData.venda_original.cliente_nome} {formData.venda_original.cliente_sobrenome}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Data: {new Date(formData.venda_original.data_venda).toLocaleDateString('pt-BR')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Valor: R$ {parseFloat(formData.venda_original.valor_total || 0).toFixed(2).replace('.', ',')}
+                  </Typography>
+                </Paper>
+              ) : (
+                <Box 
+                  sx={{ 
+                    p: 3, 
+                    mb: 3,
+                    border: '1px dashed #e0e0e0', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  <Typography variant="body1" color="text.secondary" align="center">
+                    Nenhuma venda selecionada
+                  </Typography>
+                </Box>
+              )}
             </Box>
             
-            {errors.venda_original && (
-              <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>
-                {errors.venda_original}
-              </Alert>
-            )}
-            
-            {formData.venda_original ? (
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  mb: 3, 
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0'
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Venda #{formData.venda_original.id}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  Cliente: {formData.venda_original.cliente_nome} {formData.venda_original.cliente_sobrenome}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Data: {new Date(formData.venda_original.data_venda).toLocaleDateString('pt-BR')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Valor: R$ {parseFloat(formData.venda_original.valor_total || 0).toFixed(2).replace('.', ',')}
-                </Typography>
-              </Paper>
-            ) : (
-              <Box 
-                sx={{ 
-                  p: 3, 
-                  mb: 3,
-                  border: '1px dashed #e0e0e0', 
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fafafa'
-                }}
-              >
-                <Typography variant="body1" color="text.secondary" align="center">
-                  Nenhuma venda selecionada
-                </Typography>
-              </Box>
-            )}
-          </Grid>
-          
-          {/* Customer Information */}
-          <Grid item xs={12}>
-            <Typography variant="body1" fontWeight={500} mb={1}>
-              Informações do Cliente que está Trocando
-            </Typography>
-            <Typography variant="caption" color="text.secondary" paragraph>
-              Pode ser diferente do cliente original (em caso de presente, por exemplo)
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body1" fontWeight={500} mb={1}>
-              Nome <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField
-              name="nome"
-              value={formData.nome}
-              onChange={handleChange}
-              fullWidth
-              error={!!errors.nome}
-              helperText={errors.nome}
-              required
-              variant="outlined"
-              placeholder="Nome do cliente"
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px'
-                }
-              }}
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
-            <Typography variant="body1" fontWeight={500} mb={1}>
-              Sobrenome <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            <TextField
-              name="sobrenome"
-              value={formData.sobrenome}
-              onChange={handleChange}
-              fullWidth
-              error={!!errors.sobrenome}
-              helperText={errors.sobrenome}
-              required
-              variant="outlined"
-              placeholder="Sobrenome do cliente"
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px'
-                }
-              }}
-            />
-          </Grid>
-          
-          {/* Returned Products Section */}
-          <Grid item xs={12} sx={{ mt: 2 }}>
-            <Typography variant="body1" fontWeight={500} mb={1}>
-              Produtos Devolvidos <span style={{ color: '#d32f2f' }}>*</span>
-            </Typography>
-            
-            {errors.produtos_devolvidos && (
-              <Typography variant="caption" color="error" paragraph>
-                {errors.produtos_devolvidos}
+            {/* Customer Information */}
+            <Box>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '0.875rem', 
+                fontWeight: '500', 
+                color: '#374151',
+                marginBottom: '0.5rem'
+              }}>
+                Informações do Cliente que está Trocando
+              </label>
+              <Typography variant="caption" color="text.secondary" paragraph>
+                Pode ser diferente do cliente original (em caso de presente, por exemplo)
               </Typography>
-            )}
-            
-            {formData.produtos_devolvidos.length > 0 ? (
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  maxHeight: '200px', 
-                  overflow: 'auto', 
-                  mb: 3,
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0'
-                }}
-              >
-                <List>
-                  {formData.produtos_devolvidos.map((product, index) => (
-                    <ListItem key={index} divider={index < formData.produtos_devolvidos.length - 1}>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body1" fontWeight={500}>
-                            {product.nome}
-                          </Typography>
-                        }
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {`${product.tamanho} | ${product.cor_estampa}`}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="body2" color="primary" fontWeight={500}>
-                              {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
-                            </Typography>
-                          </>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton edge="end" onClick={() => handleRemoveReturnedProduct(index)} color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            ) : (
-              <Box 
-                sx={{ 
-                  p: 3, 
-                  mb: 3,
-                  border: '1px dashed #e0e0e0', 
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fafafa'
-                }}
-              >
-                <Typography variant="body1" color="text.secondary" align="center">
-                  Nenhum produto selecionado para devolução
-                </Typography>
+              
+              <Box sx={{ 
+                display: "grid", 
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+                gap: 2,
+                mt: 1
+              }}>
+                <Box>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Nome <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <TextField
+                    name="nome"
+                    value={formData.nome}
+                    onChange={handleChange}
+                    fullWidth
+                    error={!!errors.nome}
+                    helperText={errors.nome}
+                    required
+                    variant="outlined"
+                    placeholder="Nome do cliente"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: theme.palette.accent.main },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.accent.main },
+                      }
+                    }}
+                  />
+                </Box>
+                
+                <Box>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Sobrenome <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <TextField
+                    name="sobrenome"
+                    value={formData.sobrenome}
+                    onChange={handleChange}
+                    fullWidth
+                    error={!!errors.sobrenome}
+                    helperText={errors.sobrenome}
+                    required
+                    variant="outlined"
+                    placeholder="Sobrenome do cliente"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: theme.palette.accent.main },
+                        '&.Mui-focused fieldset': { borderColor: theme.palette.accent.main },
+                      }
+                    }}
+                  />
+                </Box>
               </Box>
-            )}
-          </Grid>
-          
-          {/* New Products Section */}
-          <Grid item xs={12}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="body1" fontWeight={500}>
-                Produtos Novos <span style={{ color: '#d32f2f' }}>*</span>
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleAddNewProduct}
-                color="primary"
-                sx={{ 
-                  borderRadius: '8px',
-                  textTransform: 'none',
-                  px: 2,
-                  py: 1,
-                  backgroundColor: '#f0f9f0',
-                  color: '#2e7d32',
-                  borderColor: '#2e7d32',
-                  '&:hover': {
-                    backgroundColor: '#e0f2e0',
-                    borderColor: '#2e7d32'
-                  }
-                }}
-              >
-                Adicionar Produto
-              </Button>
             </Box>
             
-            {errors.produtos_novos && (
-              <Typography variant="caption" color="error" paragraph>
-                {errors.produtos_novos}
-              </Typography>
-            )}
-            
-            {formData.produtos_novos.length > 0 ? (
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  maxHeight: '200px', 
-                  overflow: 'auto',
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0'
-                }}
-              >
-                <List>
-                  {formData.produtos_novos.map((product, index) => (
-                    <ListItem key={index} divider={index < formData.produtos_novos.length - 1}>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body1" fontWeight={500}>
-                            {product.nome}
-                          </Typography>
-                        }
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {`${product.tamanho} | ${product.cor_estampa}`}
-                            </Typography>
-                            <br />
-                            <Typography component="span" variant="body2" color="primary" fontWeight={500}>
-                              {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
-                            </Typography>
-                          </>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton edge="end" onClick={() => handleRemoveNewProduct(index)} color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              </Paper>
-            ) : (
-              <Box 
-                sx={{ 
-                  p: 3, 
-                  border: '1px dashed #e0e0e0', 
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fafafa'
-                }}
-              >
-                <Typography variant="body1" color="text.secondary" align="center">
-                  Nenhum produto novo selecionado
+            {/* Returned Products Section */}
+            <Box>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '0.875rem', 
+                fontWeight: '500', 
+                color: '#374151',
+                marginBottom: '0.25rem'
+              }}>
+                Produtos Devolvidos <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              
+              {errors.produtos_devolvidos && (
+                <Typography variant="caption" color="error" paragraph>
+                  {errors.produtos_devolvidos}
                 </Typography>
+              )}
+              
+              {formData.produtos_devolvidos.length > 0 ? (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    maxHeight: '200px', 
+                    overflow: 'auto', 
+                    mb: 3,
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0'
+                  }}
+                >
+                  <List>
+                    {formData.produtos_devolvidos.map((product, index) => (
+                      <ListItem key={index} divider={index < formData.produtos_devolvidos.length - 1}>
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" fontWeight={500}>
+                              {product.nome}
+                            </Typography>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.primary">
+                                {`${product.tamanho} | ${product.cor_estampa}`}
+                              </Typography>
+                              <br />
+                              <Typography component="span" variant="body2" color="primary" fontWeight={500}>
+                                {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
+                              </Typography>
+                            </>
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton edge="end" onClick={() => handleRemoveReturnedProduct(index)} color="error">
+                            <DeleteIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              ) : (
+                <Box 
+                  sx={{ 
+                    p: 3, 
+                    mb: 3,
+                    border: '1px dashed #e0e0e0', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  <Typography variant="body1" color="text.secondary" align="center">
+                    Nenhum produto selecionado para devolução
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+            
+            {/* New Products Section */}
+            <Box>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151'
+                }}>
+                  Produtos Novos <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddNewProduct}
+                  sx={{ 
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    px: 2,
+                    py: 1,
+                    backgroundColor: theme.palette.accent.main,
+                    color: theme.palette.accent.contrastText,
+                    '&:hover': {
+                      backgroundColor: theme.palette.accent.dark,
+                    }
+                  }}
+                >
+                  Adicionar Produto
+                </Button>
               </Box>
-            )}
-          </Grid>
-          
-          {/* Price Difference */}
-          {(formData.produtos_devolvidos.length > 0 || formData.produtos_novos.length > 0) && (
-            <Grid item xs={12} sx={{ mt: 3 }}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0',
-                  backgroundColor: '#fafafa'
-                }}
-              >
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body1" fontWeight={500} mb={1}>
-                      Valor Devolvido:
-                    </Typography>
-                    <Typography variant="h6" fontWeight={500}>
-                      R$ {calculateReturnedTotal().toFixed(2).replace('.', ',')}
-                    </Typography>
+              
+              {errors.produtos_novos && (
+                <Typography variant="caption" color="error" paragraph>
+                  {errors.produtos_novos}
+                </Typography>
+              )}
+              
+              {formData.produtos_novos.length > 0 ? (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    maxHeight: '200px', 
+                    overflow: 'auto',
+                    borderRadius: '8px',
+                    border: '1px solid #e0e0e0'
+                  }}
+                >
+                  <List>
+                    {formData.produtos_novos.map((product, index) => (
+                      <ListItem key={index} divider={index < formData.produtos_novos.length - 1}>
+                        <ListItemText
+                          primary={
+                            <Typography variant="body1" fontWeight={500}>
+                              {product.nome}
+                            </Typography>
+                          }
+                          secondary={
+                            <>
+                              <Typography component="span" variant="body2" color="text.primary">
+                                {`${product.tamanho} | ${product.cor_estampa}`}
+                              </Typography>
+                              <br />
+                              <Typography component="span" variant="body2" color="primary" fontWeight={500}>
+                                {`R$ ${parseFloat(product.preco_venda).toFixed(2).replace('.', ',')}`}
+                              </Typography>
+                            </>
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <IconButton edge="end" onClick={() => handleRemoveNewProduct(index)} color="error">
+                            <DeleteIcon />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              ) : (
+                <Box 
+                  sx={{ 
+                    p: 3, 
+                    border: '1px dashed #e0e0e0', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  <Typography variant="body1" color="text.secondary" align="center">
+                    Nenhum produto novo selecionado
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Price Difference */}
+              {(formData.produtos_devolvidos.length > 0 && formData.produtos_novos.length > 0) && (
+                <Box mt={3} p={2} bgcolor="#f9fafb" borderRadius="8px">
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Devolvido:
+                      </Typography>
+                      <Typography variant="body1" fontWeight={500}>
+                        R$ {calculateReturnedTotal().toFixed(2).replace('.', ',')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Novos:
+                      </Typography>
+                      <Typography variant="body1" fontWeight={500}>
+                        R$ {calculateNewTotal().toFixed(2).replace('.', ',')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Typography variant="body2" color="text.secondary">
+                        Diferença:
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        fontWeight={600} 
+                        color={priceDifference > 0 ? 'error' : priceDifference < 0 ? 'success' : 'text.primary'}
+                      >
+                        {priceDifference > 0 ? '+' : ''}{priceDifference.toFixed(2).replace('.', ',')}
+                      </Typography>
+                    </Grid>
                   </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body1" fontWeight={500} mb={1}>
-                      Valor Novos Produtos:
-                    </Typography>
-                    <Typography variant="h6" fontWeight={500}>
-                      R$ {calculateNewTotal().toFixed(2).replace('.', ',')}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body1" fontWeight={500} mb={1}>
-                      Diferença a {priceDifference > 0 ? 'Pagar' : 'Receber'}:
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      color={priceDifference > 0 ? 'error.main' : 'success.main'}
-                      fontWeight="bold"
-                    >
-                      R$ {Math.abs(priceDifference).toFixed(2).replace('.', ',')}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
-          )}
-        </Grid>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Box>
       </DialogContent>
       
       <DialogActions sx={{ p: 3, borderTop: '1px solid #eee', justifyContent: 'flex-end' }}>
@@ -551,7 +594,6 @@ const ExchangeForm = ({ open, onClose, onSave }) => {
         </Button>
         <Button 
           onClick={handleSubmit} 
-          color="primary" 
           variant="contained"
           disabled={isLoading}
           sx={{ 
@@ -559,10 +601,15 @@ const ExchangeForm = ({ open, onClose, onSave }) => {
             py: 1, 
             borderRadius: '8px',
             textTransform: 'none',
-            fontWeight: 500
+            fontWeight: 500,
+            backgroundColor: theme.palette.accent.main,
+            color: theme.palette.accent.contrastText,
+            '&:hover': {
+              backgroundColor: theme.palette.accent.dark,
+            }
           }}
         >
-          {isLoading ? 'Registrando...' : 'Registrar Troca'}
+          {isLoading ? 'Processando...' : 'Registrar Troca'}
         </Button>
       </DialogActions>
       
