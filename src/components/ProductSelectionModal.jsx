@@ -15,8 +15,10 @@ import {
 import { MaterialReactTable } from 'material-react-table';
 import { MRT_Localization_PT_BR } from 'material-react-table/locales/pt-BR';
 import { authFetch } from '../api';
+import { useTheme } from '@mui/material/styles';
 
 const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
+  const theme = useTheme();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,20 +97,28 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
   }, [products, searchTerm]);
 
   const handleConfirm = () => {
-    // Get selected products from rowSelection object
-    const selectedProducts = Object.keys(rowSelection)
-      .filter(key => rowSelection[key])
-      .map(key => {
-        // Find the product by its ID in the products array
-        const id = parseInt(key, 10);
-        return products.find(product => product.id === id);
-      })
-      .filter(Boolean); // Remove any undefined values
-    
-    if (selectedProducts.length > 0) {
-      onProductsSelected(selectedProducts);
-    } else {
-      // If no products selected, just close without action
+    try {
+      // Fix: Convert rowSelection object to array of selected products
+      const selectedProductIds = Object.entries(rowSelection)
+        .filter(([_, selected]) => selected)
+        .map(([id, _]) => parseInt(id, 10));
+      
+      // Find the corresponding product objects
+      const selectedProducts = selectedProductIds
+        .map(id => products.find(product => product.id === id))
+        .filter(Boolean); // Remove any undefined values
+      
+      console.log('Selected products:', selectedProducts);
+      
+      if (selectedProducts.length > 0) {
+        onProductsSelected(selectedProducts);
+      } else {
+        // If no products selected, just close without action
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error in product selection:', error);
+      // Fallback: close the modal
       onClose();
     }
   };
@@ -137,9 +147,15 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{error}</Alert>}
         
         <Box mb={3}>
-          <Typography variant="body1" fontWeight={500} mb={1}>
+          <label style={{ 
+            display: 'block', 
+            fontSize: '0.875rem', 
+            fontWeight: '500', 
+            color: '#374151',
+            marginBottom: '0.25rem'
+          }}>
             Buscar produtos
-          </Typography>
+          </label>
           <TextField
             variant="outlined"
             fullWidth
@@ -148,7 +164,9 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
             placeholder="Nome, tamanho ou cor/estampa"
             sx={{ 
               '& .MuiOutlinedInput-root': {
-                borderRadius: '8px'
+                borderRadius: '8px',
+                '&:hover fieldset': { borderColor: theme.palette.accent.main },
+                '&.Mui-focused fieldset': { borderColor: theme.palette.accent.main },
               }
             }}
           />
@@ -182,12 +200,12 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
                 data={filteredProducts}
                 localization={MRT_Localization_PT_BR}
                 enableRowSelection
-                state={{ rowSelection }}
-                onRowSelectionChange={setRowSelection}
-                initialState={{
-                  density: 'compact',
+                state={{ 
+                  rowSelection,
                   pagination: { pageSize: 10, pageIndex: 0 },
+                  density: 'compact',
                 }}
+                onRowSelectionChange={setRowSelection}
                 muiTableBodyRowProps={{ hover: true }}
                 enableColumnFilters={false}
                 enableGlobalFilter={false}
@@ -231,7 +249,6 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
           </Button>
           <Button 
             onClick={handleConfirm} 
-            color="primary" 
             variant="contained"
             disabled={selectedCount === 0 || loading}
             sx={{ 
@@ -239,7 +256,12 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
               py: 1, 
               borderRadius: '8px',
               textTransform: 'none',
-              fontWeight: 500
+              fontWeight: 500,
+              backgroundColor: theme.palette.accent.main,
+              color: theme.palette.accent.contrastText,
+              '&:hover': {
+                backgroundColor: theme.palette.accent.dark,
+              }
             }}
           >
             Confirmar
