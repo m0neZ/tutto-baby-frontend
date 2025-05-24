@@ -25,6 +25,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import { useTheme } from '@mui/material/styles';
 
 // Adapter for react-currency-input-field
 const CurrencyInputAdapter = forwardRef(function (props, ref) {
@@ -46,6 +47,7 @@ const CurrencyInputAdapter = forwardRef(function (props, ref) {
 });
 
 const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
+  const theme = useTheme();
   const {
     handleSubmit,
     control,
@@ -215,517 +217,487 @@ const ProductForm = ({ onProductAdded, initialData, isEditMode }) => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box
-        sx={{
-          maxWidth: '800px',
-          mx: 'auto',
-          bgcolor: 'white',
-          p: 4,
-          borderRadius: 2,
-          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-        }}
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        sx={{ display: "flex", flexDirection: "column", gap: 3 }}
       >
-        <Box sx={{ mb: 4 }}>
-          <h2 style={{ 
-            fontSize: '1.5rem', 
-            fontWeight: '600', 
-            margin: 0, 
-            color: '#111827' 
-          }}>
-            {isEditMode ? 'Editar Produto' : 'Novo Produto'}
-          </h2>
-        </Box>
-
-        <Box
-          component="form"
-          onSubmit={handleSubmit(onSubmit)}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
-        >
-          {/* First Row: Name and Gender */}
-          <Box sx={{ 
-            display: "grid", 
-            gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, 
-            gap: 2 
-          }}>
-            {/* Name with Autocomplete */}
-            <Controller
-              name="name"
-              control={control}
-              rules={{ required: "Nome é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Nome do Produto <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  {autocompleteError ? (
-                    // Fallback to regular TextField if autocomplete has errors
-                    <TextField
-                      {...field}
-                      fullWidth
-                      variant="outlined"
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message || "Autocomplete indisponível"}
-                      disabled={loadingOptions || isProcessing}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '&:hover fieldset': { borderColor: '#3b82f6' },
-                          '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                        }
-                      }}
-                    />
-                  ) : (
-                    <Autocomplete
-                      options={productNames}
-                      loading={loadingOptions}
-                      disabled={loadingOptions || isProcessing}
-                      freeSolo
-                      value={field.value}
-                      onChange={(event, newValue) => {
-                        try {
-                          field.onChange(typeof newValue === 'string' ? newValue : newValue?.label || '');
-                        } catch (err) {
-                          console.error("Error in autocomplete onChange:", err);
-                          field.onChange(field.value); // Keep current value on error
-                          setAutocompleteError(true);
-                        }
-                      }}
-                      onInputChange={(event, newInputValue) => {
-                        try {
-                          field.onChange(newInputValue);
-                        } catch (err) {
-                          console.error("Error in autocomplete onInputChange:", err);
-                          setAutocompleteError(true);
-                        }
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          error={!!fieldState.error}
-                          helperText={fieldState.error?.message}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {loadingOptions ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              '&:hover fieldset': { borderColor: '#3b82f6' },
-                              '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                            }
-                          }}
-                        />
-                      )}
-                    />
-                  )}
-                </Box>
-              )}
-            />
-
-            {/* Gender */}
-            <Controller
-              name="gender"
-              control={control}
-              rules={{ required: "Sexo é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Sexo <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <Select 
-                      {...field} 
-                      disabled={loadingOptions || isProcessing}
-                      sx={{
-                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                      }}
-                    >
-                      <MenuItem value="">Selecione...</MenuItem>
-                      <MenuItem value="Masculino">Masculino</MenuItem>
-                      <MenuItem value="Feminino">Feminino</MenuItem>
-                      <MenuItem value="Unissex">Unissex</MenuItem>
-                    </Select>
-                    {fieldState.error && (
-                      <FormHelperText>{fieldState.error.message}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Box>
-              )}
-            />
-          </Box>
-
-          {/* Second Row: Size and Color/Print */}
-          <Box sx={{ 
-            display: "grid", 
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-            gap: 2 
-          }}>
-            {/* Size */}
-            <Controller
-              name="size"
-              control={control}
-              rules={{ required: "Tamanho é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Tamanho <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <Select 
-                      {...field} 
-                      disabled={loadingOptions || isProcessing}
-                      sx={{
-                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                      }}
-                    >
-                      <MenuItem value="">Selecione...</MenuItem>
-                      {sizeOptions.map((o) => (
-                        <MenuItem key={o.id} value={o.value}>{o.value}</MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <FormHelperText>{fieldState.error.message}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Box>
-              )}
-            />
-
-            {/* Color/Print */}
-            <Controller
-              name="colorPrint"
-              control={control}
-              rules={{ required: "Cor/Estampa é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Cor/Estampa <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <FormControl fullWidth error={!!fieldState.error}>
-                    <Select 
-                      {...field} 
-                      disabled={loadingOptions || isProcessing}
-                      sx={{
-                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                      }}
-                    >
-                      <MenuItem value="">Selecione...</MenuItem>
-                      {colorOptions.map((o) => (
-                        <MenuItem key={o.id} value={o.value}>{o.value}</MenuItem>
-                      ))}
-                    </Select>
-                    {fieldState.error && (
-                      <FormHelperText>{fieldState.error.message}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Box>
-              )}
-            />
-          </Box>
-
-          {/* Third Row: Supplier and Purchase Date */}
-          <Box sx={{ 
-            display: "grid", 
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-            gap: 2 
-          }}>
-            {/* Supplier */}
-            <Controller
-              name="supplierId"
-              control={control}
-              rules={{ required: "Fornecedor é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Fornecedor <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <FormControl fullWidth error={!!fieldState.error || !!supplierError}>
-                    <Select 
-                      {...field} 
-                      disabled={loadingOptions || isProcessing}
-                      sx={{
-                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
-                      }}
-                    >
-                      <MenuItem value="">Selecione...</MenuItem>
-                      {suppliers.map((s) => (
-                        <MenuItem key={s.id} value={String(s.id)}>{s.nome}</MenuItem>
-                      ))}
-                    </Select>
-                    {(fieldState.error || supplierError) && (
-                      <FormHelperText>{fieldState.error?.message || supplierError}</FormHelperText>
-                    )}
-                  </FormControl>
-                </Box>
-              )}
-            />
-
-            {/* Purchase Date */}
-            <Controller
-              name="purchaseDate"
-              control={control}
-              render={({ field }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Data de Compra
-                  </label>
-                  <DatePicker
-                    value={field.value ? dayjs(field.value) : null}
-                    onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : null)}
+        {/* First Row: Name and Gender */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, 
+          gap: 2 
+        }}>
+          {/* Name with Autocomplete */}
+          <Controller
+            name="name"
+            control={control}
+            rules={{ required: "Nome é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Nome do Produto <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                {autocompleteError ? (
+                  // Fallback to regular TextField if autocomplete has errors
+                  <TextField
+                    {...field}
+                    fullWidth
+                    variant="outlined"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message || "Autocomplete indisponível"}
                     disabled={loadingOptions || isProcessing}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        sx: {
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                        '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+                      }
+                    }}
+                  />
+                ) : (
+                  <Autocomplete
+                    options={productNames}
+                    loading={loadingOptions}
+                    disabled={loadingOptions || isProcessing}
+                    freeSolo
+                    value={field.value}
+                    onChange={(event, newValue) => {
+                      try {
+                        field.onChange(typeof newValue === 'string' ? newValue : newValue?.label || '');
+                      } catch (err) {
+                        console.error("Error in autocomplete onChange:", err);
+                        field.onChange(field.value); // Keep current value on error
+                        setAutocompleteError(true);
+                      }
+                    }}
+                    onInputChange={(event, newInputValue) => {
+                      try {
+                        field.onChange(newInputValue);
+                      } catch (err) {
+                        console.error("Error in autocomplete onInputChange:", err);
+                        setAutocompleteError(true);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        error={!!fieldState.error}
+                        helperText={fieldState.error?.message}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingOptions ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                        sx={{
                           '& .MuiOutlinedInput-root': {
                             '&:hover fieldset': { borderColor: '#3b82f6' },
                             '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
                           }
-                        }
-                      }
-                    }}
+                        }}
+                      />
+                    )}
                   />
-                </Box>
-              )}
-            />
-          </Box>
+                )}
+              </Box>
+            )}
+          />
 
-          {/* Fourth Row: Cost, Retail Price, and Quantity (if not edit mode) */}
-          <Box sx={{ 
-            display: "grid", 
-            gridTemplateColumns: !isEditMode ? 
-              { xs: '1fr', md: '1fr 1fr 1fr' } : 
-              { xs: '1fr', md: '1fr 1fr' }, 
-            gap: 2 
-          }}>
-            {/* Cost */}
-            <Controller
-              name="cost"
-              control={control}
-              rules={{ required: "Custo é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Custo <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <TextField
-                    {...field}
-                    fullWidth
-                    InputProps={{
-                      inputComponent: CurrencyInputAdapter,
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
+          {/* Gender */}
+          <Controller
+            name="gender"
+            control={control}
+            rules={{ required: "Sexo é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Sexo <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <Select 
+                    {...field} 
                     disabled={loadingOptions || isProcessing}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
                     sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                        '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                      }
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
                     }}
-                  />
-                </Box>
-              )}
-            />
+                  >
+                    <MenuItem value="">Selecione...</MenuItem>
+                    <MenuItem value="Masculino">Masculino</MenuItem>
+                    <MenuItem value="Feminino">Feminino</MenuItem>
+                    <MenuItem value="Unissex">Unissex</MenuItem>
+                  </Select>
+                  {fieldState.error && (
+                    <FormHelperText>{fieldState.error.message}</FormHelperText>
+                  )}
+                </FormControl>
+              </Box>
+            )}
+          />
+        </Box>
 
-            {/* Retail Price */}
-            <Controller
-              name="retailPrice"
-              control={control}
-              rules={{ required: "Preço de venda é obrigatório" }}
-              render={({ field, fieldState }) => (
-                <Box>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '500', 
-                    color: '#374151',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Preço de Venda <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <TextField
-                    {...field}
-                    fullWidth
-                    InputProps={{
-                      inputComponent: CurrencyInputAdapter,
-                      startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                    }}
+        {/* Second Row: Size and Color/Print */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+          gap: 2 
+        }}>
+          {/* Size */}
+          <Controller
+            name="size"
+            control={control}
+            rules={{ required: "Tamanho é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Tamanho <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <Select 
+                    {...field} 
                     disabled={loadingOptions || isProcessing}
-                    error={!!fieldState.error}
-                    helperText={fieldState.error?.message}
                     sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': { borderColor: '#3b82f6' },
-                        '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
-                      }
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
                     }}
-                  />
-                </Box>
-              )}
-            />
+                  >
+                    <MenuItem value="">Selecione...</MenuItem>
+                    {sizeOptions.map((o) => (
+                      <MenuItem key={o.id} value={o.value}>{o.value}</MenuItem>
+                    ))}
+                  </Select>
+                  {fieldState.error && (
+                    <FormHelperText>{fieldState.error.message}</FormHelperText>
+                  )}
+                </FormControl>
+              </Box>
+            )}
+          />
 
-            {/* Quantity - Only show in Add mode, not in Edit mode */}
-            {!isEditMode && (
-              <Controller
-                name="quantity"
-                control={control}
-                rules={{ 
-                  required: "Quantidade é obrigatória",
-                  min: { value: 1, message: "Quantidade mínima é 1" }
-                }}
-                render={({ field, fieldState }) => (
-                  <Box>
-                    <label style={{ 
-                      display: 'block', 
-                      fontSize: '0.875rem', 
-                      fontWeight: '500', 
-                      color: '#374151',
-                      marginBottom: '0.25rem'
-                    }}>
-                      Quantidade <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <TextField
-                      {...field}
-                      fullWidth
-                      type="number"
-                      InputProps={{ inputProps: { min: 1 } }}
-                      disabled={loadingOptions || isProcessing}
-                      error={!!fieldState.error}
-                      helperText={fieldState.error?.message || "Cada unidade será adicionada como um item separado"}
-                      sx={{
+          {/* Color/Print */}
+          <Controller
+            name="colorPrint"
+            control={control}
+            rules={{ required: "Cor/Estampa é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Cor/Estampa <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <FormControl fullWidth error={!!fieldState.error}>
+                  <Select 
+                    {...field} 
+                    disabled={loadingOptions || isProcessing}
+                    sx={{
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                    }}
+                  >
+                    <MenuItem value="">Selecione...</MenuItem>
+                    {colorOptions.map((o) => (
+                      <MenuItem key={o.id} value={o.value}>{o.value}</MenuItem>
+                    ))}
+                  </Select>
+                  {fieldState.error && (
+                    <FormHelperText>{fieldState.error.message}</FormHelperText>
+                  )}
+                </FormControl>
+              </Box>
+            )}
+          />
+        </Box>
+
+        {/* Third Row: Supplier and Purchase Date */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+          gap: 2 
+        }}>
+          {/* Supplier */}
+          <Controller
+            name="supplierId"
+            control={control}
+            rules={{ required: "Fornecedor é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Fornecedor <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <FormControl fullWidth error={!!fieldState.error || !!supplierError}>
+                  <Select 
+                    {...field} 
+                    disabled={loadingOptions || isProcessing}
+                    sx={{
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6' },
+                    }}
+                  >
+                    <MenuItem value="">Selecione...</MenuItem>
+                    {suppliers.map((supplier) => (
+                      <MenuItem key={supplier.id} value={String(supplier.id)}>
+                        {supplier.nome}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {(fieldState.error || supplierError) && (
+                    <FormHelperText>{fieldState.error?.message || supplierError}</FormHelperText>
+                  )}
+                </FormControl>
+              </Box>
+            )}
+          />
+
+          {/* Purchase Date */}
+          <Controller
+            name="purchaseDate"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Data de Compra
+                </label>
+                <DatePicker
+                  value={field.value ? dayjs(field.value) : null}
+                  onChange={(date) => field.onChange(date ? date.format('YYYY-MM-DD') : null)}
+                  disabled={loadingOptions || isProcessing}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      error: !!fieldState.error,
+                      helperText: fieldState.error?.message,
+                      sx: {
                         '& .MuiOutlinedInput-root': {
                           '&:hover fieldset': { borderColor: '#3b82f6' },
                           '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
                         }
-                      }}
-                    />
-                  </Box>
-                )}
-              />
+                      }
+                    }
+                  }}
+                />
+              </Box>
             )}
-          </Box>
+          />
+        </Box>
 
-          {/* Error and Info Messages */}
-          {formError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {formError}
-            </Alert>
-          )}
+        {/* Fourth Row: Cost, Retail Price, and Quantity */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, 
+          gap: 2 
+        }}>
+          {/* Cost */}
+          <Controller
+            name="cost"
+            control={control}
+            rules={{ required: "Custo é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Custo <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <TextField
+                  {...field}
+                  fullWidth
+                  variant="outlined"
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  disabled={loadingOptions || isProcessing}
+                  InputProps={{
+                    inputComponent: CurrencyInputAdapter,
+                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#3b82f6' },
+                      '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          />
 
-          {autocompleteError && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Houve um problema com o autocompletar de nomes. Usando campo de texto simples.
-            </Alert>
-          )}
+          {/* Retail Price */}
+          <Controller
+            name="retailPrice"
+            control={control}
+            rules={{ required: "Preço de venda é obrigatório" }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Preço de Venda <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <TextField
+                  {...field}
+                  fullWidth
+                  variant="outlined"
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  disabled={loadingOptions || isProcessing}
+                  InputProps={{
+                    inputComponent: CurrencyInputAdapter,
+                    startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#3b82f6' },
+                      '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+                    }
+                  }}
+                />
+              </Box>
+            )}
+          />
 
-          {!isEditMode && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              Novo paradigma: Cada produto terá quantidade = 1. Se você adicionar um produto com quantidade maior que 1, 
-              serão criadas múltiplas linhas idênticas com quantidade = 1 cada.
-            </Alert>
-          )}
+          {/* Quantity */}
+          <Controller
+            name="quantity"
+            control={control}
+            rules={{ 
+              required: "Quantidade é obrigatória",
+              min: { value: 1, message: "Mínimo de 1" },
+              pattern: { value: /^[0-9]+$/, message: "Apenas números" }
+            }}
+            render={({ field, fieldState }) => (
+              <Box>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  color: '#374151',
+                  marginBottom: '0.25rem'
+                }}>
+                  Quantidade <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <TextField
+                  {...field}
+                  fullWidth
+                  variant="outlined"
+                  type="number"
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  disabled={isEditMode || loadingOptions || isProcessing}
+                  InputProps={{ inputProps: { min: 1 } }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&:hover fieldset': { borderColor: '#3b82f6' },
+                      '&.Mui-focused fieldset': { borderColor: '#3b82f6' },
+                    }
+                  }}
+                />
+                <FormHelperText>
+                  Cada unidade será adicionada como um item separado
+                </FormHelperText>
+              </Box>
+            )}
+          />
+        </Box>
 
-          {isEditMode && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              No modo de edição, a quantidade é sempre 1 por item, seguindo o novo paradigma de estoque.
-            </Alert>
-          )}
+        {/* Info Alert */}
+        <Box sx={{ mt: 2 }}>
+          <Alert severity="info" sx={{ borderRadius: '8px' }}>
+            Novo paradigma: Cada produto terá quantidade = 1. Se você adicionar um produto com quantidade maior que 1, serão criadas múltiplas linhas idênticas com quantidade = 1 cada.
+          </Alert>
+        </Box>
 
-          {/* Action Buttons */}
-          <Box sx={{ 
-            display: "flex", 
-            justifyContent: "flex-end", 
-            gap: 2, 
-            mt: 3 
-          }}>
-            <Button
-              type="button"
-              variant="outlined"
-              disabled={isSubmitting || loadingOptions || isProcessing}
-              sx={{
-                px: 3,
-                py: 1.5,
-                color: '#374151',
-                borderColor: '#d1d5db',
-                '&:hover': {
-                  backgroundColor: '#f9fafb',
-                  borderColor: '#d1d5db',
-                }
-              }}
-              onClick={() => reset()}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isSubmitting || loadingOptions || isProcessing}
-              sx={{
-                px: 3,
-                py: 1.5,
-                backgroundColor: '#3b82f6',
-                '&:hover': {
-                  backgroundColor: '#2563eb',
-                }
-              }}
-            >
-              {(isSubmitting || isProcessing) ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                isEditMode ? "Salvar" : "Adicionar Produto"
-              )}
-            </Button>
-          </Box>
+        {/* Error Message */}
+        {formError && (
+          <Alert severity="error" sx={{ mt: 2, borderRadius: '8px' }}>
+            {formError}
+          </Alert>
+        )}
+
+        {/* Form Actions */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => onProductAdded()}
+            disabled={isProcessing}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500
+            }}
+          >
+            CANCELAR
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            color="accent"
+            disabled={isProcessing}
+            sx={{
+              px: 3,
+              py: 1,
+              borderRadius: '8px',
+              textTransform: 'none',
+              fontWeight: 500,
+              backgroundColor: theme.palette.accent.main,
+              '&:hover': {
+                backgroundColor: theme.palette.accent.dark,
+              }
+            }}
+          >
+            {isProcessing ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : isEditMode ? (
+              "ATUALIZAR PRODUTO"
+            ) : (
+              "ADICIONAR PRODUTO"
+            )}
+          </Button>
         </Box>
       </Box>
     </LocalizationProvider>
