@@ -29,7 +29,7 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -527,104 +527,202 @@ function EstoquePageContent() {
         },
         Footer: footer('preco_venda'),
       },
-      { 
-        accessorKey: 'nome_fornecedor', 
-        header: 'Fornecedor', 
-        size: 140, 
+      {
+        accessorKey: 'data_compra',
+        header: 'Data Compra',
+        size: 120,
+        Cell: ({ cell }) => formatDate(cell.getValue()),
         enableGrouping: true,
         muiTableHeadCellProps: {
           align: 'left',
         },
       },
       {
-        accessorKey: 'data_compra',
-        header: 'Data Compra',
+        accessorKey: 'data_entrada',
+        header: 'Data Entrada',
         size: 120,
+        Cell: ({ cell }) => formatDate(cell.getValue()),
+        enableGrouping: true,
         muiTableHeadCellProps: {
           align: 'left',
         },
-        Cell: ({ cell }) => {
-          // Safely get value
-          let value = null;
-          try {
-            if (cell && typeof cell.getValue === 'function') {
-              value = cell.getValue();
-            }
-          } catch (e) {
-            console.error('Error in date Cell formatter:', e);
-          }
-          return formatDate(value);
+      },
+      {
+        accessorKey: 'valor_total',
+        header: 'Valor Total',
+        size: 120,
+        enableColumnFilter: false,
+        Cell: ({ row }) => {
+          const custo = row.original.custo || 0;
+          const quantidade = row.original.quantidade_atual || 0;
+          const total = custo * quantidade;
+          return formatCurrency(total);
         },
-        filterVariant: 'date-range',
-        filterFn: (row, id, [start, end]) => {
-          try {
-            if (!row || typeof row.getValue !== 'function') return false;
-            const value = row.getValue(id);
-            if (!value) return false;
-            
-            const d = dayjs(value);
-            if (!d.isValid()) return false;
-            
-            if (start && end) return d.isBetween(dayjs(start).startOf('day'), dayjs(end).endOf('day'), 'day', '[]');
-            if (start) return d.isSameOrAfter(dayjs(start).startOf('day'));
-            if (end)   return d.isSameOrBefore(dayjs(end).endOf('day'));
-            return true;
-          } catch (e) {
-            console.error('Error in date filter function:', e);
-            return false;
-          }
-        },
+        muiTableBodyCellProps: { align: 'right' },
+        muiTableHeadCellProps: { align: 'right' },
+        muiTableFooterCellProps: { align: 'right' },
+        Footer: footer('valor_total'),
+      },
+      {
+        id: 'actions',
+        header: 'Ações',
+        size: 120,
+        enableColumnFilter: false,
+        enableGrouping: false,
+        enableSorting: false,
+        Cell: ({ row }) => (
+          <Box sx={{ display: 'flex', gap: '8px' }}>
+            <Tooltip title="Editar">
+              <IconButton
+                color="primary"
+                onClick={() => {
+                  setEditRow(row.original);
+                  setOpenEdit(true);
+                }}
+                size="small"
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Excluir">
+              <IconButton
+                color="error"
+                onClick={() => {
+                  setDelRow(row.original);
+                  setOpenDel(true);
+                }}
+                size="small"
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        ),
       },
     ];
-    
+
     return baseColumns;
   }, [stockQuantities, isLoadingStock]);
 
-  // Apply the showSoldItems filter to the data
-  const displayData = useMemo(() => {
-    if (!Array.isArray(rows)) return [];
+  // Handle product deletion
+  const handleDeleteProduct = async () => {
+    if (!delRow) return;
     
-    if (!showSoldItems) {
-      return rows.filter(row => (row.quantidade_atual || 0) > 0);
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      await authFetch(`/produtos/${delRow.id}`, {
+        method: 'DELETE',
+      });
+      
+      // Refresh product list
+      fetchProdutos();
+      setOpenDel(false);
+    } catch (error) {
+      setDeleteError(`Erro ao excluir produto: ${error.message || 'Erro desconhecido'}`);
+    } finally {
+      setIsDeleting(false);
     }
-    
-    return rows;
-  }, [rows, showSoldItems]);
+  };
 
-  /* --------------- table instance ------------ */
+  // Handle product save (create/update)
+  const handleSaveProduct = async (productData) => {
+    try {
+      if (editRow) {
+        // Update existing product
+        await authFetch(`/produtos/${editRow.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(productData),
+        });
+      } else {
+        // Create new product
+        await authFetch('/produtos/', {
+          method: 'POST',
+          body: JSON.stringify(productData),
+        });
+      }
+      
+      // Refresh product list
+      fetchProdutos();
+      
+      // Close modal
+      setOpenAdd(false);
+      setOpenEdit(false);
+      setEditRow(null);
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving product:', error);
+      return false;
+    }
+  };
+
+  // Handle import completion
+  const handleImportComplete = () => {
+    fetchProdutos();
+    setIsImportModalOpen(false);
+  };
+
+  // Create table instance
   const table = useMaterialReactTable({
     columns,
-    // Ensure data is always an array and filtered by showSoldItems
-    data: Array.isArray(displayData) ? displayData : [],
-    localization: MRT_Localization_PT_BR,
-    enableGrouping: true,
-    enableStickyHeader: true,
-    enableDensityToggle: false,
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-    enableTableFooter: true,
+    data: filteredRows,
+    enableRowSelection: false,
+    enableColumnResizing: true,
+    enablePinning: true,
     enableColumnFilters: true,
-    enableColumnVisibility: true, // Enable native column visibility toggle
-    initialState: {
-      density: 'compact',
-      sorting: [{ id: 'nome', desc: false }],
-      pagination,
-      columnVisibility: {
-        quantidade_atual: false, // Hide quantity column by default
-      },
+    enableGlobalFilter: true,
+    enableColumnActions: true,
+    enableGrouping: true,
+    enableColumnDragging: false,
+    enableStickyHeader: true,
+    enableStickyFooter: true,
+    enablePagination: true,
+    manualPagination: false,
+    paginationDisplayMode: 'pages',
+    positionToolbarAlertBanner: 'bottom',
+    muiToolbarAlertBannerProps: {
+      color: 'info',
+      children: 'Selecione uma coluna para agrupar',
     },
-    state: {
-      isLoading: loading,
-      showAlertBanner: !!error,
-      grouping,
-      pagination,
-      columnFilters,
-    },
-    muiToolbarAlertBannerProps: error ? { color: 'error', children: error } : undefined,
     onGroupingChange: setGrouping,
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
-    muiTableContainerProps: { sx: { maxHeight: 650 } },
+    state: {
+      grouping,
+      pagination,
+      columnFilters,
+      showSkeletons: loading,
+    },
+    localization: MRT_Localization_PT_BR,
+    initialState: {
+      density: 'compact',
+      pagination: { pageIndex: 0, pageSize: 50 },
+      columnVisibility: {
+        data_compra: false,
+        data_entrada: false,
+      },
+    },
+    muiTableContainerProps: {
+      sx: {
+        maxHeight: '600px',
+      },
+    },
+    muiTableHeadProps: {
+      sx: {
+        '& tr th': {
+          backgroundColor: '#f5f5f5',
+        },
+      },
+    },
+    muiTableBodyProps: {
+      sx: {
+        '& tr:nth-of-type(odd)': {
+          backgroundColor: '#fafafa',
+        },
+      },
+    },
     renderTopToolbarCustomActions: () => (
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <Button
@@ -638,24 +736,13 @@ function EstoquePageContent() {
         >
           Adicionar Produto
         </Button>
-        {/* Changed to IconButton with Tooltip */}
-        <Tooltip title="Importar Produtos">
-          <IconButton
-            color="secondary" // Use theme's secondary color (pink)
-            onClick={() => setIsImportModalOpen(true)}
-            sx={{ 
-              backgroundColor: theme.palette.secondary.main, // Ensure background is filled
-              color: theme.palette.secondary.contrastText, // Ensure icon contrast
-              '&:hover': {
-                backgroundColor: theme.palette.secondary.dark, // Darken on hover
-              }
-            }}
-          >
-            <CloudUploadIcon />
-          </IconButton>
-        </Tooltip>
-        
-        {/* Toggle for showing/hiding sold items */}
+        <Button
+          variant="outlined"
+          startIcon={<CloudUploadIcon />}
+          onClick={() => setIsImportModalOpen(true)}
+        >
+          Importar
+        </Button>
         <FormControlLabel
           control={
             <Switch
@@ -664,222 +751,126 @@ function EstoquePageContent() {
               color="primary"
             />
           }
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              {showSoldItems ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
-              <Typography variant="body2">
-                {showSoldItems ? "Mostrar Itens Vendidos" : "Apenas Estoque Disponível"}
-              </Typography>
-            </Box>
-          }
-          sx={{ ml: 2 }}
+          label="Mostrar itens vendidos"
         />
       </Box>
     ),
-    renderToolbarInternalActions: ({ table }) => (
-      <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <MRT_ToggleFiltersButton table={table} />
-        <MRT_ShowHideColumnsButton table={table} />
-        <MRT_ToggleDensePaddingButton table={table} />
-      </Box>
-    ),
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <Tooltip title="Editar">
-          <IconButton
-            size="small"
-            onClick={() => { setEditRow(row.original); setOpenEdit(true); }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Excluir">
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => { setDelRow(row.original); setOpenDel(true); setDeleteError(null); }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </Box>
-    ),
-    muiTableHeadCellProps: {
-      align: 'left', // Consistent alignment for all headers
-      sx: theme => ({
-        backgroundColor: theme.palette.primary.main,
-        color: theme.palette.primary.contrastText,
-        fontWeight: 'bold',
-        '& .MuiBox-root': {
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-        },
-        '& .MuiTableSortLabel-root': {
-          flexDirection: 'row',
-        },
-      }),
-    },
-    muiTableBodyProps: {
-      sx: theme => ({
-        '& tr:nth-of-type(odd)  > td': { backgroundColor: theme.palette.background.paper },
-        '& tr:nth-of-type(even) > td': { backgroundColor: theme.palette.action.hover },
-      }),
-    },
-    muiTableFooterProps: {
-      sx: theme => ({
-        backgroundColor: theme.palette.grey[200],
-        '& td': { fontWeight: 'bold' },
-      }),
-    },
   });
 
-  /* ---------- modal helpers ---------- */
-  const refreshThenClose = () => {
-    fetchProdutos();
-    setOpenAdd(false);
-    setOpenEdit(false);
-  };
-
-  const handleCloseImportModal = (shouldRefresh) => {
-    setIsImportModalOpen(false);
-    if (shouldRefresh) {
-      fetchProdutos();
-    }
-  };
-
-  /* ---------- delete product ---------- */
-  const handleDeleteProduct = async () => {
-    if (!delRow?.id) {
-      setDeleteError('ID do produto não encontrado');
-      return;
-    }
-    
-    // Check if product quantity is 1 (can only delete products with quantity = 1)
-    if (delRow.quantidade_atual !== 1) {
-      setDeleteError('Só é possível excluir produtos com quantidade = 1.');
-      return;
-    }
-    
-    setIsDeleting(true);
-    setDeleteError(null);
-    
-    try {
-      const response = await authFetch(`/produtos/${delRow.id}`, { method: 'DELETE' });
-      
-      if (!response || !response.success) {
-        // Handle specific error for products with transaction history
-        if (response?.error && response.error.includes('histórico de transações')) {
-          setDeleteError(
-            'Não é possível excluir este produto pois ele possui histórico de transações. ' +
-            'Considere zerar a quantidade em vez de excluir.'
-          );
-        } else {
-          setDeleteError(response?.error || 'Erro ao excluir produto');
-        }
-        return;
-      }
-      
-      fetchProdutos();
-      setOpenDel(false);
-    } catch (e) {
-      console.error('Delete error:', e);
-      setDeleteError(e?.message || 'Falha ao excluir produto');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  /* --------------- render ---------------- */
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          gutterBottom
-          sx={{ 
-            color: theme.palette.primary.main,
-            fontWeight: 'bold'
-          }}
-        >
-          Estoque de produtos
+    <Container maxWidth="xl" sx={{ mt: 4 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {deleteError && <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>}
+      
+      <Box mb={4}>
+        <Typography variant="h5" component="h1" gutterBottom>
+          Estoque
         </Typography>
-
-        {/* Scorecards */}
-        <InventoryScorecard products={filteredRows} loading={loading} />
-
-        {loading && <CircularProgress />}
-        {error && !loading && <Alert severity="error">{error}</Alert>}
-
-        {!loading && (
-          <Box sx={{ width: '100%' }}>
-            <MaterialReactTable table={table} />
-          </Box>
-        )}
-
-        <AddProductModal
-          open={openAdd || openEdit}
-          onClose={() => { setOpenAdd(false); setOpenEdit(false); }}
-          onSuccess={refreshThenClose}
-          productData={editRow}
-          isEditMode={!!editRow}
-        />
-
-        {/* Import Products Modal */}
-        <ImportInventoryModal
-          open={isImportModalOpen}
-          onClose={handleCloseImportModal}
-        />
-
-        {/* confirm delete */}
-        <Dialog 
-          open={openDel} 
-          onClose={() => !isDeleting && setOpenDel(false)}
-          PaperProps={{
-            sx: {
-              width: '100%',
-              maxWidth: '500px'
-            }
-          }}
-        >
-          <DialogTitle>Confirmar Exclusão</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              Tem certeza que deseja excluir "{delRow?.nome}"?
-            </DialogContentText>
-            {deleteError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {deleteError}
-              </Alert>
+        
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+          <InventoryScorecard
+            title="Total de Produtos"
+            value={filteredRows.length}
+            loading={loading}
+          />
+          <InventoryScorecard
+            title="Valor Total em Estoque"
+            value={formatCurrency(
+              filteredRows.reduce(
+                (sum, row) => sum + (row.custo || 0) * (row.quantidade_atual || 0),
+                0
+              )
             )}
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setOpenDel(false)} 
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              color="error"
-              onClick={handleDeleteProduct}
-              disabled={isDeleting}
-            >
-              {isDeleting ? <CircularProgress size={24} /> : 'Excluir'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Container>
-    </LocalizationProvider>
+            loading={loading}
+          />
+          <InventoryScorecard
+            title="Valor de Venda Potencial"
+            value={formatCurrency(
+              filteredRows.reduce(
+                (sum, row) => sum + (row.preco_venda || 0) * (row.quantidade_atual || 0),
+                0
+              )
+            )}
+            loading={loading}
+          />
+          <InventoryScorecard
+            title="Lucro Potencial"
+            value={formatCurrency(
+              filteredRows.reduce(
+                (sum, row) =>
+                  sum +
+                  ((row.preco_venda || 0) - (row.custo || 0)) * (row.quantidade_atual || 0),
+                0
+              )
+            )}
+            loading={loading}
+          />
+        </Box>
+      </Box>
+      
+      <Paper elevation={2}>
+        <MaterialReactTable table={table} />
+      </Paper>
+      
+      {/* Add/Edit Product Modal */}
+      <AddProductModal
+        open={openAdd || openEdit}
+        onClose={() => {
+          setOpenAdd(false);
+          setOpenEdit(false);
+          setEditRow(null);
+        }}
+        onSave={handleSaveProduct}
+        editData={editRow}
+        isEdit={!!editRow}
+      />
+      
+      {/* Import Modal */}
+      <ImportInventoryModal
+        open={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportComplete={handleImportComplete}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDel}
+        onClose={() => !isDeleting && setOpenDel(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Confirmar exclusão
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Tem certeza que deseja excluir o produto "{delRow?.nome}"? Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDel(false)} disabled={isDeleting}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleDeleteProduct}
+            color="error"
+            autoFocus
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Excluindo...' : 'Excluir'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 }
 
-/* ----------- wrapped in boundary ---------- */
 export default function EstoquePage() {
   return (
     <ErrorBoundary>
-      <EstoquePageContent />
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <EstoquePageContent />
+      </LocalizationProvider>
     </ErrorBoundary>
   );
 }
