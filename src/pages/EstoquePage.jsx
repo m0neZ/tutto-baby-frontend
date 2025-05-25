@@ -728,21 +728,29 @@ function EstoquePageContent() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => {
-            setEditRow(null);
-            setOpenAdd(true);
-          }}
           sx={{ textTransform: 'none' }}
+          onClick={() => { setEditRow(null); setOpenAdd(true); }}
         >
           Adicionar Produto
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<CloudUploadIcon />}
-          onClick={() => setIsImportModalOpen(true)}
-        >
-          Importar
-        </Button>
+        {/* Changed to IconButton with Tooltip */}
+        <Tooltip title="Importar Produtos">
+          <IconButton
+            color="secondary" // Use theme's secondary color (pink)
+            onClick={() => setIsImportModalOpen(true)}
+            sx={{ 
+              backgroundColor: theme.palette.secondary.main, // Ensure background is filled
+              color: theme.palette.secondary.contrastText, // Ensure icon contrast
+              '&:hover': {
+                backgroundColor: theme.palette.secondary.dark, // Darken on hover
+              }
+            }}
+          >
+            <CloudUploadIcon />
+          </IconButton>
+        </Tooltip>
+        
+        {/* Toggle for showing/hiding sold items */}
         <FormControlLabel
           control={
             <Switch
@@ -751,8 +759,44 @@ function EstoquePageContent() {
               color="primary"
             />
           }
-          label="Mostrar itens vendidos"
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {showSoldItems ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+              <Typography variant="body2">
+                {showSoldItems ? "Mostrar Itens Vendidos" : "Apenas Estoque Disponível"}
+              </Typography>
+            </Box>
+          }
+          sx={{ ml: 2 }}
         />
+      </Box>
+    ),
+    renderToolbarInternalActions: ({ table }) => (
+      <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <MRT_ToggleFiltersButton table={table} />
+        <MRT_ShowHideColumnsButton table={table} />
+        <MRT_ToggleDensePaddingButton table={table} />
+      </Box>
+    ),
+    renderRowActions: ({ row }) => (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Tooltip title="Editar">
+          <IconButton
+            size="small"
+            onClick={() => { setEditRow(row.original); setOpenEdit(true); }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Excluir">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() => { setDelRow(row.original); setOpenDel(true); setDeleteError(null); }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     ),
   });
