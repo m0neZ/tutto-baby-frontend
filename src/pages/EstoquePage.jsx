@@ -633,7 +633,7 @@ function EstoquePageContent() {
           sx={{ textTransform: 'none' }}
           onClick={() => { setEditRow(null); setOpenAdd(true); }}
         >
-          Adicionar Produto
+          Produto
         </Button>
         {/* Changed to IconButton with Tooltip */}
         <Tooltip title="Importar Produtos">
