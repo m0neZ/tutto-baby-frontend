@@ -29,7 +29,7 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/Add';
+import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
