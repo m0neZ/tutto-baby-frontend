@@ -50,13 +50,18 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
       if (response && Array.isArray(response.produtos)) {
         // Filter only products with quantity > 0
         const availableProducts = response.produtos.filter(p => p.quantidade_atual > 0);
-        // Add unique keys to ensure proper selection tracking
-        const productsWithKeys = availableProducts.map(p => ({
-          ...p,
-          id: p.id || Math.random().toString(36).substr(2, 9)
-        }));
-        setProducts(productsWithKeys);
-        console.log('Loaded products:', productsWithKeys.length);
+        
+        // Ensure all products have a valid ID (don't generate random IDs)
+        const productsWithValidIds = availableProducts.map(p => {
+          // If product doesn't have an ID, log warning but don't modify
+          if (p.id === undefined || p.id === null) {
+            console.warn('Product without ID:', p);
+          }
+          return p;
+        });
+        
+        setProducts(productsWithValidIds);
+        console.log('Loaded products:', productsWithValidIds.length);
       } else {
         setProducts([]);
         console.log('No products returned from API');
@@ -114,38 +119,48 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
     );
   }, [products, searchTerm]);
 
+  // Debug function to log row selection state
+  const debugRowSelection = () => {
+    console.log('Current rowSelection state:', rowSelection);
+    console.log('Products array:', products);
+    
+    // Check which products would be selected with current rowSelection
+    const selectedIds = Object.entries(rowSelection)
+      .filter(([_, selected]) => selected)
+      .map(([id, _]) => id);
+    
+    console.log('Selected IDs from rowSelection:', selectedIds);
+    
+    // Check if these IDs exist in the products array
+    selectedIds.forEach(id => {
+      const found = products.find(p => String(p.id) === String(id));
+      console.log(`Product with ID ${id} ${found ? 'found' : 'NOT FOUND'} in products array`);
+    });
+  };
+
   const handleConfirm = () => {
     try {
-      // Get selected product IDs from rowSelection object
-      const selectedProductIds = Object.entries(rowSelection)
-        .filter(([_, selected]) => selected)
-        .map(([id, _]) => {
-          // Handle both string and numeric IDs
-          return isNaN(id) ? id : parseInt(id, 10);
-        });
+      // Debug current state
+      debugRowSelection();
       
-      console.log('Selected product IDs:', selectedProductIds);
+      // Get selected products directly from products array using rowSelection
+      const selectedProducts = [];
       
-      // Find the corresponding product objects
-      const selectedProducts = selectedProductIds
-        .map(id => {
-          const product = products.find(p => 
-            // Match either string or number ID
-            String(p.id) === String(id)
-          );
-          if (!product) {
-            console.warn(`Product with ID ${id} not found`);
-          }
-          return product;
-        })
-        .filter(Boolean); // Remove any undefined values
+      // Iterate through products and check if they're selected in rowSelection
+      for (const product of products) {
+        const productId = String(product.id);
+        if (rowSelection[productId] === true) {
+          selectedProducts.push(product);
+        }
+      }
       
-      console.log('Selected products:', selectedProducts);
+      console.log('Final selected products:', selectedProducts);
       
       if (selectedProducts.length > 0) {
         onProductsSelected(selectedProducts);
+        onClose(); // Close modal after successful selection
       } else {
-        console.warn('No products selected or found');
+        console.warn('No products selected');
         // If no products selected, just close without action
         onClose();
       }
@@ -247,6 +262,7 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
                 enableColumnFilters={false}
                 enableGlobalFilter={false}
                 enableTopToolbar={true}
+                getRowId={(row) => String(row.id)} // Ensure consistent row IDs
                 initialState={{
                   density: 'compact',
                   pagination: { pageIndex: 0, pageSize: 10 },
