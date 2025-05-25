@@ -419,7 +419,7 @@ export default function VendasPage() {
                   setIsSaleFormOpen(true);
                 }}
               >
-                + Venda
+                Venda
               </Button>
               <Button
                 variant="contained"
