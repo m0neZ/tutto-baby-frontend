@@ -24,12 +24,22 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
   const [error, setError] = useState(null);
   const [rowSelection, setRowSelection] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
+  // Add state for pagination
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   useEffect(() => {
     if (open) {
       fetchProducts();
       // Reset selection when modal opens
       setRowSelection({});
+      // Reset pagination to first page
+      setPagination({
+        pageIndex: 0,
+        pageSize: 10,
+      });
     }
   }, [open]);
 
@@ -40,12 +50,20 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
       if (response && Array.isArray(response.produtos)) {
         // Filter only products with quantity > 0
         const availableProducts = response.produtos.filter(p => p.quantidade_atual > 0);
-        setProducts(availableProducts);
+        // Add unique keys to ensure proper selection tracking
+        const productsWithKeys = availableProducts.map(p => ({
+          ...p,
+          id: p.id || Math.random().toString(36).substr(2, 9)
+        }));
+        setProducts(productsWithKeys);
+        console.log('Loaded products:', productsWithKeys.length);
       } else {
         setProducts([]);
+        console.log('No products returned from API');
       }
       setError(null);
     } catch (err) {
+      console.error('Error fetching products:', err);
       setError('Erro ao carregar produtos: ' + (err.message || 'Erro desconhecido'));
       setProducts([]);
     } finally {
@@ -98,14 +116,28 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
 
   const handleConfirm = () => {
     try {
-      // Fix: Convert rowSelection object to array of selected products
+      // Get selected product IDs from rowSelection object
       const selectedProductIds = Object.entries(rowSelection)
         .filter(([_, selected]) => selected)
-        .map(([id, _]) => parseInt(id, 10));
+        .map(([id, _]) => {
+          // Handle both string and numeric IDs
+          return isNaN(id) ? id : parseInt(id, 10);
+        });
+      
+      console.log('Selected product IDs:', selectedProductIds);
       
       // Find the corresponding product objects
       const selectedProducts = selectedProductIds
-        .map(id => products.find(product => product.id === id))
+        .map(id => {
+          const product = products.find(p => 
+            // Match either string or number ID
+            String(p.id) === String(id)
+          );
+          if (!product) {
+            console.warn(`Product with ID ${id} not found`);
+          }
+          return product;
+        })
         .filter(Boolean); // Remove any undefined values
       
       console.log('Selected products:', selectedProducts);
@@ -113,6 +145,7 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
       if (selectedProducts.length > 0) {
         onProductsSelected(selectedProducts);
       } else {
+        console.warn('No products selected or found');
         // If no products selected, just close without action
         onClose();
       }
@@ -200,16 +233,24 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
                 data={filteredProducts}
                 localization={MRT_Localization_PT_BR}
                 enableRowSelection
+                positionToolbarAlertBanner="bottom"
+                enablePagination={true}
+                enableBottomToolbar={true}
                 state={{ 
                   rowSelection,
-                  pagination: { pageSize: 10, pageIndex: 0 },
+                  pagination,
                   density: 'compact',
                 }}
                 onRowSelectionChange={setRowSelection}
+                onPaginationChange={setPagination}
                 muiTableBodyRowProps={{ hover: true }}
                 enableColumnFilters={false}
                 enableGlobalFilter={false}
-                enableTopToolbar={false}
+                enableTopToolbar={true}
+                initialState={{
+                  density: 'compact',
+                  pagination: { pageIndex: 0, pageSize: 10 },
+                }}
                 muiTablePaperProps={{
                   sx: {
                     borderRadius: '8px',
@@ -223,6 +264,14 @@ const ProductSelectionModal = ({ open, onClose, onProductsSelected }) => {
                     },
                   },
                 }}
+                muiBottomToolbarProps={{
+                  sx: {
+                    backgroundColor: '#f5f5f5',
+                  },
+                }}
+                paginationDisplayMode="pages"
+                rowCount={filteredProducts.length}
+                manualPagination={false}
               />
             )}
           </>
