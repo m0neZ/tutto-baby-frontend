@@ -29,7 +29,7 @@ import {
   FormControlLabel,
   Switch,
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import AddCircleOutlineIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -629,7 +629,7 @@ function EstoquePageContent() {
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
         <Button
           variant="contained"
-          startIcon={<AddCircleOutlineIcon />}
+          startIcon={<AddIcon />}
           sx={{ textTransform: 'none' }}
           onClick={() => { setEditRow(null); setOpenAdd(true); }}
         >
